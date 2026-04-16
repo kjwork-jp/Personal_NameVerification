@@ -6,6 +6,7 @@ from PySide6.QtWidgets import QMainWindow, QTabWidget
 
 from app.application.core_services import CoreService
 from app.application.query_services import QueryService
+from app.ui.audit_log_tab import AuditLogTab
 from app.ui.link_management_tab import LinkManagementTab
 from app.ui.name_management_tab import NameManagementTab
 from app.ui.search_tab import SearchTab
@@ -38,5 +39,9 @@ class MainWindow(QMainWindow):
         tabs.addTab(
             TrashTab(core_service=core_service, query_service=query_service),
             "ゴミ箱",
+        )
+        tabs.addTab(
+            AuditLogTab(query_service=query_service),
+            "監査ログ",
         )
         self.setCentralWidget(tabs)
