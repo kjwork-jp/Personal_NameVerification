@@ -6,6 +6,7 @@ from PySide6.QtWidgets import QMainWindow, QTabWidget
 
 from app.application.core_services import CoreService
 from app.application.query_services import QueryService
+from app.ui.link_management_tab import LinkManagementTab
 from app.ui.name_management_tab import NameManagementTab
 from app.ui.search_tab import SearchTab
 from app.ui.title_subtitle_management_tab import TitleSubtitleManagementTab
@@ -28,5 +29,9 @@ class MainWindow(QMainWindow):
         tabs.addTab(
             TitleSubtitleManagementTab(core_service=core_service, query_service=query_service),
             "タイトル/サブタイトル管理",
+        )
+        tabs.addTab(
+            LinkManagementTab(core_service=core_service, query_service=query_service),
+            "リンク管理",
         )
         self.setCentralWidget(tabs)

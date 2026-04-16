@@ -84,6 +84,13 @@ class EmptyCoreService:
     def hard_delete_subtitle(self, *args: object, **kwargs: object) -> None:
         _ = (args, kwargs)
 
+    def link_name_to_subtitle(self, *args: object, **kwargs: object) -> int:
+        _ = (args, kwargs)
+        return 0
+
+    def unlink_name_from_subtitle(self, *args: object, **kwargs: object) -> None:
+        _ = (args, kwargs)
+
 
 def _get_app() -> QApplication:
     app = QApplication.instance()
@@ -97,7 +104,8 @@ def test_main_window_has_required_tabs() -> None:
     window = MainWindow(query_service=EmptyQueryService(), core_service=EmptyCoreService())
     tab_widget = window.centralWidget()
     assert tab_widget is not None
-    assert tab_widget.count() == 3
+    assert tab_widget.count() == 4
     assert tab_widget.tabText(0) == "検索/照合"
     assert tab_widget.tabText(1) == "名前管理"
     assert tab_widget.tabText(2) == "タイトル/サブタイトル管理"
+    assert tab_widget.tabText(3) == "リンク管理"

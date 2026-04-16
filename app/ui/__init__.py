@@ -1,5 +1,6 @@
 """Presentation layer package (PySide6 UI components)."""
 
+from .link_management_tab import LinkManagementTab
 from .main_window import MainWindow
 from .name_management_tab import NameManagementTab
 from .search_tab import SearchTab
@@ -10,4 +11,5 @@ __all__ = [
     "SearchTab",
     "NameManagementTab",
     "TitleSubtitleManagementTab",
+    "LinkManagementTab",
 ]
