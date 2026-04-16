@@ -295,6 +295,12 @@ class CoreService:
             "name_subtitle_links", link_id, "unlink", operator_id, before, self._get_link(link_id)
         )
 
+    def restore_link(self, link_id: int, operator_id: str) -> None:
+        self._restore("name_subtitle_links", link_id, operator_id)
+
+    def hard_delete_link(self, link_id: int, operator_id: str) -> None:
+        self._hard_delete("name_subtitle_links", link_id, operator_id)
+
     def _logical_delete(self, table: str, entity_id: int, operator_id: str) -> None:
         self._validate_operator_id(operator_id)
         before = self._get_entity(table, entity_id)
