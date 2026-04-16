@@ -34,6 +34,18 @@ class EmptyQueryService:
         _ = (title_id, include_deleted)
         return []
 
+    def list_deleted_names(self) -> list[object]:
+        return []
+
+    def list_deleted_titles(self) -> list[object]:
+        return []
+
+    def list_deleted_subtitles(self) -> list[object]:
+        return []
+
+    def list_deleted_links(self) -> list[object]:
+        return []
+
 
 class EmptyCoreService:
     def create_name(self, *args: object, **kwargs: object) -> int:
@@ -91,6 +103,12 @@ class EmptyCoreService:
     def unlink_name_from_subtitle(self, *args: object, **kwargs: object) -> None:
         _ = (args, kwargs)
 
+    def restore_link(self, *args: object, **kwargs: object) -> None:
+        _ = (args, kwargs)
+
+    def hard_delete_link(self, *args: object, **kwargs: object) -> None:
+        _ = (args, kwargs)
+
 
 def _get_app() -> QApplication:
     app = QApplication.instance()
@@ -104,8 +122,9 @@ def test_main_window_has_required_tabs() -> None:
     window = MainWindow(query_service=EmptyQueryService(), core_service=EmptyCoreService())
     tab_widget = window.centralWidget()
     assert tab_widget is not None
-    assert tab_widget.count() == 4
+    assert tab_widget.count() == 5
     assert tab_widget.tabText(0) == "検索/照合"
     assert tab_widget.tabText(1) == "名前管理"
     assert tab_widget.tabText(2) == "タイトル/サブタイトル管理"
     assert tab_widget.tabText(3) == "リンク管理"
+    assert tab_widget.tabText(4) == "ゴミ箱"

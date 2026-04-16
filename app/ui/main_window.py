@@ -10,6 +10,7 @@ from app.ui.link_management_tab import LinkManagementTab
 from app.ui.name_management_tab import NameManagementTab
 from app.ui.search_tab import SearchTab
 from app.ui.title_subtitle_management_tab import TitleSubtitleManagementTab
+from app.ui.trash_tab import TrashTab
 
 
 class MainWindow(QMainWindow):
@@ -33,5 +34,9 @@ class MainWindow(QMainWindow):
         tabs.addTab(
             LinkManagementTab(core_service=core_service, query_service=query_service),
             "リンク管理",
+        )
+        tabs.addTab(
+            TrashTab(core_service=core_service, query_service=query_service),
+            "ゴミ箱",
         )
         self.setCentralWidget(tabs)

@@ -5,6 +5,7 @@ from .main_window import MainWindow
 from .name_management_tab import NameManagementTab
 from .search_tab import SearchTab
 from .title_subtitle_management_tab import TitleSubtitleManagementTab
+from .trash_tab import TrashTab
 
 __all__ = [
     "MainWindow",
@@ -12,4 +13,5 @@ __all__ = [
     "NameManagementTab",
     "TitleSubtitleManagementTab",
     "LinkManagementTab",
+    "TrashTab",
 ]
