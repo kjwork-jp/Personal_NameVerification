@@ -7,7 +7,11 @@ import sys
 
 def main() -> int:
     """Launch the minimal PySide6 application shell."""
-    from PySide6.QtWidgets import QApplication, QLabel, QMainWindow
+    from PySide6.QtWidgets import (
+        QApplication,
+        QLabel,
+        QMainWindow,
+    )
 
     app = QApplication(sys.argv)
 
@@ -17,7 +21,7 @@ def main() -> int:
     window.resize(640, 320)
     window.show()
 
-    return app.exec()
+    return int(app.exec())
 
 
 if __name__ == "__main__":
