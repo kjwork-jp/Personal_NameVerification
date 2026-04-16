@@ -27,6 +27,24 @@ class EmptyQueryService:
         return []
 
 
+class EmptyCoreService:
+    def create_name(self, *args: object, **kwargs: object) -> int:
+        _ = (args, kwargs)
+        return 0
+
+    def update_name(self, *args: object, **kwargs: object) -> None:
+        _ = (args, kwargs)
+
+    def delete_name(self, *args: object, **kwargs: object) -> None:
+        _ = (args, kwargs)
+
+    def restore_name(self, *args: object, **kwargs: object) -> None:
+        _ = (args, kwargs)
+
+    def hard_delete_name(self, *args: object, **kwargs: object) -> None:
+        _ = (args, kwargs)
+
+
 def _get_app() -> QApplication:
     app = QApplication.instance()
     if app is None:
@@ -34,10 +52,11 @@ def _get_app() -> QApplication:
     return app
 
 
-def test_main_window_has_search_tab() -> None:
+def test_main_window_has_search_and_name_tabs() -> None:
     _get_app()
-    window = MainWindow(query_service=EmptyQueryService())
+    window = MainWindow(query_service=EmptyQueryService(), core_service=EmptyCoreService())
     tab_widget = window.centralWidget()
     assert tab_widget is not None
-    assert tab_widget.count() == 1
+    assert tab_widget.count() == 2
     assert tab_widget.tabText(0) == "検索/照合"
+    assert tab_widget.tabText(1) == "名前管理"
