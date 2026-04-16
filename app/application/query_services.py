@@ -157,6 +157,32 @@ class QueryService:
         rows = self._list_deleted("names")
         return [NameDetail(**row) for row in rows]
 
+    def list_titles(self, *, include_deleted: bool = False) -> list[TitleDetail]:
+        rows = self._connection.execute(
+            """
+            SELECT *
+            FROM titles
+            WHERE (? = 1 OR deleted_at IS NULL)
+            ORDER BY updated_at DESC, id DESC
+            """,
+            (1 if include_deleted else 0,),
+        ).fetchall()
+        return [TitleDetail(**dict(row)) for row in rows]
+
+    def list_subtitles(
+        self, title_id: int, *, include_deleted: bool = False
+    ) -> list[SubtitleDetail]:
+        rows = self._connection.execute(
+            """
+            SELECT *
+            FROM subtitles
+            WHERE title_id = ? AND (? = 1 OR deleted_at IS NULL)
+            ORDER BY sort_order ASC, id ASC
+            """,
+            (title_id, 1 if include_deleted else 0),
+        ).fetchall()
+        return [SubtitleDetail(**dict(row)) for row in rows]
+
     def list_deleted_titles(self) -> list[TitleDetail]:
         rows = self._list_deleted("titles")
         return [TitleDetail(**row) for row in rows]

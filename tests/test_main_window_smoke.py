@@ -26,6 +26,14 @@ class EmptyQueryService:
         _ = (name_id, include_deleted)
         return []
 
+    def list_titles(self, *, include_deleted: bool = False) -> list[object]:
+        _ = include_deleted
+        return []
+
+    def list_subtitles(self, title_id: int, *, include_deleted: bool = False) -> list[object]:
+        _ = (title_id, include_deleted)
+        return []
+
 
 class EmptyCoreService:
     def create_name(self, *args: object, **kwargs: object) -> int:
@@ -44,6 +52,38 @@ class EmptyCoreService:
     def hard_delete_name(self, *args: object, **kwargs: object) -> None:
         _ = (args, kwargs)
 
+    def create_title(self, *args: object, **kwargs: object) -> int:
+        _ = (args, kwargs)
+        return 0
+
+    def update_title(self, *args: object, **kwargs: object) -> None:
+        _ = (args, kwargs)
+
+    def delete_title(self, *args: object, **kwargs: object) -> None:
+        _ = (args, kwargs)
+
+    def restore_title(self, *args: object, **kwargs: object) -> None:
+        _ = (args, kwargs)
+
+    def hard_delete_title(self, *args: object, **kwargs: object) -> None:
+        _ = (args, kwargs)
+
+    def create_subtitle(self, *args: object, **kwargs: object) -> int:
+        _ = (args, kwargs)
+        return 0
+
+    def update_subtitle(self, *args: object, **kwargs: object) -> None:
+        _ = (args, kwargs)
+
+    def delete_subtitle(self, *args: object, **kwargs: object) -> None:
+        _ = (args, kwargs)
+
+    def restore_subtitle(self, *args: object, **kwargs: object) -> None:
+        _ = (args, kwargs)
+
+    def hard_delete_subtitle(self, *args: object, **kwargs: object) -> None:
+        _ = (args, kwargs)
+
 
 def _get_app() -> QApplication:
     app = QApplication.instance()
@@ -52,11 +92,12 @@ def _get_app() -> QApplication:
     return app
 
 
-def test_main_window_has_search_and_name_tabs() -> None:
+def test_main_window_has_required_tabs() -> None:
     _get_app()
     window = MainWindow(query_service=EmptyQueryService(), core_service=EmptyCoreService())
     tab_widget = window.centralWidget()
     assert tab_widget is not None
-    assert tab_widget.count() == 2
+    assert tab_widget.count() == 3
     assert tab_widget.tabText(0) == "検索/照合"
     assert tab_widget.tabText(1) == "名前管理"
+    assert tab_widget.tabText(2) == "タイトル/サブタイトル管理"
