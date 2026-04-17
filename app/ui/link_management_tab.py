@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
 )
 
 from app.application.read_models import NameSearchRow, RelatedRow, SubtitleDetail, TitleDetail
+from app.ui.dialogs import confirm_destructive_action
 
 
 class LinkWriteService(Protocol):
@@ -284,6 +285,14 @@ class LinkManagementTab(QWidget):
             return
         if self._selected_link is None:
             self._set_message("解除するリンクを選択してください", is_error=True)
+            return
+
+        if not confirm_destructive_action(
+            self,
+            "リンク解除の確認",
+            f"リンクID={self._selected_link.id} を解除します。よろしいですか？",
+        ):
+            self._set_message("リンク解除をキャンセルしました")
             return
 
         try:

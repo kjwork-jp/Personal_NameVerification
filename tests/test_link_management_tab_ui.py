@@ -13,6 +13,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 qt_widgets = pytest.importorskip("PySide6.QtWidgets", exc_type=ImportError)
 QApplication = qt_widgets.QApplication
 
+from app.ui import link_management_tab as link_tab_module  # noqa: E402
 from app.ui.link_management_tab import LinkManagementTab  # noqa: E402
 
 
@@ -102,8 +103,9 @@ def _app() -> QApplication:
     return app
 
 
-def test_link_management_tab_link_and_unlink() -> None:
+def test_link_management_tab_link_and_unlink(monkeypatch: pytest.MonkeyPatch) -> None:
     _app()
+    monkeypatch.setattr(link_tab_module, "confirm_destructive_action", lambda *args, **kwargs: True)
     core = StubCoreService()
     query = StubQueryService()
     tab = LinkManagementTab(core_service=core, query_service=query)
@@ -125,3 +127,17 @@ def test_link_management_tab_requires_operator_and_relation_type() -> None:
     tab.relation_type_input.setText("")
     tab._create_link()
     assert "operator_id" in tab.message_label.text()
+
+
+def test_link_management_cancel_unlink(monkeypatch: pytest.MonkeyPatch) -> None:
+    _app()
+    monkeypatch.setattr(
+        link_tab_module, "confirm_destructive_action", lambda *args, **kwargs: False
+    )
+    core = StubCoreService()
+    tab = LinkManagementTab(core_service=core, query_service=StubQueryService())
+
+    tab.operator_input.setText("op-1")
+    tab._unlink_link()
+
+    assert not any(call.startswith("unlink:") for call in core.calls)

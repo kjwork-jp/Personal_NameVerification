@@ -1,6 +1,7 @@
 """Presentation layer package (PySide6 UI components)."""
 
 from .audit_log_tab import AuditLogTab
+from .dialogs import confirm_destructive_action
 from .link_management_tab import LinkManagementTab
 from .main_window import MainWindow
 from .name_management_tab import NameManagementTab
@@ -16,4 +17,5 @@ __all__ = [
     "LinkManagementTab",
     "TrashTab",
     "AuditLogTab",
+    "confirm_destructive_action",
 ]

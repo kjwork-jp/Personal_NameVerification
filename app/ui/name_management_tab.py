@@ -20,6 +20,7 @@ from PySide6.QtWidgets import (
 
 from app.application.core_services import NameInput
 from app.application.read_models import NameDetail, NameSearchRow
+from app.ui.dialogs import confirm_destructive_action
 
 
 class NameWriteService(Protocol):
@@ -223,6 +224,14 @@ class NameManagementTab(QWidget):
         if operator_id is None:
             return
 
+        if not confirm_destructive_action(
+            self,
+            "論理削除の確認",
+            f"名前ID={selected.id} を論理削除します。よろしいですか？",
+        ):
+            self._set_message("論理削除をキャンセルしました")
+            return
+
         try:
             self._core_service.delete_name(selected.id, operator_id=operator_id)
             self._set_message("論理削除しました")
@@ -242,6 +251,14 @@ class NameManagementTab(QWidget):
         if operator_id is None:
             return
 
+        if not confirm_destructive_action(
+            self,
+            "復元の確認",
+            f"名前ID={selected.id} を復元します。よろしいですか？",
+        ):
+            self._set_message("復元をキャンセルしました")
+            return
+
         try:
             self._core_service.restore_name(selected.id, operator_id=operator_id)
             self._set_message("復元しました")
@@ -259,6 +276,14 @@ class NameManagementTab(QWidget):
 
         operator_id = self._require_operator_id()
         if operator_id is None:
+            return
+
+        if not confirm_destructive_action(
+            self,
+            "完全削除の確認",
+            f"名前ID={selected.id} を完全削除します。この操作は元に戻せません。",
+        ):
+            self._set_message("完全削除をキャンセルしました")
             return
 
         try:

@@ -13,6 +13,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 qt_widgets = pytest.importorskip("PySide6.QtWidgets", exc_type=ImportError)
 QApplication = qt_widgets.QApplication
 
+from app.ui import title_subtitle_management_tab as ts_tab_module  # noqa: E402
 from app.ui.title_subtitle_management_tab import TitleSubtitleManagementTab  # noqa: E402
 
 
@@ -113,8 +114,9 @@ def _app() -> QApplication:
     return app
 
 
-def test_title_subtitle_management_operations() -> None:
+def test_title_subtitle_management_operations(monkeypatch: pytest.MonkeyPatch) -> None:
     _app()
+    monkeypatch.setattr(ts_tab_module, "confirm_destructive_action", lambda *args, **kwargs: True)
     core = StubCoreService()
     query = StubQueryService()
     tab = TitleSubtitleManagementTab(core_service=core, query_service=query)
@@ -168,3 +170,16 @@ def test_title_subtitle_management_requires_operator_id() -> None:
     tab._create_title()
 
     assert "operator_id" in tab.message_label.text()
+
+
+def test_title_subtitle_cancel_does_not_call_service(monkeypatch: pytest.MonkeyPatch) -> None:
+    _app()
+    monkeypatch.setattr(ts_tab_module, "confirm_destructive_action", lambda *args, **kwargs: False)
+    core = StubCoreService()
+    tab = TitleSubtitleManagementTab(core_service=core, query_service=StubQueryService())
+    tab.operator_input.setText("op-1")
+
+    tab.titles_table.selectRow(0)
+    tab._delete_title()
+
+    assert not any(call.startswith("delete_title:") for call in core.calls)

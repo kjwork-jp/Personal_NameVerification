@@ -20,6 +20,7 @@ from PySide6.QtWidgets import (
 
 from app.application.core_services import SubtitleInput, TitleInput
 from app.application.read_models import SubtitleDetail, TitleDetail
+from app.ui.dialogs import confirm_destructive_action
 
 
 class TitleSubtitleWriteService(Protocol):
@@ -307,6 +308,13 @@ class TitleSubtitleManagementTab(QWidget):
             return
 
         try:
+            if not confirm_destructive_action(
+                self,
+                "論理削除の確認",
+                f"タイトルID={selected.id} を論理削除します。よろしいですか？",
+            ):
+                self._set_message("タイトル論理削除をキャンセルしました")
+                return
             self._core_service.delete_title(selected.id, operator_id=operator_id)
             self._set_message("タイトル論理削除しました")
             self._refresh_titles()
@@ -326,6 +334,13 @@ class TitleSubtitleManagementTab(QWidget):
             return
 
         try:
+            if not confirm_destructive_action(
+                self,
+                "復元の確認",
+                f"タイトルID={selected.id} を復元します。よろしいですか？",
+            ):
+                self._set_message("タイトル復元をキャンセルしました")
+                return
             self._core_service.restore_title(selected.id, operator_id=operator_id)
             self._set_message("タイトル復元しました")
             self._refresh_titles()
@@ -345,6 +360,13 @@ class TitleSubtitleManagementTab(QWidget):
             return
 
         try:
+            if not confirm_destructive_action(
+                self,
+                "完全削除の確認",
+                f"タイトルID={selected.id} を完全削除します。この操作は元に戻せません。",
+            ):
+                self._set_message("タイトル完全削除をキャンセルしました")
+                return
             self._core_service.hard_delete_title(selected.id, operator_id=operator_id)
             self._set_message("タイトル完全削除しました")
             self._refresh_titles()
@@ -407,6 +429,13 @@ class TitleSubtitleManagementTab(QWidget):
             return
 
         try:
+            if not confirm_destructive_action(
+                self,
+                "論理削除の確認",
+                f"サブタイトルID={selected.id} を論理削除します。よろしいですか？",
+            ):
+                self._set_message("サブタイトル論理削除をキャンセルしました")
+                return
             self._core_service.delete_subtitle(selected.id, operator_id=operator_id)
             self._set_message("サブタイトル論理削除しました")
             self._refresh_subtitles()
@@ -426,6 +455,13 @@ class TitleSubtitleManagementTab(QWidget):
             return
 
         try:
+            if not confirm_destructive_action(
+                self,
+                "復元の確認",
+                f"サブタイトルID={selected.id} を復元します。よろしいですか？",
+            ):
+                self._set_message("サブタイトル復元をキャンセルしました")
+                return
             self._core_service.restore_subtitle(selected.id, operator_id=operator_id)
             self._set_message("サブタイトル復元しました")
             self._refresh_subtitles()
@@ -445,6 +481,13 @@ class TitleSubtitleManagementTab(QWidget):
             return
 
         try:
+            if not confirm_destructive_action(
+                self,
+                "完全削除の確認",
+                f"サブタイトルID={selected.id} を完全削除します。この操作は元に戻せません。",
+            ):
+                self._set_message("サブタイトル完全削除をキャンセルしました")
+                return
             self._core_service.hard_delete_subtitle(selected.id, operator_id=operator_id)
             self._set_message("サブタイトル完全削除しました")
             self._refresh_subtitles()

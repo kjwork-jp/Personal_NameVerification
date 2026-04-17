@@ -13,6 +13,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 qt_widgets = pytest.importorskip("PySide6.QtWidgets", exc_type=ImportError)
 QApplication = qt_widgets.QApplication
 
+from app.ui import trash_tab as trash_tab_module  # noqa: E402
 from app.ui.trash_tab import TrashTab  # noqa: E402
 
 
@@ -128,8 +129,13 @@ def _app() -> QApplication:
     return app
 
 
-def test_trash_tab_restore_and_hard_delete_for_all_entities() -> None:
+def test_trash_tab_restore_and_hard_delete_for_all_entities(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     _app()
+    monkeypatch.setattr(
+        trash_tab_module, "confirm_destructive_action", lambda *args, **kwargs: True
+    )
     core = StubCoreService()
     tab = TrashTab(core_service=core, query_service=StubQueryService())
     tab.operator_input.setText("op-1")
@@ -172,8 +178,11 @@ def test_trash_tab_requires_operator_id() -> None:
     assert "operator_id" in tab.message_label.text()
 
 
-def test_trash_tab_guards_active_rows() -> None:
+def test_trash_tab_guards_active_rows(monkeypatch: pytest.MonkeyPatch) -> None:
     _app()
+    monkeypatch.setattr(
+        trash_tab_module, "confirm_destructive_action", lambda *args, **kwargs: True
+    )
     core = StubCoreService()
     tab = TrashTab(core_service=core, query_service=ActiveOnlyQueryService())
     tab.operator_input.setText("op-1")
@@ -181,4 +190,19 @@ def test_trash_tab_guards_active_rows() -> None:
     tab._restore_selected()
 
     assert "active" in tab.message_label.text()
+    assert not core.calls
+
+
+def test_trash_tab_cancel_does_not_call_service(monkeypatch: pytest.MonkeyPatch) -> None:
+    _app()
+    monkeypatch.setattr(
+        trash_tab_module, "confirm_destructive_action", lambda *args, **kwargs: False
+    )
+    core = StubCoreService()
+    tab = TrashTab(core_service=core, query_service=StubQueryService())
+    tab.operator_input.setText("op-1")
+
+    tab.entity_selector.setCurrentText("Name")
+    tab._restore_selected()
+
     assert not core.calls

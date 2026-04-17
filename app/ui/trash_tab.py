@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
 )
 
 from app.application.read_models import NameDetail, RelatedRow, SubtitleDetail, TitleDetail
+from app.ui.dialogs import confirm_destructive_action
 
 
 class TrashReadService(Protocol):
@@ -217,6 +218,14 @@ class TrashTab(QWidget):
             return
 
         entity = self.entity_selector.currentText()
+        if not confirm_destructive_action(
+            self,
+            "復元の確認",
+            f"{entity} ID={selected.entity_id} を復元します。よろしいですか？",
+        ):
+            self._set_message("復元をキャンセルしました")
+            return
+
         try:
             if entity == "Name":
                 self._core_service.restore_name(selected.entity_id, operator_id)
@@ -242,6 +251,14 @@ class TrashTab(QWidget):
             return
 
         entity = self.entity_selector.currentText()
+        if not confirm_destructive_action(
+            self,
+            "完全削除の確認",
+            f"{entity} ID={selected.entity_id} を完全削除します。この操作は元に戻せません。",
+        ):
+            self._set_message("完全削除をキャンセルしました")
+            return
+
         try:
             if entity == "Name":
                 self._core_service.hard_delete_name(selected.entity_id, operator_id)

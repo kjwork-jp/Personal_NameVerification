@@ -13,6 +13,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 qt_widgets = pytest.importorskip("PySide6.QtWidgets", exc_type=ImportError)
 QApplication = qt_widgets.QApplication
 
+from app.ui import name_management_tab as name_tab_module  # noqa: E402
 from app.ui.name_management_tab import NameManagementTab  # noqa: E402
 
 
@@ -94,8 +95,11 @@ def _app() -> QApplication:
     return app
 
 
-def test_name_management_tab_create_update_delete_restore_hard_delete() -> None:
+def test_name_management_tab_create_update_delete_restore_hard_delete(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     _app()
+    monkeypatch.setattr(name_tab_module, "confirm_destructive_action", lambda *args, **kwargs: True)
     core = StubCoreService()
     query = StubQueryService()
     tab = NameManagementTab(core_service=core, query_service=query)
@@ -127,3 +131,18 @@ def test_name_management_tab_requires_operator_id() -> None:
     tab._create_name()
 
     assert "operator_id" in tab.message_label.text()
+
+
+def test_name_management_cancel_does_not_call_service(monkeypatch: pytest.MonkeyPatch) -> None:
+    _app()
+    monkeypatch.setattr(
+        name_tab_module, "confirm_destructive_action", lambda *args, **kwargs: False
+    )
+    core = StubCoreService()
+    tab = NameManagementTab(core_service=core, query_service=StubQueryService())
+    tab.operator_input.setText("op-1")
+
+    tab.names_table.selectRow(0)
+    tab._delete_name()
+
+    assert not any(item.startswith("delete:") for item in core.called)
