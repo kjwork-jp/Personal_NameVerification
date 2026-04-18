@@ -145,7 +145,7 @@ def test_title_subtitle_management_operations(monkeypatch: pytest.MonkeyPatch) -
     tab._update_subtitle()
     tab._delete_subtitle()
 
-    tab.titles_table.selectRow(1)
+    tab.titles_table.selectRow(0)
     tab.subtitles_table.selectRow(0)
     tab._restore_subtitle()
     tab._hard_delete_subtitle()
@@ -158,8 +158,8 @@ def test_title_subtitle_management_operations(monkeypatch: pytest.MonkeyPatch) -
     assert any(call.startswith("create_subtitle:1:SNEW:op-1") for call in core.calls)
     assert any(call.startswith("update_subtitle:11:S1-U:op-1") for call in core.calls)
     assert any(call.startswith("delete_subtitle:11:op-1") for call in core.calls)
-    assert any(call.startswith("restore_subtitle:12:op-1") for call in core.calls)
-    assert any(call.startswith("hard_delete_subtitle:12:op-1") for call in core.calls)
+    assert any(call.startswith("restore_subtitle:11:op-1") for call in core.calls)
+    assert any(call.startswith("hard_delete_subtitle:11:op-1") for call in core.calls)
 
 
 def test_title_subtitle_management_requires_operator_id() -> None:
@@ -231,6 +231,8 @@ def test_selected_title_label_and_subtitle_form_clear_on_title_change() -> None:
 
     assert "ID=2 / Title2 (削除済み)" in tab.selected_title_label.text()
     assert tab.subtitle_code_input.text() == ""
+    assert "削除済みタイトル" in tab.subtitle_hint_label.text()
+    assert not tab.subtitle_create_button.isEnabled()
 
 
 def test_cannot_create_or_update_subtitle_under_deleted_title() -> None:
@@ -251,3 +253,15 @@ def test_cannot_create_or_update_subtitle_under_deleted_title() -> None:
     tab._update_subtitle()
     assert "削除済みタイトルのサブタイトルは更新できません" in tab.message_label.text()
     assert not any(call.startswith("update_subtitle:") for call in core.calls)
+
+
+def test_subtitle_buttons_disabled_without_title_selection() -> None:
+    _app()
+    tab = TitleSubtitleManagementTab(
+        core_service=StubCoreService(), query_service=StubQueryService()
+    )
+    tab.titles_table.clearSelection()
+
+    assert "タイトルを選択してください" in tab.subtitle_hint_label.text()
+    assert not tab.subtitle_refresh_button.isEnabled()
+    assert not tab.subtitle_create_button.isEnabled()
