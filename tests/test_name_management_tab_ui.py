@@ -15,6 +15,7 @@ QApplication = qt_widgets.QApplication
 
 from app.ui import name_management_tab as name_tab_module  # noqa: E402
 from app.ui.name_management_tab import NameManagementTab  # noqa: E402
+from app.ui.role_context import RoleContext  # noqa: E402
 
 
 class StubCoreService:
@@ -146,3 +147,33 @@ def test_name_management_cancel_does_not_call_service(monkeypatch: pytest.Monkey
     tab._delete_name()
 
     assert not any(item.startswith("delete:") for item in core.called)
+
+
+def test_name_management_role_guards() -> None:
+    _app()
+    tab_viewer = NameManagementTab(
+        core_service=StubCoreService(),
+        query_service=StubQueryService(),
+        role_context=RoleContext(role="viewer"),
+    )
+    assert not tab_viewer.create_button.isEnabled()
+    assert not tab_viewer.update_button.isEnabled()
+    assert not tab_viewer.delete_button.isEnabled()
+
+    tab_editor = NameManagementTab(
+        core_service=StubCoreService(),
+        query_service=StubQueryService(),
+        role_context=RoleContext(role="editor"),
+    )
+    assert tab_editor.create_button.isEnabled()
+    assert tab_editor.update_button.isEnabled()
+    assert not tab_editor.delete_button.isEnabled()
+
+    tab_admin = NameManagementTab(
+        core_service=StubCoreService(),
+        query_service=StubQueryService(),
+        role_context=RoleContext(role="admin"),
+    )
+    assert tab_admin.delete_button.isEnabled()
+    assert tab_admin.restore_button.isEnabled()
+    assert tab_admin.hard_delete_button.isEnabled()

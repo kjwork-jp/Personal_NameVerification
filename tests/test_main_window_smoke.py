@@ -12,6 +12,7 @@ qt_widgets = pytest.importorskip("PySide6.QtWidgets", exc_type=ImportError)
 QApplication = qt_widgets.QApplication
 
 from app.ui.main_window import MainWindow  # noqa: E402
+from app.ui.role_context import RoleContext  # noqa: E402
 
 
 class EmptyQueryService:
@@ -133,3 +134,13 @@ def test_main_window_has_required_tabs() -> None:
     assert tab_widget.tabText(3) == "リンク管理"
     assert tab_widget.tabText(4) == "ゴミ箱"
     assert tab_widget.tabText(5) == "監査ログ"
+
+
+def test_main_window_accepts_role_context() -> None:
+    _get_app()
+    window = MainWindow(
+        query_service=EmptyQueryService(),
+        core_service=EmptyCoreService(),
+        role_context=RoleContext(role="viewer"),
+    )
+    assert window.centralWidget() is not None

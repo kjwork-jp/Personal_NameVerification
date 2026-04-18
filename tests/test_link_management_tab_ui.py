@@ -15,6 +15,7 @@ QApplication = qt_widgets.QApplication
 
 from app.ui import link_management_tab as link_tab_module  # noqa: E402
 from app.ui.link_management_tab import LinkManagementTab  # noqa: E402
+from app.ui.role_context import RoleContext  # noqa: E402
 
 
 class StubCoreService:
@@ -141,3 +142,30 @@ def test_link_management_cancel_unlink(monkeypatch: pytest.MonkeyPatch) -> None:
     tab._unlink_link()
 
     assert not any(call.startswith("unlink:") for call in core.calls)
+
+
+def test_link_management_role_guards() -> None:
+    _app()
+    viewer = LinkManagementTab(
+        core_service=StubCoreService(),
+        query_service=StubQueryService(),
+        role_context=RoleContext(role="viewer"),
+    )
+    assert not viewer.link_button.isEnabled()
+    assert not viewer.unlink_button.isEnabled()
+
+    editor = LinkManagementTab(
+        core_service=StubCoreService(),
+        query_service=StubQueryService(),
+        role_context=RoleContext(role="editor"),
+    )
+    assert editor.link_button.isEnabled()
+    assert not editor.unlink_button.isEnabled()
+
+    admin = LinkManagementTab(
+        core_service=StubCoreService(),
+        query_service=StubQueryService(),
+        role_context=RoleContext(role="admin"),
+    )
+    assert admin.link_button.isEnabled()
+    assert admin.unlink_button.isEnabled()

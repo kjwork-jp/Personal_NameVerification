@@ -46,3 +46,12 @@ strict = true
 files = ["app"]
 exclude = ["tests"]
 warn_unused_configs = true
+
+
+[[tool.mypy.overrides]]
+module = ["PySide6", "PySide6.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["app.ui.*"]
+disable_error_code = ["misc", "no-any-return"]

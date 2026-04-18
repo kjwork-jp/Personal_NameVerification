@@ -20,6 +20,8 @@ from PySide6.QtWidgets import (
 
 from app.application.read_models import NameSearchRow, RelatedRow, SubtitleDetail, TitleDetail
 from app.ui.dialogs import confirm_destructive_action
+from app.ui.permissions import can_link, can_unlink
+from app.ui.role_context import RoleContext
 
 
 class LinkWriteService(Protocol):
@@ -60,10 +62,16 @@ class _Selection:
 class LinkManagementTab(QWidget):
     """UI for managing links between names and subtitles."""
 
-    def __init__(self, core_service: LinkWriteService, query_service: LinkReadService) -> None:
+    def __init__(
+        self,
+        core_service: LinkWriteService,
+        query_service: LinkReadService,
+        role_context: RoleContext | None = None,
+    ) -> None:
         super().__init__()
         self._core_service = core_service
         self._query_service = query_service
+        self._role_context = role_context or RoleContext.admin()
 
         self._names: list[NameSearchRow] = []
         self._titles: list[TitleDetail] = []
@@ -145,7 +153,13 @@ class LinkManagementTab(QWidget):
         root.addWidget(self.message_label)
         root.addWidget(splitter)
 
+        self._apply_role_guards()
         self._refresh_all()
+
+    def _apply_role_guards(self) -> None:
+        role = self._role_context.role
+        self.link_button.setEnabled(can_link(role))
+        self.unlink_button.setEnabled(can_unlink(role))
 
     def _refresh_all(self) -> None:
         try:
@@ -255,6 +269,10 @@ class LinkManagementTab(QWidget):
             self.links_table.selectRow(0)
 
     def _create_link(self) -> None:
+        if not can_link(self._role_context.role):
+            self._set_message("このロールではリンク作成できません", is_error=True)
+            return
+
         operator_id = self._require_operator_id()
         if operator_id is None:
             return
@@ -280,6 +298,10 @@ class LinkManagementTab(QWidget):
             self._set_message(f"リンク作成に失敗しました: {exc}", is_error=True)
 
     def _unlink_link(self) -> None:
+        if not can_unlink(self._role_context.role):
+            self._set_message("このロールではリンク解除できません", is_error=True)
+            return
+
         operator_id = self._require_operator_id()
         if operator_id is None:
             return

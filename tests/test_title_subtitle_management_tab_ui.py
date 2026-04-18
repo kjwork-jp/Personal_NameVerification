@@ -14,6 +14,7 @@ qt_widgets = pytest.importorskip("PySide6.QtWidgets", exc_type=ImportError)
 QApplication = qt_widgets.QApplication
 
 from app.ui import title_subtitle_management_tab as ts_tab_module  # noqa: E402
+from app.ui.role_context import RoleContext  # noqa: E402
 from app.ui.title_subtitle_management_tab import TitleSubtitleManagementTab  # noqa: E402
 
 
@@ -183,3 +184,32 @@ def test_title_subtitle_cancel_does_not_call_service(monkeypatch: pytest.MonkeyP
     tab._delete_title()
 
     assert not any(call.startswith("delete_title:") for call in core.calls)
+
+
+def test_title_subtitle_role_guards() -> None:
+    _app()
+    viewer = TitleSubtitleManagementTab(
+        core_service=StubCoreService(),
+        query_service=StubQueryService(),
+        role_context=RoleContext(role="viewer"),
+    )
+    assert not viewer.title_create_button.isEnabled()
+    assert not viewer.subtitle_create_button.isEnabled()
+
+    editor = TitleSubtitleManagementTab(
+        core_service=StubCoreService(),
+        query_service=StubQueryService(),
+        role_context=RoleContext(role="editor"),
+    )
+    assert editor.title_create_button.isEnabled()
+    assert editor.subtitle_update_button.isEnabled()
+    assert not editor.title_delete_button.isEnabled()
+    assert not editor.subtitle_delete_button.isEnabled()
+
+    admin = TitleSubtitleManagementTab(
+        core_service=StubCoreService(),
+        query_service=StubQueryService(),
+        role_context=RoleContext(role="admin"),
+    )
+    assert admin.title_delete_button.isEnabled()
+    assert admin.subtitle_hard_delete_button.isEnabled()

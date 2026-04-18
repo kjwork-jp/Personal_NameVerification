@@ -14,6 +14,7 @@ qt_widgets = pytest.importorskip("PySide6.QtWidgets", exc_type=ImportError)
 QApplication = qt_widgets.QApplication
 
 from app.ui import trash_tab as trash_tab_module  # noqa: E402
+from app.ui.role_context import RoleContext  # noqa: E402
 from app.ui.trash_tab import TrashTab  # noqa: E402
 
 
@@ -206,3 +207,30 @@ def test_trash_tab_cancel_does_not_call_service(monkeypatch: pytest.MonkeyPatch)
     tab._restore_selected()
 
     assert not core.calls
+
+
+def test_trash_tab_role_guards() -> None:
+    _app()
+    viewer = TrashTab(
+        core_service=StubCoreService(),
+        query_service=StubQueryService(),
+        role_context=RoleContext(role="viewer"),
+    )
+    assert not viewer.restore_button.isEnabled()
+    assert not viewer.hard_delete_button.isEnabled()
+
+    editor = TrashTab(
+        core_service=StubCoreService(),
+        query_service=StubQueryService(),
+        role_context=RoleContext(role="editor"),
+    )
+    assert not editor.restore_button.isEnabled()
+    assert not editor.hard_delete_button.isEnabled()
+
+    admin = TrashTab(
+        core_service=StubCoreService(),
+        query_service=StubQueryService(),
+        role_context=RoleContext(role="admin"),
+    )
+    assert admin.restore_button.isEnabled()
+    assert admin.hard_delete_button.isEnabled()

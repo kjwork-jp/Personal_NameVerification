@@ -21,6 +21,8 @@ from PySide6.QtWidgets import (
 from app.application.core_services import SubtitleInput, TitleInput
 from app.application.read_models import SubtitleDetail, TitleDetail
 from app.ui.dialogs import confirm_destructive_action
+from app.ui.permissions import can_create_or_update, can_run_destructive_actions
+from app.ui.role_context import RoleContext
 
 
 class TitleSubtitleWriteService(Protocol):
@@ -71,11 +73,15 @@ class TitleSubtitleManagementTab(QWidget):
     """UI for title/subtitle management flows."""
 
     def __init__(
-        self, core_service: TitleSubtitleWriteService, query_service: TitleSubtitleReadService
+        self,
+        core_service: TitleSubtitleWriteService,
+        query_service: TitleSubtitleReadService,
+        role_context: RoleContext | None = None,
     ) -> None:
         super().__init__()
         self._core_service = core_service
         self._query_service = query_service
+        self._role_context = role_context or RoleContext.admin()
 
         self._titles: list[TitleDetail] = []
         self._subtitles: list[SubtitleDetail] = []
@@ -188,7 +194,25 @@ class TitleSubtitleManagementTab(QWidget):
         root.addWidget(self.message_label)
         root.addWidget(splitter)
 
+        self._apply_role_guards()
         self._refresh_titles()
+
+    def _apply_role_guards(self) -> None:
+        role = self._role_context.role
+        can_write = can_create_or_update(role)
+        can_destructive = can_run_destructive_actions(role)
+
+        self.title_create_button.setEnabled(can_write)
+        self.title_update_button.setEnabled(can_write)
+        self.subtitle_create_button.setEnabled(can_write)
+        self.subtitle_update_button.setEnabled(can_write)
+
+        self.title_delete_button.setEnabled(can_destructive)
+        self.title_restore_button.setEnabled(can_destructive)
+        self.title_hard_delete_button.setEnabled(can_destructive)
+        self.subtitle_delete_button.setEnabled(can_destructive)
+        self.subtitle_restore_button.setEnabled(can_destructive)
+        self.subtitle_hard_delete_button.setEnabled(can_destructive)
 
     def _refresh_titles(self) -> None:
         try:
@@ -264,6 +288,10 @@ class TitleSubtitleManagementTab(QWidget):
         self.subtitle_note_input.setText(selected.note or "")
 
     def _create_title(self) -> None:
+        if not can_create_or_update(self._role_context.role):
+            self._set_message("このロールではタイトル作成できません", is_error=True)
+            return
+
         operator_id = self._require_operator_id()
         if operator_id is None:
             return
@@ -275,6 +303,10 @@ class TitleSubtitleManagementTab(QWidget):
             self._set_message(f"タイトル作成に失敗しました: {exc}", is_error=True)
 
     def _update_title(self) -> None:
+        if not can_create_or_update(self._role_context.role):
+            self._set_message("このロールではタイトル更新できません", is_error=True)
+            return
+
         selected = self._require_selected_title()
         if selected is None:
             return
@@ -296,6 +328,10 @@ class TitleSubtitleManagementTab(QWidget):
             self._set_message(f"タイトル更新に失敗しました: {exc}", is_error=True)
 
     def _delete_title(self) -> None:
+        if not can_run_destructive_actions(self._role_context.role):
+            self._set_message("このロールではタイトル論理削除できません", is_error=True)
+            return
+
         selected = self._require_selected_title()
         if selected is None:
             return
@@ -322,6 +358,10 @@ class TitleSubtitleManagementTab(QWidget):
             self._set_message(f"タイトル論理削除に失敗しました: {exc}", is_error=True)
 
     def _restore_title(self) -> None:
+        if not can_run_destructive_actions(self._role_context.role):
+            self._set_message("このロールではタイトル復元できません", is_error=True)
+            return
+
         selected = self._require_selected_title()
         if selected is None:
             return
@@ -348,6 +388,10 @@ class TitleSubtitleManagementTab(QWidget):
             self._set_message(f"タイトル復元に失敗しました: {exc}", is_error=True)
 
     def _hard_delete_title(self) -> None:
+        if not can_run_destructive_actions(self._role_context.role):
+            self._set_message("このロールではタイトル完全削除できません", is_error=True)
+            return
+
         selected = self._require_selected_title()
         if selected is None:
             return
@@ -374,6 +418,10 @@ class TitleSubtitleManagementTab(QWidget):
             self._set_message(f"タイトル完全削除に失敗しました: {exc}", is_error=True)
 
     def _create_subtitle(self) -> None:
+        if not can_create_or_update(self._role_context.role):
+            self._set_message("このロールではサブタイトル作成できません", is_error=True)
+            return
+
         selected = self._require_selected_title()
         if selected is None:
             return
@@ -393,6 +441,10 @@ class TitleSubtitleManagementTab(QWidget):
             self._set_message(f"サブタイトル作成に失敗しました: {exc}", is_error=True)
 
     def _update_subtitle(self) -> None:
+        if not can_create_or_update(self._role_context.role):
+            self._set_message("このロールではサブタイトル更新できません", is_error=True)
+            return
+
         selected_subtitle = self._require_selected_subtitle()
         selected_title = self._require_selected_title()
         if selected_subtitle is None or selected_title is None:
@@ -417,6 +469,10 @@ class TitleSubtitleManagementTab(QWidget):
             self._set_message(f"サブタイトル更新に失敗しました: {exc}", is_error=True)
 
     def _delete_subtitle(self) -> None:
+        if not can_run_destructive_actions(self._role_context.role):
+            self._set_message("このロールではサブタイトル論理削除できません", is_error=True)
+            return
+
         selected = self._require_selected_subtitle()
         if selected is None:
             return
@@ -443,6 +499,10 @@ class TitleSubtitleManagementTab(QWidget):
             self._set_message(f"サブタイトル論理削除に失敗しました: {exc}", is_error=True)
 
     def _restore_subtitle(self) -> None:
+        if not can_run_destructive_actions(self._role_context.role):
+            self._set_message("このロールではサブタイトル復元できません", is_error=True)
+            return
+
         selected = self._require_selected_subtitle()
         if selected is None:
             return
@@ -469,6 +529,10 @@ class TitleSubtitleManagementTab(QWidget):
             self._set_message(f"サブタイトル復元に失敗しました: {exc}", is_error=True)
 
     def _hard_delete_subtitle(self) -> None:
+        if not can_run_destructive_actions(self._role_context.role):
+            self._set_message("このロールではサブタイトル完全削除できません", is_error=True)
+            return
+
         selected = self._require_selected_subtitle()
         if selected is None:
             return

@@ -21,6 +21,8 @@ from PySide6.QtWidgets import (
 from app.application.core_services import NameInput
 from app.application.read_models import NameDetail, NameSearchRow
 from app.ui.dialogs import confirm_destructive_action
+from app.ui.permissions import can_create_or_update, can_run_destructive_actions
+from app.ui.role_context import RoleContext
 
 
 class NameWriteService(Protocol):
@@ -58,10 +60,16 @@ class _SelectedName:
 class NameManagementTab(QWidget):
     """UI for name create/update/delete/restore/hard-delete flows."""
 
-    def __init__(self, core_service: NameWriteService, query_service: NameReadService) -> None:
+    def __init__(
+        self,
+        core_service: NameWriteService,
+        query_service: NameReadService,
+        role_context: RoleContext | None = None,
+    ) -> None:
         super().__init__()
         self._core_service = core_service
         self._query_service = query_service
+        self._role_context = role_context or RoleContext.admin()
         self._rows: list[NameSearchRow] = []
         self._selected: _SelectedName | None = None
 
@@ -124,7 +132,19 @@ class NameManagementTab(QWidget):
         layout.addWidget(QLabel("詳細"))
         layout.addWidget(self.detail_text)
 
+        self._apply_role_guards()
         self._refresh_list()
+
+    def _apply_role_guards(self) -> None:
+        role = self._role_context.role
+        can_write = can_create_or_update(role)
+        can_destructive = can_run_destructive_actions(role)
+
+        self.create_button.setEnabled(can_write)
+        self.update_button.setEnabled(can_write)
+        self.delete_button.setEnabled(can_destructive)
+        self.restore_button.setEnabled(can_destructive)
+        self.hard_delete_button.setEnabled(can_destructive)
 
     def _refresh_list(self) -> None:
         try:
@@ -181,6 +201,10 @@ class NameManagementTab(QWidget):
         self.note_input.setText(detail.note or "")
 
     def _create_name(self) -> None:
+        if not can_create_or_update(self._role_context.role):
+            self._set_message("このロールでは新規作成できません", is_error=True)
+            return
+
         operator_id = self._require_operator_id()
         if operator_id is None:
             return
@@ -192,6 +216,10 @@ class NameManagementTab(QWidget):
             self._set_message(f"新規作成に失敗しました: {exc}", is_error=True)
 
     def _update_name(self) -> None:
+        if not can_create_or_update(self._role_context.role):
+            self._set_message("このロールでは更新できません", is_error=True)
+            return
+
         selected = self._require_selected()
         if selected is None:
             return
@@ -213,6 +241,10 @@ class NameManagementTab(QWidget):
             self._set_message(f"更新に失敗しました: {exc}", is_error=True)
 
     def _delete_name(self) -> None:
+        if not can_run_destructive_actions(self._role_context.role):
+            self._set_message("このロールでは論理削除できません", is_error=True)
+            return
+
         selected = self._require_selected()
         if selected is None:
             return
@@ -240,6 +272,10 @@ class NameManagementTab(QWidget):
             self._set_message(f"論理削除に失敗しました: {exc}", is_error=True)
 
     def _restore_name(self) -> None:
+        if not can_run_destructive_actions(self._role_context.role):
+            self._set_message("このロールでは復元できません", is_error=True)
+            return
+
         selected = self._require_selected()
         if selected is None:
             return
@@ -267,6 +303,10 @@ class NameManagementTab(QWidget):
             self._set_message(f"復元に失敗しました: {exc}", is_error=True)
 
     def _hard_delete_name(self) -> None:
+        if not can_run_destructive_actions(self._role_context.role):
+            self._set_message("このロールでは完全削除できません", is_error=True)
+            return
+
         selected = self._require_selected()
         if selected is None:
             return

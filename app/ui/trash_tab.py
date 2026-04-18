@@ -20,6 +20,8 @@ from PySide6.QtWidgets import (
 
 from app.application.read_models import NameDetail, RelatedRow, SubtitleDetail, TitleDetail
 from app.ui.dialogs import confirm_destructive_action
+from app.ui.permissions import can_run_destructive_actions
+from app.ui.role_context import RoleContext
 
 
 class TrashReadService(Protocol):
@@ -59,10 +61,16 @@ class _Selection:
 class TrashTab(QWidget):
     """Cross-entity trash UI."""
 
-    def __init__(self, core_service: TrashWriteService, query_service: TrashReadService) -> None:
+    def __init__(
+        self,
+        core_service: TrashWriteService,
+        query_service: TrashReadService,
+        role_context: RoleContext | None = None,
+    ) -> None:
         super().__init__()
         self._core_service = core_service
         self._query_service = query_service
+        self._role_context = role_context or RoleContext.admin()
 
         self._names: list[NameDetail] = []
         self._titles: list[TitleDetail] = []
@@ -109,7 +117,13 @@ class TrashTab(QWidget):
         root.addWidget(self.list_table)
         root.addWidget(self.detail_label)
 
+        self._apply_role_guards()
         self._reload()
+
+    def _apply_role_guards(self) -> None:
+        enabled = can_run_destructive_actions(self._role_context.role)
+        self.restore_button.setEnabled(enabled)
+        self.hard_delete_button.setEnabled(enabled)
 
     def _reload(self) -> None:
         entity = self.entity_selector.currentText()
@@ -210,6 +224,10 @@ class TrashTab(QWidget):
             self.detail_label.setText(detail_text)
 
     def _restore_selected(self) -> None:
+        if not can_run_destructive_actions(self._role_context.role):
+            self._set_message("このロールでは復元できません", is_error=True)
+            return
+
         operator_id = self._require_operator_id()
         if operator_id is None:
             return
@@ -243,6 +261,10 @@ class TrashTab(QWidget):
         self._reload()
 
     def _hard_delete_selected(self) -> None:
+        if not can_run_destructive_actions(self._role_context.role):
+            self._set_message("このロールでは完全削除できません", is_error=True)
+            return
+
         operator_id = self._require_operator_id()
         if operator_id is None:
             return
