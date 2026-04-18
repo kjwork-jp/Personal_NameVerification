@@ -7,7 +7,7 @@ import sqlite3
 import pytest
 
 from app.application.core_services import CoreService, NameInput, SubtitleInput, TitleInput
-from app.domain.errors import ConflictError, NotFoundError, StateTransitionError
+from app.domain.errors import AuthorizationError, ConflictError, NotFoundError, StateTransitionError
 from app.infrastructure.db import apply_schema
 
 
@@ -115,3 +115,50 @@ def test_subtitle_unique_conflict() -> None:
             SubtitleInput(title_id=title_id, subtitle_code="S1", subtitle_name="Another"),
             operator_id="op-1",
         )
+
+
+def test_viewer_cannot_run_write_operations() -> None:
+    _, service = _service()
+
+    with pytest.raises(AuthorizationError):
+        service.create_name(NameInput(raw_name="Alice"), operator_id="op-1", role="viewer")
+
+
+def test_editor_can_write_but_cannot_run_destructive_operations() -> None:
+    _, service = _service()
+    name_id = service.create_name(NameInput(raw_name="Alice"), operator_id="op-1", role="editor")
+    assert isinstance(name_id, int)
+
+    with pytest.raises(AuthorizationError):
+        service.delete_name(name_id, operator_id="op-1", role="editor")
+
+
+def test_admin_can_run_destructive_operations() -> None:
+    _, service = _service()
+    name_id = service.create_name(NameInput(raw_name="Alice"), operator_id="op-1", role="admin")
+
+    service.delete_name(name_id, operator_id="op-1", role="admin")
+    service.restore_name(name_id, operator_id="op-1", role="admin")
+
+
+def test_editor_can_link_but_cannot_unlink() -> None:
+    _, service = _service()
+    name_id = service.create_name(NameInput(raw_name="Alice"), operator_id="op-1", role="admin")
+    title_id = service.create_title(TitleInput(title_name="Main"), operator_id="op-1", role="admin")
+    subtitle_id = service.create_subtitle(
+        SubtitleInput(title_id=title_id, subtitle_code="S1", subtitle_name="Sub 1"),
+        operator_id="op-1",
+        role="admin",
+    )
+
+    link_id = service.link_name_to_subtitle(
+        name_id=name_id,
+        subtitle_id=subtitle_id,
+        relation_type="primary",
+        operator_id="op-2",
+        role="editor",
+    )
+    assert isinstance(link_id, int)
+
+    with pytest.raises(AuthorizationError):
+        service.unlink_name_from_subtitle(link_id=link_id, operator_id="op-2", role="editor")

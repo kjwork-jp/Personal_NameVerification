@@ -15,3 +15,7 @@ class NotFoundError(Exception):
 
 class StateTransitionError(Exception):
     """Raised when an invalid state transition is requested."""
+
+
+class AuthorizationError(Exception):
+    """Raised when caller role is not authorized for requested action."""

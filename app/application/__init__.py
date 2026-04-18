@@ -1,5 +1,6 @@
 """Application layer package (use cases and orchestration)."""
 
+from .authorization import ServiceRole
 from .core_services import CoreService, NameInput, SubtitleInput, TitleInput
 from .query_services import QueryService
 from .read_models import (
@@ -13,6 +14,7 @@ from .read_models import (
 
 __all__ = [
     "CoreService",
+    "ServiceRole",
     "NameInput",
     "TitleInput",
     "SubtitleInput",

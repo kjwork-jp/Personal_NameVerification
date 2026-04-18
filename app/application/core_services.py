@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
 
+from app.application.authorization import ServiceRole, require_admin, require_editor_or_admin
 from app.domain.errors import ConflictError, NotFoundError, StateTransitionError, ValidationError
 from app.domain.normalization import normalize_for_comparison
 
@@ -43,7 +44,8 @@ class CoreService:
         self._connection = connection
         self._connection.execute("PRAGMA foreign_keys = ON;")
 
-    def create_name(self, payload: NameInput, operator_id: str) -> int:
+    def create_name(self, payload: NameInput, operator_id: str, role: ServiceRole = "admin") -> int:
+        require_editor_or_admin(role, action="create_name")
         self._validate_operator_id(operator_id)
         normalized_name = normalize_for_comparison(payload.raw_name)
         now = _utc_now()
@@ -73,7 +75,14 @@ class CoreService:
         )
         return name_id
 
-    def update_name(self, name_id: int, payload: NameInput, operator_id: str) -> None:
+    def update_name(
+        self,
+        name_id: int,
+        payload: NameInput,
+        operator_id: str,
+        role: ServiceRole = "admin",
+    ) -> None:
+        require_editor_or_admin(role, action="update_name")
         self._validate_operator_id(operator_id)
         before = self._get_name(name_id)
         if before["deleted_at"] is not None:
@@ -97,16 +106,19 @@ class CoreService:
             "names", name_id, "update", operator_id, before, self._get_name(name_id)
         )
 
-    def delete_name(self, name_id: int, operator_id: str) -> None:
-        self._logical_delete("names", name_id, operator_id)
+    def delete_name(self, name_id: int, operator_id: str, role: ServiceRole = "admin") -> None:
+        self._logical_delete("names", name_id, operator_id, role)
 
-    def restore_name(self, name_id: int, operator_id: str) -> None:
-        self._restore("names", name_id, operator_id)
+    def restore_name(self, name_id: int, operator_id: str, role: ServiceRole = "admin") -> None:
+        self._restore("names", name_id, operator_id, role)
 
-    def hard_delete_name(self, name_id: int, operator_id: str) -> None:
-        self._hard_delete("names", name_id, operator_id)
+    def hard_delete_name(self, name_id: int, operator_id: str, role: ServiceRole = "admin") -> None:
+        self._hard_delete("names", name_id, operator_id, role)
 
-    def create_title(self, payload: TitleInput, operator_id: str) -> int:
+    def create_title(
+        self, payload: TitleInput, operator_id: str, role: ServiceRole = "admin"
+    ) -> int:
+        require_editor_or_admin(role, action="create_title")
         self._validate_operator_id(operator_id)
         now = _utc_now()
         cursor = self._connection.execute(
@@ -122,7 +134,14 @@ class CoreService:
         )
         return title_id
 
-    def update_title(self, title_id: int, payload: TitleInput, operator_id: str) -> None:
+    def update_title(
+        self,
+        title_id: int,
+        payload: TitleInput,
+        operator_id: str,
+        role: ServiceRole = "admin",
+    ) -> None:
+        require_editor_or_admin(role, action="update_title")
         self._validate_operator_id(operator_id)
         before = self._get_title(title_id)
         if before["deleted_at"] is not None:
@@ -141,16 +160,21 @@ class CoreService:
             "titles", title_id, "update", operator_id, before, self._get_title(title_id)
         )
 
-    def delete_title(self, title_id: int, operator_id: str) -> None:
-        self._logical_delete("titles", title_id, operator_id)
+    def delete_title(self, title_id: int, operator_id: str, role: ServiceRole = "admin") -> None:
+        self._logical_delete("titles", title_id, operator_id, role)
 
-    def restore_title(self, title_id: int, operator_id: str) -> None:
-        self._restore("titles", title_id, operator_id)
+    def restore_title(self, title_id: int, operator_id: str, role: ServiceRole = "admin") -> None:
+        self._restore("titles", title_id, operator_id, role)
 
-    def hard_delete_title(self, title_id: int, operator_id: str) -> None:
-        self._hard_delete("titles", title_id, operator_id)
+    def hard_delete_title(
+        self, title_id: int, operator_id: str, role: ServiceRole = "admin"
+    ) -> None:
+        self._hard_delete("titles", title_id, operator_id, role)
 
-    def create_subtitle(self, payload: SubtitleInput, operator_id: str) -> int:
+    def create_subtitle(
+        self, payload: SubtitleInput, operator_id: str, role: ServiceRole = "admin"
+    ) -> int:
+        require_editor_or_admin(role, action="create_subtitle")
         self._validate_operator_id(operator_id)
         self._assert_active("titles", payload.title_id)
 
@@ -183,7 +207,14 @@ class CoreService:
         )
         return subtitle_id
 
-    def update_subtitle(self, subtitle_id: int, payload: SubtitleInput, operator_id: str) -> None:
+    def update_subtitle(
+        self,
+        subtitle_id: int,
+        payload: SubtitleInput,
+        operator_id: str,
+        role: ServiceRole = "admin",
+    ) -> None:
+        require_editor_or_admin(role, action="update_subtitle")
         self._validate_operator_id(operator_id)
         before = self._get_subtitle(subtitle_id)
         if before["deleted_at"] is not None:
@@ -217,18 +248,30 @@ class CoreService:
             "subtitles", subtitle_id, "update", operator_id, before, self._get_subtitle(subtitle_id)
         )
 
-    def delete_subtitle(self, subtitle_id: int, operator_id: str) -> None:
-        self._logical_delete("subtitles", subtitle_id, operator_id)
+    def delete_subtitle(
+        self, subtitle_id: int, operator_id: str, role: ServiceRole = "admin"
+    ) -> None:
+        self._logical_delete("subtitles", subtitle_id, operator_id, role)
 
-    def restore_subtitle(self, subtitle_id: int, operator_id: str) -> None:
-        self._restore("subtitles", subtitle_id, operator_id)
+    def restore_subtitle(
+        self, subtitle_id: int, operator_id: str, role: ServiceRole = "admin"
+    ) -> None:
+        self._restore("subtitles", subtitle_id, operator_id, role)
 
-    def hard_delete_subtitle(self, subtitle_id: int, operator_id: str) -> None:
-        self._hard_delete("subtitles", subtitle_id, operator_id)
+    def hard_delete_subtitle(
+        self, subtitle_id: int, operator_id: str, role: ServiceRole = "admin"
+    ) -> None:
+        self._hard_delete("subtitles", subtitle_id, operator_id, role)
 
     def link_name_to_subtitle(
-        self, name_id: int, subtitle_id: int, relation_type: str, operator_id: str
+        self,
+        name_id: int,
+        subtitle_id: int,
+        relation_type: str,
+        operator_id: str,
+        role: ServiceRole = "admin",
     ) -> int:
+        require_editor_or_admin(role, action="link_name_to_subtitle")
         self._validate_operator_id(operator_id)
         if not relation_type.strip():
             raise ValidationError("relation_type must not be blank")
@@ -280,7 +323,10 @@ class CoreService:
         )
         return link_id
 
-    def unlink_name_from_subtitle(self, link_id: int, operator_id: str) -> None:
+    def unlink_name_from_subtitle(
+        self, link_id: int, operator_id: str, role: ServiceRole = "admin"
+    ) -> None:
+        require_admin(role, action="unlink_name_from_subtitle")
         self._validate_operator_id(operator_id)
         before = self._get_link(link_id)
         if before["deleted_at"] is not None:
@@ -295,13 +341,16 @@ class CoreService:
             "name_subtitle_links", link_id, "unlink", operator_id, before, self._get_link(link_id)
         )
 
-    def restore_link(self, link_id: int, operator_id: str) -> None:
-        self._restore("name_subtitle_links", link_id, operator_id)
+    def restore_link(self, link_id: int, operator_id: str, role: ServiceRole = "admin") -> None:
+        self._restore("name_subtitle_links", link_id, operator_id, role)
 
-    def hard_delete_link(self, link_id: int, operator_id: str) -> None:
-        self._hard_delete("name_subtitle_links", link_id, operator_id)
+    def hard_delete_link(self, link_id: int, operator_id: str, role: ServiceRole = "admin") -> None:
+        self._hard_delete("name_subtitle_links", link_id, operator_id, role)
 
-    def _logical_delete(self, table: str, entity_id: int, operator_id: str) -> None:
+    def _logical_delete(
+        self, table: str, entity_id: int, operator_id: str, role: ServiceRole
+    ) -> None:
+        require_admin(role, action=f"delete_{table}")
         self._validate_operator_id(operator_id)
         before = self._get_entity(table, entity_id)
         if before["deleted_at"] is not None:
@@ -321,7 +370,8 @@ class CoreService:
             self._get_entity(table, entity_id),
         )
 
-    def _restore(self, table: str, entity_id: int, operator_id: str) -> None:
+    def _restore(self, table: str, entity_id: int, operator_id: str, role: ServiceRole) -> None:
+        require_admin(role, action=f"restore_{table}")
         self._validate_operator_id(operator_id)
         before = self._get_entity(table, entity_id)
         if before["deleted_at"] is None:
@@ -345,7 +395,8 @@ class CoreService:
             self._get_entity(table, entity_id),
         )
 
-    def _hard_delete(self, table: str, entity_id: int, operator_id: str) -> None:
+    def _hard_delete(self, table: str, entity_id: int, operator_id: str, role: ServiceRole) -> None:
+        require_admin(role, action=f"hard_delete_{table}")
         self._validate_operator_id(operator_id)
         before = self._get_entity(table, entity_id)
         if before["deleted_at"] is None:
