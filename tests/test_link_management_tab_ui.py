@@ -112,7 +112,7 @@ def test_link_management_tab_link_and_unlink(monkeypatch: pytest.MonkeyPatch) ->
     tab = LinkManagementTab(core_service=core, query_service=query)
 
     tab.operator_input.setText("op-1")
-    tab.relation_type_input.setText("primary")
+    tab.relation_type_combo.setCurrentIndex(1)
     tab._create_link()
     tab._unlink_link()
 
@@ -125,7 +125,7 @@ def test_link_management_tab_requires_operator_and_relation_type() -> None:
     tab = LinkManagementTab(core_service=StubCoreService(), query_service=StubQueryService())
 
     tab.operator_input.setText("")
-    tab.relation_type_input.setText("")
+    tab.relation_type_combo.setCurrentIndex(0)
     tab._create_link()
     assert "operator_id" in tab.message_label.text()
 
@@ -169,3 +169,28 @@ def test_link_management_role_guards() -> None:
     )
     assert admin.link_button.isEnabled()
     assert admin.unlink_button.isEnabled()
+
+
+def test_link_management_tab_requires_relation_type_selection() -> None:
+    _app()
+    tab = LinkManagementTab(core_service=StubCoreService(), query_service=StubQueryService())
+
+    tab.operator_input.setText("op-1")
+    tab.relation_type_combo.setCurrentIndex(0)
+    tab._create_link()
+
+    assert "relation_type" in tab.message_label.text()
+
+
+def test_link_management_tab_accepts_custom_relation_type(monkeypatch: pytest.MonkeyPatch) -> None:
+    _app()
+    monkeypatch.setattr(link_tab_module, "confirm_destructive_action", lambda *args, **kwargs: True)
+    core = StubCoreService()
+    tab = LinkManagementTab(core_service=core, query_service=StubQueryService())
+
+    tab.operator_input.setText("op-1")
+    tab.relation_type_combo.setCurrentIndex(tab.relation_type_combo.count() - 1)
+    tab.custom_relation_type_input.setText("custom-tag")
+    tab._create_link()
+
+    assert "link:1:100:custom-tag:op-1" in core.calls

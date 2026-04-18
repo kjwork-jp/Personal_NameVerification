@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import Protocol
 
 from PySide6.QtWidgets import (
+    QComboBox,
     QFormLayout,
     QHBoxLayout,
     QLabel,
@@ -21,6 +22,7 @@ from PySide6.QtWidgets import (
 from app.application.read_models import NameSearchRow, RelatedRow, SubtitleDetail, TitleDetail
 from app.ui.dialogs import confirm_destructive_action
 from app.ui.permissions import can_link, can_unlink
+from app.ui.relation_types import RELATION_TYPE_OPTIONS
 from app.ui.role_context import RoleContext
 
 
@@ -86,8 +88,15 @@ class LinkManagementTab(QWidget):
         self.operator_input = QLineEdit()
         self.operator_input.setPlaceholderText("operator_id")
 
-        self.relation_type_input = QLineEdit()
-        self.relation_type_input.setPlaceholderText("relation_type")
+        self.relation_type_combo = QComboBox()
+        self.relation_type_combo.addItem("-- relation_type を選択 --", "")
+        for option in RELATION_TYPE_OPTIONS:
+            self.relation_type_combo.addItem(option.label, option.value)
+        self.relation_type_combo.currentIndexChanged.connect(self._on_relation_type_changed)
+
+        self.custom_relation_type_input = QLineEdit()
+        self.custom_relation_type_input.setPlaceholderText("カスタム relation_type")
+        self.custom_relation_type_input.setEnabled(False)
 
         self.message_label = QLabel("")
 
@@ -118,7 +127,8 @@ class LinkManagementTab(QWidget):
 
         top_form = QFormLayout()
         top_form.addRow("operator_id", self.operator_input)
-        top_form.addRow("relation_type", self.relation_type_input)
+        top_form.addRow("relation_type", self.relation_type_combo)
+        top_form.addRow("custom_relation_type", self.custom_relation_type_input)
 
         actions = QHBoxLayout()
         actions.addWidget(self.refresh_button)
@@ -227,6 +237,12 @@ class LinkManagementTab(QWidget):
             return
         self._selected_link = _Selection(id=self._links[idx].link_id)
 
+    def _on_relation_type_changed(self) -> None:
+        selected_value = str(self.relation_type_combo.currentData())
+        self.custom_relation_type_input.setEnabled(selected_value == "other")
+        if selected_value != "other":
+            self.custom_relation_type_input.clear()
+
     def _refresh_subtitles(self, title_id: int) -> None:
         try:
             self._subtitles = self._query_service.list_subtitles(title_id, include_deleted=False)
@@ -276,9 +292,8 @@ class LinkManagementTab(QWidget):
         operator_id = self._require_operator_id()
         if operator_id is None:
             return
-        relation_type = self.relation_type_input.text().strip()
-        if not relation_type:
-            self._set_message("relation_type を入力してください", is_error=True)
+        relation_type = self._selected_relation_type()
+        if relation_type is None:
             return
 
         if self._selected_name is None or self._selected_subtitle is None:
@@ -325,6 +340,21 @@ class LinkManagementTab(QWidget):
             self._refresh_links()
         except Exception as exc:  # noqa: BLE001
             self._set_message(f"リンク解除に失敗しました: {exc}", is_error=True)
+
+    def _selected_relation_type(self) -> str | None:
+        selected_value = str(self.relation_type_combo.currentData())
+        if not selected_value:
+            self._set_message("relation_type を選択してください", is_error=True)
+            return None
+
+        if selected_value == "other":
+            custom_value = self.custom_relation_type_input.text().strip()
+            if not custom_value:
+                self._set_message("custom relation_type を入力してください", is_error=True)
+                return None
+            return custom_value
+
+        return selected_value
 
     def _require_operator_id(self) -> str | None:
         operator_id = self.operator_input.text().strip()
