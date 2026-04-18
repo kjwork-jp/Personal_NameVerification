@@ -213,7 +213,9 @@ def test_title_subtitle_role_guards() -> None:
         role_context=RoleContext(role="admin"),
     )
     assert admin.title_delete_button.isEnabled()
-    assert admin.subtitle_hard_delete_button.isEnabled()
+    assert not admin.title_restore_button.isEnabled()
+    assert admin.subtitle_delete_button.isEnabled()
+    assert not admin.subtitle_hard_delete_button.isEnabled()
     assert "operator_id" in admin.operator_input.toolTip()
 
 
@@ -265,3 +267,61 @@ def test_subtitle_buttons_disabled_without_title_selection() -> None:
     assert "タイトルを選択してください" in tab.subtitle_hint_label.text()
     assert not tab.subtitle_refresh_button.isEnabled()
     assert not tab.subtitle_create_button.isEnabled()
+    assert not tab.subtitle_update_button.isEnabled()
+    assert not tab.subtitle_delete_button.isEnabled()
+    assert not tab.subtitle_restore_button.isEnabled()
+    assert not tab.subtitle_hard_delete_button.isEnabled()
+
+
+def test_title_buttons_follow_deleted_state() -> None:
+    _app()
+    tab = TitleSubtitleManagementTab(
+        core_service=StubCoreService(), query_service=StubQueryService()
+    )
+
+    tab.titles_table.selectRow(0)
+    assert tab.title_update_button.isEnabled()
+    assert tab.title_delete_button.isEnabled()
+    assert not tab.title_restore_button.isEnabled()
+    assert not tab.title_hard_delete_button.isEnabled()
+
+    tab.titles_table.selectRow(1)
+    assert not tab.title_update_button.isEnabled()
+    assert not tab.title_delete_button.isEnabled()
+    assert tab.title_restore_button.isEnabled()
+    assert tab.title_hard_delete_button.isEnabled()
+
+
+class SubtitleDeletedOnActiveTitleQueryService(StubQueryService):
+    def list_subtitles(
+        self, title_id: int, *, include_deleted: bool = False
+    ) -> list[SubtitleDetail]:
+        _ = include_deleted
+        return [
+            SubtitleDetail(
+                id=11,
+                title_id=title_id,
+                subtitle_code="S1",
+                subtitle_name="Sub1",
+                sort_order=1,
+                note=None,
+                icon_path=None,
+                deleted_at="2026-01-03T00:00:00Z",
+                created_at="2026-01-01T00:00:00Z",
+                updated_at="2026-01-01T00:00:00Z",
+            )
+        ]
+
+
+def test_subtitle_destructive_buttons_follow_subtitle_deleted_state() -> None:
+    _app()
+    tab = TitleSubtitleManagementTab(
+        core_service=StubCoreService(), query_service=SubtitleDeletedOnActiveTitleQueryService()
+    )
+    tab.titles_table.selectRow(0)
+    tab.subtitles_table.selectRow(0)
+
+    assert not tab.subtitle_update_button.isEnabled()
+    assert not tab.subtitle_delete_button.isEnabled()
+    assert tab.subtitle_restore_button.isEnabled()
+    assert tab.subtitle_hard_delete_button.isEnabled()

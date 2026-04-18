@@ -239,7 +239,7 @@ class TitleSubtitleManagementTab(QWidget):
         ]:
             button.setToolTip(disabled_reason if not can_destructive else selection_reason)
 
-        self._update_subtitle_action_state()
+        self._update_action_states()
 
     def _refresh_titles(self) -> None:
         try:
@@ -262,7 +262,7 @@ class TitleSubtitleManagementTab(QWidget):
         self._update_selected_title_label()
         self.subtitles_table.setRowCount(0)
         self._clear_subtitle_form()
-        self._update_subtitle_action_state()
+        self._update_action_states()
         if self._titles:
             self.titles_table.selectRow(0)
 
@@ -273,7 +273,7 @@ class TitleSubtitleManagementTab(QWidget):
             self._selected_subtitle = None
             self.subtitles_table.setRowCount(0)
             self._clear_subtitle_form()
-            self._update_subtitle_action_state()
+            self._update_action_states()
             return
 
         try:
@@ -293,7 +293,7 @@ class TitleSubtitleManagementTab(QWidget):
 
         self._selected_subtitle = None
         self._clear_subtitle_form()
-        self._update_subtitle_action_state()
+        self._update_action_states()
 
     def _on_title_selected(self) -> None:
         idx = self.titles_table.currentRow()
@@ -304,7 +304,7 @@ class TitleSubtitleManagementTab(QWidget):
             self._update_selected_title_label()
             self.subtitles_table.setRowCount(0)
             self._clear_subtitle_form()
-            self._update_subtitle_action_state()
+            self._update_action_states()
             return
 
         selected = self._titles[idx]
@@ -320,7 +320,7 @@ class TitleSubtitleManagementTab(QWidget):
         idx = self.subtitles_table.currentRow()
         if idx < 0 or idx >= len(self._subtitles):
             self._selected_subtitle = None
-            self._update_subtitle_action_state()
+            self._update_action_states()
             return
 
         selected = self._subtitles[idx]
@@ -331,7 +331,7 @@ class TitleSubtitleManagementTab(QWidget):
         self.subtitle_name_input.setText(selected.subtitle_name)
         self.subtitle_sort_order_input.setText(str(selected.sort_order))
         self.subtitle_note_input.setText(selected.note or "")
-        self._update_subtitle_action_state()
+        self._update_action_states()
 
     def _create_title(self) -> None:
         if not can_create_or_update(self._role_context.role):
@@ -677,27 +677,43 @@ class TitleSubtitleManagementTab(QWidget):
             f"選択中タイトル: ID={title.id} / {title.title_name} ({status})"
         )
 
+    def _update_action_states(self) -> None:
+        self._update_title_action_state()
+        self._update_subtitle_action_state()
+
+    def _update_title_action_state(self) -> None:
+        can_write = can_create_or_update(self._role_context.role)
+        can_destructive = can_run_destructive_actions(self._role_context.role)
+
+        has_title = self._selected_title is not None
+        title_deleted = bool(self._selected_title and self._selected_title.deleted)
+
+        self.title_create_button.setEnabled(can_write)
+        self.title_update_button.setEnabled(can_write and has_title and not title_deleted)
+        self.title_delete_button.setEnabled(can_destructive and has_title and not title_deleted)
+        self.title_restore_button.setEnabled(can_destructive and has_title and title_deleted)
+        self.title_hard_delete_button.setEnabled(can_destructive and has_title and title_deleted)
+
     def _update_subtitle_action_state(self) -> None:
         can_write = can_create_or_update(self._role_context.role)
         can_destructive = can_run_destructive_actions(self._role_context.role)
 
         has_title = self._selected_title is not None
         title_deleted = bool(self._selected_title and self._selected_title.deleted)
+        title_active = has_title and not title_deleted
         has_subtitle = self._selected_subtitle is not None
+        subtitle_deleted = bool(self._selected_subtitle and self._selected_subtitle.deleted)
+        subtitle_active = has_subtitle and not subtitle_deleted
 
         self.subtitle_refresh_button.setEnabled(has_title)
-        self.subtitle_create_button.setEnabled(can_write and has_title and not title_deleted)
-        self.subtitle_update_button.setEnabled(
-            can_write and has_title and has_subtitle and not title_deleted
-        )
-        self.subtitle_delete_button.setEnabled(
-            can_destructive and has_title and has_subtitle and not title_deleted
-        )
+        self.subtitle_create_button.setEnabled(can_write and title_active)
+        self.subtitle_update_button.setEnabled(can_write and title_active and subtitle_active)
+        self.subtitle_delete_button.setEnabled(can_destructive and title_active and subtitle_active)
         self.subtitle_restore_button.setEnabled(
-            can_destructive and has_title and has_subtitle and not title_deleted
+            can_destructive and title_active and has_subtitle and subtitle_deleted
         )
         self.subtitle_hard_delete_button.setEnabled(
-            can_destructive and has_title and has_subtitle and not title_deleted
+            can_destructive and title_active and has_subtitle and subtitle_deleted
         )
 
         if not has_title:
