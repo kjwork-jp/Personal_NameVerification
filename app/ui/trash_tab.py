@@ -85,6 +85,7 @@ class TrashTab(QWidget):
 
         self.operator_input = QLineEdit()
         self.operator_input.setPlaceholderText("operator_id")
+        self.operator_input.setToolTip("operator_id が必要です")
 
         self.message_label = QLabel("")
 
@@ -124,6 +125,13 @@ class TrashTab(QWidget):
         enabled = can_run_destructive_actions(self._role_context.role)
         self.restore_button.setEnabled(enabled)
         self.hard_delete_button.setEnabled(enabled)
+
+        self.restore_button.setToolTip(
+            "このロールでは実行できません" if not enabled else "削除済みデータを選択してください"
+        )
+        self.hard_delete_button.setToolTip(
+            "このロールでは実行できません" if not enabled else "削除済みデータを選択してください"
+        )
 
     def _reload(self) -> None:
         entity = self.entity_selector.currentText()

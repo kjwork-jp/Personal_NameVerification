@@ -75,6 +75,7 @@ class NameManagementTab(QWidget):
 
         self.operator_input = QLineEdit()
         self.operator_input.setPlaceholderText("operator_id")
+        self.operator_input.setToolTip("operator_id が必要です")
 
         self.raw_name_input = QLineEdit()
         self.raw_name_input.setPlaceholderText("表示名")
@@ -145,6 +146,30 @@ class NameManagementTab(QWidget):
         self.delete_button.setEnabled(can_destructive)
         self.restore_button.setEnabled(can_destructive)
         self.hard_delete_button.setEnabled(can_destructive)
+
+        self.create_button.setToolTip(
+            "このロールでは実行できません" if not can_write else "operator_id を入力して実行します"
+        )
+        self.update_button.setToolTip(
+            "このロールでは実行できません"
+            if not can_write
+            else "行が選択されていない場合は実行できません"
+        )
+        self.delete_button.setToolTip(
+            "このロールでは実行できません"
+            if not can_destructive
+            else "行が選択されていない場合は実行できません"
+        )
+        self.restore_button.setToolTip(
+            "このロールでは実行できません"
+            if not can_destructive
+            else "削除済み行を選択してください"
+        )
+        self.hard_delete_button.setToolTip(
+            "このロールでは実行できません"
+            if not can_destructive
+            else "削除済み行を選択してください"
+        )
 
     def _refresh_list(self) -> None:
         try:

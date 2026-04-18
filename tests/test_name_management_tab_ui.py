@@ -159,6 +159,7 @@ def test_name_management_role_guards() -> None:
     assert not tab_viewer.create_button.isEnabled()
     assert not tab_viewer.update_button.isEnabled()
     assert not tab_viewer.delete_button.isEnabled()
+    assert "このロールでは実行できません" in tab_viewer.delete_button.toolTip()
 
     tab_editor = NameManagementTab(
         core_service=StubCoreService(),
@@ -177,3 +178,4 @@ def test_name_management_role_guards() -> None:
     assert tab_admin.delete_button.isEnabled()
     assert tab_admin.restore_button.isEnabled()
     assert tab_admin.hard_delete_button.isEnabled()
+    assert "operator_id" in tab_admin.operator_input.toolTip()

@@ -195,6 +195,7 @@ def test_title_subtitle_role_guards() -> None:
     )
     assert not viewer.title_create_button.isEnabled()
     assert not viewer.subtitle_create_button.isEnabled()
+    assert "このロールでは実行できません" in viewer.title_delete_button.toolTip()
 
     editor = TitleSubtitleManagementTab(
         core_service=StubCoreService(),
@@ -213,3 +214,4 @@ def test_title_subtitle_role_guards() -> None:
     )
     assert admin.title_delete_button.isEnabled()
     assert admin.subtitle_hard_delete_button.isEnabled()
+    assert "operator_id" in admin.operator_input.toolTip()

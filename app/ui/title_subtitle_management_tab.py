@@ -90,6 +90,7 @@ class TitleSubtitleManagementTab(QWidget):
 
         self.operator_input = QLineEdit()
         self.operator_input.setPlaceholderText("operator_id")
+        self.operator_input.setToolTip("operator_id が必要です")
 
         self.title_name_input = QLineEdit()
         self.title_note_input = QLineEdit()
@@ -213,6 +214,26 @@ class TitleSubtitleManagementTab(QWidget):
         self.subtitle_delete_button.setEnabled(can_destructive)
         self.subtitle_restore_button.setEnabled(can_destructive)
         self.subtitle_hard_delete_button.setEnabled(can_destructive)
+
+        disabled_reason = "このロールでは実行できません"
+        selection_reason = "対象行が選択されていない場合は実行できません"
+        for button in [
+            self.title_create_button,
+            self.title_update_button,
+            self.subtitle_create_button,
+            self.subtitle_update_button,
+        ]:
+            button.setToolTip(disabled_reason if not can_write else selection_reason)
+
+        for button in [
+            self.title_delete_button,
+            self.title_restore_button,
+            self.title_hard_delete_button,
+            self.subtitle_delete_button,
+            self.subtitle_restore_button,
+            self.subtitle_hard_delete_button,
+        ]:
+            button.setToolTip(disabled_reason if not can_destructive else selection_reason)
 
     def _refresh_titles(self) -> None:
         try:

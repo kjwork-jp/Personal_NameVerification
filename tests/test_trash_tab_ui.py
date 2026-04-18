@@ -218,6 +218,7 @@ def test_trash_tab_role_guards() -> None:
     )
     assert not viewer.restore_button.isEnabled()
     assert not viewer.hard_delete_button.isEnabled()
+    assert "このロールでは実行できません" in viewer.restore_button.toolTip()
 
     editor = TrashTab(
         core_service=StubCoreService(),
@@ -234,3 +235,4 @@ def test_trash_tab_role_guards() -> None:
     )
     assert admin.restore_button.isEnabled()
     assert admin.hard_delete_button.isEnabled()
+    assert "operator_id" in admin.operator_input.toolTip()

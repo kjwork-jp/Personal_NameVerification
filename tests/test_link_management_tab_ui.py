@@ -153,6 +153,7 @@ def test_link_management_role_guards() -> None:
     )
     assert not viewer.link_button.isEnabled()
     assert not viewer.unlink_button.isEnabled()
+    assert "このロールでは実行できません" in viewer.link_button.toolTip()
 
     editor = LinkManagementTab(
         core_service=StubCoreService(),
@@ -169,6 +170,7 @@ def test_link_management_role_guards() -> None:
     )
     assert admin.link_button.isEnabled()
     assert admin.unlink_button.isEnabled()
+    assert "relation_type" in admin.relation_type_combo.toolTip()
 
 
 def test_link_management_tab_requires_relation_type_selection() -> None:
@@ -194,3 +196,16 @@ def test_link_management_tab_accepts_custom_relation_type(monkeypatch: pytest.Mo
     tab._create_link()
 
     assert "link:1:100:custom-tag:op-1" in core.calls
+
+
+def test_link_management_custom_relation_type_requires_text() -> None:
+    _app()
+    tab = LinkManagementTab(core_service=StubCoreService(), query_service=StubQueryService())
+
+    tab.operator_input.setText("op-1")
+    tab.relation_type_combo.setCurrentIndex(tab.relation_type_combo.count() - 1)
+    tab.custom_relation_type_input.setText("")
+    tab._create_link()
+
+    assert "custom relation_type" in tab.message_label.text()
+    assert "custom relation_type" in tab.custom_relation_type_input.toolTip()

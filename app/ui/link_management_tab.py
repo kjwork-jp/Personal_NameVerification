@@ -87,16 +87,21 @@ class LinkManagementTab(QWidget):
 
         self.operator_input = QLineEdit()
         self.operator_input.setPlaceholderText("operator_id")
+        self.operator_input.setToolTip("operator_id が必要です")
 
         self.relation_type_combo = QComboBox()
         self.relation_type_combo.addItem("-- relation_type を選択 --", "")
         for option in RELATION_TYPE_OPTIONS:
             self.relation_type_combo.addItem(option.label, option.value)
         self.relation_type_combo.currentIndexChanged.connect(self._on_relation_type_changed)
+        self.relation_type_combo.setToolTip("relation_type を選択してください")
 
         self.custom_relation_type_input = QLineEdit()
         self.custom_relation_type_input.setPlaceholderText("カスタム relation_type")
         self.custom_relation_type_input.setEnabled(False)
+        self.custom_relation_type_input.setToolTip(
+            "other 選択時に custom relation_type を入力してください"
+        )
 
         self.message_label = QLabel("")
 
@@ -168,8 +173,21 @@ class LinkManagementTab(QWidget):
 
     def _apply_role_guards(self) -> None:
         role = self._role_context.role
-        self.link_button.setEnabled(can_link(role))
-        self.unlink_button.setEnabled(can_unlink(role))
+        link_enabled = can_link(role)
+        unlink_enabled = can_unlink(role)
+        self.link_button.setEnabled(link_enabled)
+        self.unlink_button.setEnabled(unlink_enabled)
+
+        self.link_button.setToolTip(
+            "このロールでは実行できません"
+            if not link_enabled
+            else "operator_id・relation_type・Name/Subtitle選択が必要です"
+        )
+        self.unlink_button.setToolTip(
+            "このロールでは実行できません"
+            if not unlink_enabled
+            else "解除対象リンクを選択してください"
+        )
 
     def _refresh_all(self) -> None:
         try:
@@ -239,8 +257,14 @@ class LinkManagementTab(QWidget):
 
     def _on_relation_type_changed(self) -> None:
         selected_value = str(self.relation_type_combo.currentData())
-        self.custom_relation_type_input.setEnabled(selected_value == "other")
-        if selected_value != "other":
+        is_custom = selected_value == "other"
+        self.custom_relation_type_input.setEnabled(is_custom)
+        self.custom_relation_type_input.setToolTip(
+            "custom relation_type を入力してください"
+            if is_custom
+            else "other 選択時のみ入力できます"
+        )
+        if not is_custom:
             self.custom_relation_type_input.clear()
 
     def _refresh_subtitles(self, title_id: int) -> None:
