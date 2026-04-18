@@ -215,3 +215,39 @@ def test_title_subtitle_role_guards() -> None:
     assert admin.title_delete_button.isEnabled()
     assert admin.subtitle_hard_delete_button.isEnabled()
     assert "operator_id" in admin.operator_input.toolTip()
+
+
+def test_selected_title_label_and_subtitle_form_clear_on_title_change() -> None:
+    _app()
+    tab = TitleSubtitleManagementTab(
+        core_service=StubCoreService(), query_service=StubQueryService()
+    )
+
+    tab.titles_table.selectRow(0)
+    assert "ID=1 / Title1 (有効)" in tab.selected_title_label.text()
+
+    tab.subtitle_code_input.setText("TEMP")
+    tab.titles_table.selectRow(1)
+
+    assert "ID=2 / Title2 (削除済み)" in tab.selected_title_label.text()
+    assert tab.subtitle_code_input.text() == ""
+
+
+def test_cannot_create_or_update_subtitle_under_deleted_title() -> None:
+    _app()
+    core = StubCoreService()
+    tab = TitleSubtitleManagementTab(core_service=core, query_service=StubQueryService())
+    tab.operator_input.setText("op-1")
+    tab.titles_table.selectRow(1)
+
+    tab.subtitle_code_input.setText("S2-N")
+    tab.subtitle_name_input.setText("Sub2-New")
+    tab._create_subtitle()
+    assert "削除済みタイトルにはサブタイトル作成できません" in tab.message_label.text()
+    assert not any(call.startswith("create_subtitle:") for call in core.calls)
+
+    tab.subtitles_table.selectRow(0)
+    tab.subtitle_code_input.setText("S2-U")
+    tab._update_subtitle()
+    assert "削除済みタイトルのサブタイトルは更新できません" in tab.message_label.text()
+    assert not any(call.startswith("update_subtitle:") for call in core.calls)

@@ -102,6 +102,7 @@ class TitleSubtitleManagementTab(QWidget):
         self.subtitle_note_input = QLineEdit()
 
         self.message_label = QLabel("")
+        self.selected_title_label = QLabel("選択中タイトル: 未選択")
 
         self.titles_table = QTableWidget(0, 3)
         self.titles_table.setHorizontalHeaderLabels(["ID", "タイトル", "状態"])
@@ -182,6 +183,7 @@ class TitleSubtitleManagementTab(QWidget):
         subtitle_panel = QWidget()
         subtitle_layout = QVBoxLayout(subtitle_panel)
         subtitle_layout.addWidget(QLabel("サブタイトル"))
+        subtitle_layout.addWidget(self.selected_title_label)
         subtitle_layout.addLayout(subtitle_form)
         subtitle_layout.addLayout(subtitle_actions)
         subtitle_layout.addWidget(self.subtitles_table)
@@ -251,14 +253,21 @@ class TitleSubtitleManagementTab(QWidget):
             )
 
         self._selected_title = None
+        self._update_selected_title_label()
         self._subtitles = []
+        self._selected_subtitle = None
         self.subtitles_table.setRowCount(0)
+        self._clear_subtitle_form()
         if self._titles:
             self.titles_table.selectRow(0)
 
     def _refresh_subtitles(self) -> None:
         selected = self._require_selected_title()
         if selected is None:
+            self._subtitles = []
+            self._selected_subtitle = None
+            self.subtitles_table.setRowCount(0)
+            self._clear_subtitle_form()
             return
 
         try:
@@ -277,17 +286,24 @@ class TitleSubtitleManagementTab(QWidget):
             )
 
         self._selected_subtitle = None
+        self._clear_subtitle_form()
 
     def _on_title_selected(self) -> None:
         idx = self.titles_table.currentRow()
         if idx < 0 or idx >= len(self._titles):
             self._selected_title = None
+            self._update_selected_title_label()
+            self._subtitles = []
+            self._selected_subtitle = None
+            self.subtitles_table.setRowCount(0)
+            self._clear_subtitle_form()
             return
 
         selected = self._titles[idx]
         self._selected_title = _TitleSelection(
             id=selected.id, deleted=selected.deleted_at is not None
         )
+        self._update_selected_title_label(title=selected)
         self.title_name_input.setText(selected.title_name)
         self.title_note_input.setText(selected.note or "")
         self._refresh_subtitles()
@@ -446,6 +462,9 @@ class TitleSubtitleManagementTab(QWidget):
         selected = self._require_selected_title()
         if selected is None:
             return
+        if selected.deleted:
+            self._set_message("削除済みタイトルにはサブタイトル作成できません", is_error=True)
+            return
 
         operator_id = self._require_operator_id()
         if operator_id is None:
@@ -469,6 +488,9 @@ class TitleSubtitleManagementTab(QWidget):
         selected_subtitle = self._require_selected_subtitle()
         selected_title = self._require_selected_title()
         if selected_subtitle is None or selected_title is None:
+            return
+        if selected_title.deleted:
+            self._set_message("削除済みタイトルのサブタイトルは更新できません", is_error=True)
             return
         if selected_subtitle.deleted:
             self._set_message("削除済みサブタイトルは更新できません", is_error=True)
@@ -617,3 +639,18 @@ class TitleSubtitleManagementTab(QWidget):
         color = "#b00020" if is_error else "#0b6b0b"
         self.message_label.setStyleSheet(f"color: {color};")
         self.message_label.setText(message)
+
+    def _clear_subtitle_form(self) -> None:
+        self.subtitle_code_input.clear()
+        self.subtitle_name_input.clear()
+        self.subtitle_sort_order_input.clear()
+        self.subtitle_note_input.clear()
+
+    def _update_selected_title_label(self, title: TitleDetail | None = None) -> None:
+        if title is None:
+            self.selected_title_label.setText("選択中タイトル: 未選択")
+            return
+        status = "削除済み" if title.deleted_at else "有効"
+        self.selected_title_label.setText(
+            f"選択中タイトル: ID={title.id} / {title.title_name} ({status})"
+        )
