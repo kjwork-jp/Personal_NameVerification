@@ -16,7 +16,7 @@ Implemented layers:
 
 ## Runtime / stack
 
-- Python 3.11+
+- Python 3.12+
 - PySide6 (desktop UI)
 - SQLite (local DB)
 
