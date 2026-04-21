@@ -13,11 +13,24 @@
 - [ ] CSV / JSON Export / Import が成立する
 - [ ] バックアップ / 復旧が成立する
 - [ ] 監査ログが記録される
+- [ ] CSV / JSON / SQL dump export が editor/admin で成立する
+- [ ] backup create が editor/admin で成立する
 
-### 2.2 権限
-- [ ] viewer が編集系操作を実行できない
-- [ ] editor が削除 / 復旧 / 復旧系管理を越権できない
-- [ ] admin が管理系操作を実行できる
+### 2.2 権限（read / write / destructive 分離）
+#### viewer
+- [ ] 検索、詳細参照、タイトル/サブタイトル一覧参照、既存リンク参照ができる
+- [ ] ゴミ箱/削除済み一覧と監査ログを閲覧できる
+- [ ] 作成/更新/リンク操作（write）ができない
+- [ ] 論理削除/復元/完全削除（destructive）ができない
+
+#### editor
+- [ ] viewer の read-only 操作をすべて実行できる
+- [ ] 作成/更新/リンク操作（write）を実行できる
+- [ ] 論理削除/復元/完全削除（destructive）ができない
+
+#### admin
+- [ ] read-only / write / destructive を実行できる
+- [ ] ゴミ箱表示対象に対して復元/完全削除を実行できる
 
 ### 2.3 UI
 - [ ] 検索主導線が明確
@@ -43,3 +56,4 @@
 - 文書と実装が一致しない
 - Tkinter 前提が残る
 - 復旧手順が未検証
+- RBAC において read / write / destructive の区分が曖昧

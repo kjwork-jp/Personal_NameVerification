@@ -19,3 +19,9 @@
 
 ## 4. 禁止
 - 未確認バックアップを本番復旧に使う
+
+
+## 5. 実装ステータス（現時点）
+- backup create（DB ファイルコピー）は実装済み。
+- restore は未実装（後続PRで対応）。
+- backup 実行権限は editor/admin、viewer は不可。
