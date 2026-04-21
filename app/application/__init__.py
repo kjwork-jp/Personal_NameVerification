@@ -2,6 +2,7 @@
 
 from .authorization import ServiceRole
 from .core_services import CoreService, NameInput, SubtitleInput, TitleInput
+from .export_backup_services import ExportBackupService
 from .query_services import QueryService
 from .read_models import (
     ChangeLogRow,
@@ -19,6 +20,7 @@ __all__ = [
     "TitleInput",
     "SubtitleInput",
     "QueryService",
+    "ExportBackupService",
     "NameSearchRow",
     "NameDetail",
     "TitleDetail",

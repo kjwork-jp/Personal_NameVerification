@@ -56,6 +56,16 @@ black --check .
 mypy app
 ```
 
+## Export / backup create foundation (service layer)
+
+The application/infrastructure layers now provide file output helpers for:
+- CSV export (`names`, `titles`, `subtitles`, `name_subtitle_links`, `change_logs`)
+- JSON export (same table set)
+- SQL dump export (SQLite `iterdump`)
+- backup file create (SQLite file copy)
+
+Current RBAC: export/backup create operations are allowed for `editor` / `admin`, and rejected for `viewer`.
+
 ## Notes
 
 - The app uses a local SQLite database and is intended for single-site local operation.

@@ -13,6 +13,8 @@
 - [ ] CSV / JSON Export / Import が成立する
 - [ ] バックアップ / 復旧が成立する
 - [ ] 監査ログが記録される
+- [ ] CSV / JSON / SQL dump export が editor/admin で成立する
+- [ ] backup create が editor/admin で成立する
 
 ### 2.2 権限（read / write / destructive 分離）
 #### viewer
