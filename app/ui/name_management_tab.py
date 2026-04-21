@@ -22,19 +22,25 @@ from app.application.core_services import NameInput
 from app.application.read_models import NameDetail, NameSearchRow
 from app.ui.dialogs import confirm_destructive_action
 from app.ui.permissions import can_create_or_update, can_run_destructive_actions
-from app.ui.role_context import RoleContext
+from app.ui.role_context import RoleContext, UserRole
 
 
 class NameWriteService(Protocol):
-    def create_name(self, payload: NameInput, operator_id: str) -> int: ...
+    def create_name(
+        self, payload: NameInput, operator_id: str, role: UserRole = "admin"
+    ) -> int: ...
 
-    def update_name(self, name_id: int, payload: NameInput, operator_id: str) -> None: ...
+    def update_name(
+        self, name_id: int, payload: NameInput, operator_id: str, role: UserRole = "admin"
+    ) -> None: ...
 
-    def delete_name(self, name_id: int, operator_id: str) -> None: ...
+    def delete_name(self, name_id: int, operator_id: str, role: UserRole = "admin") -> None: ...
 
-    def restore_name(self, name_id: int, operator_id: str) -> None: ...
+    def restore_name(self, name_id: int, operator_id: str, role: UserRole = "admin") -> None: ...
 
-    def hard_delete_name(self, name_id: int, operator_id: str) -> None: ...
+    def hard_delete_name(
+        self, name_id: int, operator_id: str, role: UserRole = "admin"
+    ) -> None: ...
 
 
 class NameReadService(Protocol):
@@ -234,7 +240,11 @@ class NameManagementTab(QWidget):
         if operator_id is None:
             return
         try:
-            self._core_service.create_name(self._current_payload(), operator_id=operator_id)
+            self._core_service.create_name(
+                self._current_payload(),
+                operator_id=operator_id,
+                role=self._role_context.role,
+            )
             self._set_message("新規作成しました")
             self._refresh_list()
         except Exception as exc:  # noqa: BLE001
@@ -258,7 +268,10 @@ class NameManagementTab(QWidget):
 
         try:
             self._core_service.update_name(
-                selected.id, self._current_payload(), operator_id=operator_id
+                selected.id,
+                self._current_payload(),
+                operator_id=operator_id,
+                role=self._role_context.role,
             )
             self._set_message("更新しました")
             self._refresh_list()
@@ -290,7 +303,9 @@ class NameManagementTab(QWidget):
             return
 
         try:
-            self._core_service.delete_name(selected.id, operator_id=operator_id)
+            self._core_service.delete_name(
+                selected.id, operator_id=operator_id, role=self._role_context.role
+            )
             self._set_message("論理削除しました")
             self._refresh_list()
         except Exception as exc:  # noqa: BLE001
@@ -321,7 +336,9 @@ class NameManagementTab(QWidget):
             return
 
         try:
-            self._core_service.restore_name(selected.id, operator_id=operator_id)
+            self._core_service.restore_name(
+                selected.id, operator_id=operator_id, role=self._role_context.role
+            )
             self._set_message("復元しました")
             self._refresh_list()
         except Exception as exc:  # noqa: BLE001
@@ -352,7 +369,9 @@ class NameManagementTab(QWidget):
             return
 
         try:
-            self._core_service.hard_delete_name(selected.id, operator_id=operator_id)
+            self._core_service.hard_delete_name(
+                selected.id, operator_id=operator_id, role=self._role_context.role
+            )
             self._set_message("完全削除しました")
             self._refresh_list()
         except Exception as exc:  # noqa: BLE001

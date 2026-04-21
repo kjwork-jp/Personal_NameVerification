@@ -22,31 +22,49 @@ from app.application.core_services import SubtitleInput, TitleInput
 from app.application.read_models import SubtitleDetail, TitleDetail
 from app.ui.dialogs import confirm_destructive_action
 from app.ui.permissions import can_create_or_update, can_run_destructive_actions
-from app.ui.role_context import RoleContext
+from app.ui.role_context import RoleContext, UserRole
 
 
 class TitleSubtitleWriteService(Protocol):
-    def create_title(self, payload: TitleInput, operator_id: str) -> int: ...
+    def create_title(
+        self, payload: TitleInput, operator_id: str, role: UserRole = "admin"
+    ) -> int: ...
 
-    def update_title(self, title_id: int, payload: TitleInput, operator_id: str) -> None: ...
-
-    def delete_title(self, title_id: int, operator_id: str) -> None: ...
-
-    def restore_title(self, title_id: int, operator_id: str) -> None: ...
-
-    def hard_delete_title(self, title_id: int, operator_id: str) -> None: ...
-
-    def create_subtitle(self, payload: SubtitleInput, operator_id: str) -> int: ...
-
-    def update_subtitle(
-        self, subtitle_id: int, payload: SubtitleInput, operator_id: str
+    def update_title(
+        self, title_id: int, payload: TitleInput, operator_id: str, role: UserRole = "admin"
     ) -> None: ...
 
-    def delete_subtitle(self, subtitle_id: int, operator_id: str) -> None: ...
+    def delete_title(self, title_id: int, operator_id: str, role: UserRole = "admin") -> None: ...
 
-    def restore_subtitle(self, subtitle_id: int, operator_id: str) -> None: ...
+    def restore_title(self, title_id: int, operator_id: str, role: UserRole = "admin") -> None: ...
 
-    def hard_delete_subtitle(self, subtitle_id: int, operator_id: str) -> None: ...
+    def hard_delete_title(
+        self, title_id: int, operator_id: str, role: UserRole = "admin"
+    ) -> None: ...
+
+    def create_subtitle(
+        self, payload: SubtitleInput, operator_id: str, role: UserRole = "admin"
+    ) -> int: ...
+
+    def update_subtitle(
+        self,
+        subtitle_id: int,
+        payload: SubtitleInput,
+        operator_id: str,
+        role: UserRole = "admin",
+    ) -> None: ...
+
+    def delete_subtitle(
+        self, subtitle_id: int, operator_id: str, role: UserRole = "admin"
+    ) -> None: ...
+
+    def restore_subtitle(
+        self, subtitle_id: int, operator_id: str, role: UserRole = "admin"
+    ) -> None: ...
+
+    def hard_delete_subtitle(
+        self, subtitle_id: int, operator_id: str, role: UserRole = "admin"
+    ) -> None: ...
 
 
 class TitleSubtitleReadService(Protocol):
@@ -342,7 +360,9 @@ class TitleSubtitleManagementTab(QWidget):
         if operator_id is None:
             return
         try:
-            self._core_service.create_title(self._title_payload(), operator_id=operator_id)
+            self._core_service.create_title(
+                self._title_payload(), operator_id=operator_id, role=self._role_context.role
+            )
             self._set_message("タイトル作成しました")
             self._refresh_titles()
         except Exception as exc:  # noqa: BLE001
@@ -366,7 +386,10 @@ class TitleSubtitleManagementTab(QWidget):
 
         try:
             self._core_service.update_title(
-                selected.id, self._title_payload(), operator_id=operator_id
+                selected.id,
+                self._title_payload(),
+                operator_id=operator_id,
+                role=self._role_context.role,
             )
             self._set_message("タイトル更新しました")
             self._refresh_titles()
@@ -397,7 +420,9 @@ class TitleSubtitleManagementTab(QWidget):
             ):
                 self._set_message("タイトル論理削除をキャンセルしました")
                 return
-            self._core_service.delete_title(selected.id, operator_id=operator_id)
+            self._core_service.delete_title(
+                selected.id, operator_id=operator_id, role=self._role_context.role
+            )
             self._set_message("タイトル論理削除しました")
             self._refresh_titles()
         except Exception as exc:  # noqa: BLE001
@@ -427,7 +452,9 @@ class TitleSubtitleManagementTab(QWidget):
             ):
                 self._set_message("タイトル復元をキャンセルしました")
                 return
-            self._core_service.restore_title(selected.id, operator_id=operator_id)
+            self._core_service.restore_title(
+                selected.id, operator_id=operator_id, role=self._role_context.role
+            )
             self._set_message("タイトル復元しました")
             self._refresh_titles()
         except Exception as exc:  # noqa: BLE001
@@ -457,7 +484,9 @@ class TitleSubtitleManagementTab(QWidget):
             ):
                 self._set_message("タイトル完全削除をキャンセルしました")
                 return
-            self._core_service.hard_delete_title(selected.id, operator_id=operator_id)
+            self._core_service.hard_delete_title(
+                selected.id, operator_id=operator_id, role=self._role_context.role
+            )
             self._set_message("タイトル完全削除しました")
             self._refresh_titles()
         except Exception as exc:  # noqa: BLE001
@@ -483,6 +512,7 @@ class TitleSubtitleManagementTab(QWidget):
             self._core_service.create_subtitle(
                 self._subtitle_payload(title_id=selected.id),
                 operator_id=operator_id,
+                role=self._role_context.role,
             )
             self._set_message("サブタイトル作成しました")
             self._refresh_subtitles()
@@ -514,6 +544,7 @@ class TitleSubtitleManagementTab(QWidget):
                 selected_subtitle.id,
                 self._subtitle_payload(title_id=selected_title.id),
                 operator_id=operator_id,
+                role=self._role_context.role,
             )
             self._set_message("サブタイトル更新しました")
             self._refresh_subtitles()
@@ -548,7 +579,9 @@ class TitleSubtitleManagementTab(QWidget):
             ):
                 self._set_message("サブタイトル論理削除をキャンセルしました")
                 return
-            self._core_service.delete_subtitle(selected.id, operator_id=operator_id)
+            self._core_service.delete_subtitle(
+                selected.id, operator_id=operator_id, role=self._role_context.role
+            )
             self._set_message("サブタイトル論理削除しました")
             self._refresh_subtitles()
         except Exception as exc:  # noqa: BLE001
@@ -582,7 +615,9 @@ class TitleSubtitleManagementTab(QWidget):
             ):
                 self._set_message("サブタイトル復元をキャンセルしました")
                 return
-            self._core_service.restore_subtitle(selected.id, operator_id=operator_id)
+            self._core_service.restore_subtitle(
+                selected.id, operator_id=operator_id, role=self._role_context.role
+            )
             self._set_message("サブタイトル復元しました")
             self._refresh_subtitles()
         except Exception as exc:  # noqa: BLE001
@@ -616,7 +651,9 @@ class TitleSubtitleManagementTab(QWidget):
             ):
                 self._set_message("サブタイトル完全削除をキャンセルしました")
                 return
-            self._core_service.hard_delete_subtitle(selected.id, operator_id=operator_id)
+            self._core_service.hard_delete_subtitle(
+                selected.id, operator_id=operator_id, role=self._role_context.role
+            )
             self._set_message("サブタイトル完全削除しました")
             self._refresh_subtitles()
         except Exception as exc:  # noqa: BLE001

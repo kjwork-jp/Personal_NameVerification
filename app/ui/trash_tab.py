@@ -21,7 +21,7 @@ from PySide6.QtWidgets import (
 from app.application.read_models import NameDetail, RelatedRow, SubtitleDetail, TitleDetail
 from app.ui.dialogs import confirm_destructive_action
 from app.ui.permissions import can_run_destructive_actions
-from app.ui.role_context import RoleContext
+from app.ui.role_context import RoleContext, UserRole
 
 
 class TrashReadService(Protocol):
@@ -35,21 +35,31 @@ class TrashReadService(Protocol):
 
 
 class TrashWriteService(Protocol):
-    def restore_name(self, name_id: int, operator_id: str) -> None: ...
+    def restore_name(self, name_id: int, operator_id: str, role: UserRole = "admin") -> None: ...
 
-    def hard_delete_name(self, name_id: int, operator_id: str) -> None: ...
+    def hard_delete_name(
+        self, name_id: int, operator_id: str, role: UserRole = "admin"
+    ) -> None: ...
 
-    def restore_title(self, title_id: int, operator_id: str) -> None: ...
+    def restore_title(self, title_id: int, operator_id: str, role: UserRole = "admin") -> None: ...
 
-    def hard_delete_title(self, title_id: int, operator_id: str) -> None: ...
+    def hard_delete_title(
+        self, title_id: int, operator_id: str, role: UserRole = "admin"
+    ) -> None: ...
 
-    def restore_subtitle(self, subtitle_id: int, operator_id: str) -> None: ...
+    def restore_subtitle(
+        self, subtitle_id: int, operator_id: str, role: UserRole = "admin"
+    ) -> None: ...
 
-    def hard_delete_subtitle(self, subtitle_id: int, operator_id: str) -> None: ...
+    def hard_delete_subtitle(
+        self, subtitle_id: int, operator_id: str, role: UserRole = "admin"
+    ) -> None: ...
 
-    def restore_link(self, link_id: int, operator_id: str) -> None: ...
+    def restore_link(self, link_id: int, operator_id: str, role: UserRole = "admin") -> None: ...
 
-    def hard_delete_link(self, link_id: int, operator_id: str) -> None: ...
+    def hard_delete_link(
+        self, link_id: int, operator_id: str, role: UserRole = "admin"
+    ) -> None: ...
 
 
 @dataclass(frozen=True)
@@ -254,13 +264,21 @@ class TrashTab(QWidget):
 
         try:
             if entity == "Name":
-                self._core_service.restore_name(selected.entity_id, operator_id)
+                self._core_service.restore_name(
+                    selected.entity_id, operator_id, role=self._role_context.role
+                )
             elif entity == "Title":
-                self._core_service.restore_title(selected.entity_id, operator_id)
+                self._core_service.restore_title(
+                    selected.entity_id, operator_id, role=self._role_context.role
+                )
             elif entity == "Subtitle":
-                self._core_service.restore_subtitle(selected.entity_id, operator_id)
+                self._core_service.restore_subtitle(
+                    selected.entity_id, operator_id, role=self._role_context.role
+                )
             elif entity == "Link":
-                self._core_service.restore_link(selected.entity_id, operator_id)
+                self._core_service.restore_link(
+                    selected.entity_id, operator_id, role=self._role_context.role
+                )
         except Exception as exc:  # noqa: BLE001
             self._set_message(f"復元に失敗しました: {exc}", is_error=True)
             return
@@ -291,13 +309,21 @@ class TrashTab(QWidget):
 
         try:
             if entity == "Name":
-                self._core_service.hard_delete_name(selected.entity_id, operator_id)
+                self._core_service.hard_delete_name(
+                    selected.entity_id, operator_id, role=self._role_context.role
+                )
             elif entity == "Title":
-                self._core_service.hard_delete_title(selected.entity_id, operator_id)
+                self._core_service.hard_delete_title(
+                    selected.entity_id, operator_id, role=self._role_context.role
+                )
             elif entity == "Subtitle":
-                self._core_service.hard_delete_subtitle(selected.entity_id, operator_id)
+                self._core_service.hard_delete_subtitle(
+                    selected.entity_id, operator_id, role=self._role_context.role
+                )
             elif entity == "Link":
-                self._core_service.hard_delete_link(selected.entity_id, operator_id)
+                self._core_service.hard_delete_link(
+                    selected.entity_id, operator_id, role=self._role_context.role
+                )
         except Exception as exc:  # noqa: BLE001
             self._set_message(f"完全削除に失敗しました: {exc}", is_error=True)
             return

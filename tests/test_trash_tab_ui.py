@@ -22,29 +22,29 @@ class StubCoreService:
     def __init__(self) -> None:
         self.calls: list[str] = []
 
-    def restore_name(self, name_id: int, operator_id: str) -> None:
-        self.calls.append(f"restore_name:{name_id}:{operator_id}")
+    def restore_name(self, name_id: int, operator_id: str, role: str = "admin") -> None:
+        self.calls.append(f"restore_name:{name_id}:{operator_id}:{role}")
 
-    def hard_delete_name(self, name_id: int, operator_id: str) -> None:
-        self.calls.append(f"hard_delete_name:{name_id}:{operator_id}")
+    def hard_delete_name(self, name_id: int, operator_id: str, role: str = "admin") -> None:
+        self.calls.append(f"hard_delete_name:{name_id}:{operator_id}:{role}")
 
-    def restore_title(self, title_id: int, operator_id: str) -> None:
-        self.calls.append(f"restore_title:{title_id}:{operator_id}")
+    def restore_title(self, title_id: int, operator_id: str, role: str = "admin") -> None:
+        self.calls.append(f"restore_title:{title_id}:{operator_id}:{role}")
 
-    def hard_delete_title(self, title_id: int, operator_id: str) -> None:
-        self.calls.append(f"hard_delete_title:{title_id}:{operator_id}")
+    def hard_delete_title(self, title_id: int, operator_id: str, role: str = "admin") -> None:
+        self.calls.append(f"hard_delete_title:{title_id}:{operator_id}:{role}")
 
-    def restore_subtitle(self, subtitle_id: int, operator_id: str) -> None:
-        self.calls.append(f"restore_subtitle:{subtitle_id}:{operator_id}")
+    def restore_subtitle(self, subtitle_id: int, operator_id: str, role: str = "admin") -> None:
+        self.calls.append(f"restore_subtitle:{subtitle_id}:{operator_id}:{role}")
 
-    def hard_delete_subtitle(self, subtitle_id: int, operator_id: str) -> None:
-        self.calls.append(f"hard_delete_subtitle:{subtitle_id}:{operator_id}")
+    def hard_delete_subtitle(self, subtitle_id: int, operator_id: str, role: str = "admin") -> None:
+        self.calls.append(f"hard_delete_subtitle:{subtitle_id}:{operator_id}:{role}")
 
-    def restore_link(self, link_id: int, operator_id: str) -> None:
-        self.calls.append(f"restore_link:{link_id}:{operator_id}")
+    def restore_link(self, link_id: int, operator_id: str, role: str = "admin") -> None:
+        self.calls.append(f"restore_link:{link_id}:{operator_id}:{role}")
 
-    def hard_delete_link(self, link_id: int, operator_id: str) -> None:
-        self.calls.append(f"hard_delete_link:{link_id}:{operator_id}")
+    def hard_delete_link(self, link_id: int, operator_id: str, role: str = "admin") -> None:
+        self.calls.append(f"hard_delete_link:{link_id}:{operator_id}:{role}")
 
 
 class StubQueryService:
@@ -161,14 +161,14 @@ def test_trash_tab_restore_and_hard_delete_for_all_entities(
     tab._restore_selected()
     tab._hard_delete_selected()
 
-    assert "restore_name:1:op-1" in core.calls
-    assert "hard_delete_name:1:op-1" in core.calls
-    assert "restore_title:10:op-1" in core.calls
-    assert "hard_delete_title:10:op-1" in core.calls
-    assert "restore_subtitle:100:op-1" in core.calls
-    assert "hard_delete_subtitle:100:op-1" in core.calls
-    assert "restore_link:500:op-1" in core.calls
-    assert "hard_delete_link:500:op-1" in core.calls
+    assert "restore_name:1:op-1:admin" in core.calls
+    assert "hard_delete_name:1:op-1:admin" in core.calls
+    assert "restore_title:10:op-1:admin" in core.calls
+    assert "hard_delete_title:10:op-1:admin" in core.calls
+    assert "restore_subtitle:100:op-1:admin" in core.calls
+    assert "hard_delete_subtitle:100:op-1:admin" in core.calls
+    assert "restore_link:500:op-1:admin" in core.calls
+    assert "hard_delete_link:500:op-1:admin" in core.calls
 
 
 def test_trash_tab_requires_operator_id() -> None:

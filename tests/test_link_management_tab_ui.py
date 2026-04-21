@@ -23,13 +23,20 @@ class StubCoreService:
         self.calls: list[str] = []
 
     def link_name_to_subtitle(
-        self, name_id: int, subtitle_id: int, relation_type: str, operator_id: str
+        self,
+        name_id: int,
+        subtitle_id: int,
+        relation_type: str,
+        operator_id: str,
+        role: str = "admin",
     ) -> int:
-        self.calls.append(f"link:{name_id}:{subtitle_id}:{relation_type}:{operator_id}")
+        self.calls.append(f"link:{name_id}:{subtitle_id}:{relation_type}:{operator_id}:{role}")
         return 1
 
-    def unlink_name_from_subtitle(self, link_id: int, operator_id: str) -> None:
-        self.calls.append(f"unlink:{link_id}:{operator_id}")
+    def unlink_name_from_subtitle(
+        self, link_id: int, operator_id: str, role: str = "admin"
+    ) -> None:
+        self.calls.append(f"unlink:{link_id}:{operator_id}:{role}")
 
 
 class StubQueryService:
@@ -116,8 +123,8 @@ def test_link_management_tab_link_and_unlink(monkeypatch: pytest.MonkeyPatch) ->
     tab._create_link()
     tab._unlink_link()
 
-    assert "link:1:100:primary:op-1" in core.calls
-    assert "unlink:500:op-1" in core.calls
+    assert "link:1:100:primary:op-1:admin" in core.calls
+    assert "unlink:500:op-1:admin" in core.calls
 
 
 def test_link_management_tab_requires_operator_and_relation_type() -> None:
@@ -195,7 +202,7 @@ def test_link_management_tab_accepts_custom_relation_type(monkeypatch: pytest.Mo
     tab.custom_relation_type_input.setText("custom-tag")
     tab._create_link()
 
-    assert "link:1:100:custom-tag:op-1" in core.calls
+    assert "link:1:100:custom-tag:op-1:admin" in core.calls
 
 
 def test_link_management_custom_relation_type_requires_text() -> None:
@@ -209,3 +216,19 @@ def test_link_management_custom_relation_type_requires_text() -> None:
 
     assert "custom relation_type" in tab.message_label.text()
     assert "custom relation_type" in tab.custom_relation_type_input.toolTip()
+
+
+def test_link_management_propagates_editor_role_to_service() -> None:
+    _app()
+    core = StubCoreService()
+    tab = LinkManagementTab(
+        core_service=core,
+        query_service=StubQueryService(),
+        role_context=RoleContext(role="editor"),
+    )
+
+    tab.operator_input.setText("op-2")
+    tab.relation_type_combo.setCurrentIndex(1)
+    tab._create_link()
+
+    assert "link:1:100:primary:op-2:editor" in core.calls

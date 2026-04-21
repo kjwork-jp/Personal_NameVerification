@@ -23,15 +23,22 @@ from app.application.read_models import NameSearchRow, RelatedRow, SubtitleDetai
 from app.ui.dialogs import confirm_destructive_action
 from app.ui.permissions import can_link, can_unlink
 from app.ui.relation_types import RELATION_TYPE_OPTIONS
-from app.ui.role_context import RoleContext
+from app.ui.role_context import RoleContext, UserRole
 
 
 class LinkWriteService(Protocol):
     def link_name_to_subtitle(
-        self, name_id: int, subtitle_id: int, relation_type: str, operator_id: str
+        self,
+        name_id: int,
+        subtitle_id: int,
+        relation_type: str,
+        operator_id: str,
+        role: UserRole = "admin",
     ) -> int: ...
 
-    def unlink_name_from_subtitle(self, link_id: int, operator_id: str) -> None: ...
+    def unlink_name_from_subtitle(
+        self, link_id: int, operator_id: str, role: UserRole = "admin"
+    ) -> None: ...
 
 
 class LinkReadService(Protocol):
@@ -330,6 +337,7 @@ class LinkManagementTab(QWidget):
                 self._selected_subtitle.id,
                 relation_type=relation_type,
                 operator_id=operator_id,
+                role=self._role_context.role,
             )
             self._set_message("リンク作成しました")
             self._refresh_links()
@@ -358,7 +366,9 @@ class LinkManagementTab(QWidget):
 
         try:
             self._core_service.unlink_name_from_subtitle(
-                self._selected_link.id, operator_id=operator_id
+                self._selected_link.id,
+                operator_id=operator_id,
+                role=self._role_context.role,
             )
             self._set_message("リンク解除しました")
             self._refresh_links()

@@ -22,39 +22,47 @@ class StubCoreService:
     def __init__(self) -> None:
         self.calls: list[str] = []
 
-    def create_title(self, payload, operator_id: str) -> int:  # type: ignore[no-untyped-def]
-        self.calls.append(f"create_title:{payload.title_name}:{operator_id}")
+    def create_title(self, payload, operator_id: str, role: str = "admin") -> int:  # type: ignore[no-untyped-def]
+        self.calls.append(f"create_title:{payload.title_name}:{operator_id}:{role}")
         return 1
 
-    def update_title(self, title_id: int, payload, operator_id: str) -> None:  # type: ignore[no-untyped-def]
-        self.calls.append(f"update_title:{title_id}:{payload.title_name}:{operator_id}")
+    def update_title(self, title_id: int, payload, operator_id: str, role: str = "admin") -> None:  # type: ignore[no-untyped-def]
+        self.calls.append(f"update_title:{title_id}:{payload.title_name}:{operator_id}:{role}")
 
-    def delete_title(self, title_id: int, operator_id: str) -> None:
-        self.calls.append(f"delete_title:{title_id}:{operator_id}")
+    def delete_title(self, title_id: int, operator_id: str, role: str = "admin") -> None:
+        self.calls.append(f"delete_title:{title_id}:{operator_id}:{role}")
 
-    def restore_title(self, title_id: int, operator_id: str) -> None:
-        self.calls.append(f"restore_title:{title_id}:{operator_id}")
+    def restore_title(self, title_id: int, operator_id: str, role: str = "admin") -> None:
+        self.calls.append(f"restore_title:{title_id}:{operator_id}:{role}")
 
-    def hard_delete_title(self, title_id: int, operator_id: str) -> None:
-        self.calls.append(f"hard_delete_title:{title_id}:{operator_id}")
+    def hard_delete_title(self, title_id: int, operator_id: str, role: str = "admin") -> None:
+        self.calls.append(f"hard_delete_title:{title_id}:{operator_id}:{role}")
 
-    def create_subtitle(self, payload, operator_id: str) -> int:  # type: ignore[no-untyped-def]
+    def create_subtitle(self, payload, operator_id: str, role: str = "admin") -> int:  # type: ignore[no-untyped-def]
         self.calls.append(
-            f"create_subtitle:{payload.title_id}:{payload.subtitle_code}:{operator_id}"
+            f"create_subtitle:{payload.title_id}:{payload.subtitle_code}:{operator_id}:{role}"
         )
         return 1
 
-    def update_subtitle(self, subtitle_id: int, payload, operator_id: str) -> None:  # type: ignore[no-untyped-def]
-        self.calls.append(f"update_subtitle:{subtitle_id}:{payload.subtitle_code}:{operator_id}")
+    def update_subtitle(  # type: ignore[no-untyped-def]
+        self,
+        subtitle_id: int,
+        payload,
+        operator_id: str,
+        role: str = "admin",
+    ) -> None:
+        self.calls.append(
+            f"update_subtitle:{subtitle_id}:{payload.subtitle_code}:{operator_id}:{role}"
+        )
 
-    def delete_subtitle(self, subtitle_id: int, operator_id: str) -> None:
-        self.calls.append(f"delete_subtitle:{subtitle_id}:{operator_id}")
+    def delete_subtitle(self, subtitle_id: int, operator_id: str, role: str = "admin") -> None:
+        self.calls.append(f"delete_subtitle:{subtitle_id}:{operator_id}:{role}")
 
-    def restore_subtitle(self, subtitle_id: int, operator_id: str) -> None:
-        self.calls.append(f"restore_subtitle:{subtitle_id}:{operator_id}")
+    def restore_subtitle(self, subtitle_id: int, operator_id: str, role: str = "admin") -> None:
+        self.calls.append(f"restore_subtitle:{subtitle_id}:{operator_id}:{role}")
 
-    def hard_delete_subtitle(self, subtitle_id: int, operator_id: str) -> None:
-        self.calls.append(f"hard_delete_subtitle:{subtitle_id}:{operator_id}")
+    def hard_delete_subtitle(self, subtitle_id: int, operator_id: str, role: str = "admin") -> None:
+        self.calls.append(f"hard_delete_subtitle:{subtitle_id}:{operator_id}:{role}")
 
 
 class StubQueryService:
@@ -150,16 +158,16 @@ def test_title_subtitle_management_operations(monkeypatch: pytest.MonkeyPatch) -
     tab._restore_subtitle()
     tab._hard_delete_subtitle()
 
-    assert any(call.startswith("create_title:NewTitle:op-1") for call in core.calls)
-    assert any(call.startswith("update_title:1:UpdatedTitle:op-1") for call in core.calls)
-    assert any(call.startswith("delete_title:1:op-1") for call in core.calls)
-    assert any(call.startswith("restore_title:2:op-1") for call in core.calls)
-    assert any(call.startswith("hard_delete_title:2:op-1") for call in core.calls)
-    assert any(call.startswith("create_subtitle:1:SNEW:op-1") for call in core.calls)
-    assert any(call.startswith("update_subtitle:11:S1-U:op-1") for call in core.calls)
-    assert any(call.startswith("delete_subtitle:11:op-1") for call in core.calls)
-    assert any(call.startswith("restore_subtitle:11:op-1") for call in core.calls)
-    assert any(call.startswith("hard_delete_subtitle:11:op-1") for call in core.calls)
+    assert any(call.startswith("create_title:NewTitle:op-1:admin") for call in core.calls)
+    assert any(call.startswith("update_title:1:UpdatedTitle:op-1:admin") for call in core.calls)
+    assert any(call.startswith("delete_title:1:op-1:admin") for call in core.calls)
+    assert any(call.startswith("restore_title:2:op-1:admin") for call in core.calls)
+    assert any(call.startswith("hard_delete_title:2:op-1:admin") for call in core.calls)
+    assert any(call.startswith("create_subtitle:1:SNEW:op-1:admin") for call in core.calls)
+    assert any(call.startswith("update_subtitle:11:S1-U:op-1:admin") for call in core.calls)
+    assert any(call.startswith("delete_subtitle:11:op-1:admin") for call in core.calls)
+    assert any(call.startswith("restore_subtitle:11:op-1:admin") for call in core.calls)
+    assert any(call.startswith("hard_delete_subtitle:11:op-1:admin") for call in core.calls)
 
 
 def test_title_subtitle_management_requires_operator_id() -> None:

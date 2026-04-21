@@ -22,21 +22,21 @@ class StubCoreService:
     def __init__(self) -> None:
         self.called: list[str] = []
 
-    def create_name(self, payload, operator_id: str) -> int:  # type: ignore[no-untyped-def]
-        self.called.append(f"create:{payload.raw_name}:{operator_id}")
+    def create_name(self, payload, operator_id: str, role: str = "admin") -> int:  # type: ignore[no-untyped-def]
+        self.called.append(f"create:{payload.raw_name}:{operator_id}:{role}")
         return 1
 
-    def update_name(self, name_id: int, payload, operator_id: str) -> None:  # type: ignore[no-untyped-def]
-        self.called.append(f"update:{name_id}:{payload.raw_name}:{operator_id}")
+    def update_name(self, name_id: int, payload, operator_id: str, role: str = "admin") -> None:  # type: ignore[no-untyped-def]
+        self.called.append(f"update:{name_id}:{payload.raw_name}:{operator_id}:{role}")
 
-    def delete_name(self, name_id: int, operator_id: str) -> None:
-        self.called.append(f"delete:{name_id}:{operator_id}")
+    def delete_name(self, name_id: int, operator_id: str, role: str = "admin") -> None:
+        self.called.append(f"delete:{name_id}:{operator_id}:{role}")
 
-    def restore_name(self, name_id: int, operator_id: str) -> None:
-        self.called.append(f"restore:{name_id}:{operator_id}")
+    def restore_name(self, name_id: int, operator_id: str, role: str = "admin") -> None:
+        self.called.append(f"restore:{name_id}:{operator_id}:{role}")
 
-    def hard_delete_name(self, name_id: int, operator_id: str) -> None:
-        self.called.append(f"hard_delete:{name_id}:{operator_id}")
+    def hard_delete_name(self, name_id: int, operator_id: str, role: str = "admin") -> None:
+        self.called.append(f"hard_delete:{name_id}:{operator_id}:{role}")
 
 
 class StubQueryService:
@@ -118,11 +118,11 @@ def test_name_management_tab_create_update_delete_restore_hard_delete(
     tab._restore_name()
     tab._hard_delete_name()
 
-    assert any(item.startswith("create:Created:op-1") for item in core.called)
-    assert any(item.startswith("update:1:Alice Updated:op-1") for item in core.called)
-    assert any(item.startswith("delete:1:op-1") for item in core.called)
-    assert any(item.startswith("restore:2:op-1") for item in core.called)
-    assert any(item.startswith("hard_delete:2:op-1") for item in core.called)
+    assert any(item.startswith("create:Created:op-1:admin") for item in core.called)
+    assert any(item.startswith("update:1:Alice Updated:op-1:admin") for item in core.called)
+    assert any(item.startswith("delete:1:op-1:admin") for item in core.called)
+    assert any(item.startswith("restore:2:op-1:admin") for item in core.called)
+    assert any(item.startswith("hard_delete:2:op-1:admin") for item in core.called)
 
 
 def test_name_management_tab_requires_operator_id() -> None:
@@ -179,3 +179,18 @@ def test_name_management_role_guards() -> None:
     assert tab_admin.restore_button.isEnabled()
     assert tab_admin.hard_delete_button.isEnabled()
     assert "operator_id" in tab_admin.operator_input.toolTip()
+
+
+def test_name_management_propagates_editor_role_to_service() -> None:
+    _app()
+    core = StubCoreService()
+    tab = NameManagementTab(
+        core_service=core,
+        query_service=StubQueryService(),
+        role_context=RoleContext(role="editor"),
+    )
+    tab.operator_input.setText("op-1")
+    tab.raw_name_input.setText("EditorCreate")
+    tab._create_name()
+
+    assert "create:EditorCreate:op-1:editor" in core.called
