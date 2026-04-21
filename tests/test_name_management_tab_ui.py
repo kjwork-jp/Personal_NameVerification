@@ -66,7 +66,8 @@ class StubQueryService:
         _ = (args, kwargs)
         return self.rows
 
-    def get_name_detail(self, name_id: int) -> NameDetail:
+    def get_name_detail(self, name_id: int, role: str = "admin") -> NameDetail:
+        _ = role
         if name_id == 2:
             deleted_at = "2026-01-01T00:00:00Z"
             note = "memo"

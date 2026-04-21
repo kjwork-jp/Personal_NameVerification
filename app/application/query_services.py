@@ -5,6 +5,7 @@ from __future__ import annotations
 import sqlite3
 from typing import Any
 
+from app.application.authorization import ServiceRole, require_known_role
 from app.application.read_models import (
     ChangeLogRow,
     NameDetail,
@@ -27,12 +28,14 @@ class QueryService:
     def search_names(
         self,
         query: str | None = None,
+        role: ServiceRole = "admin",
         *,
         exact_match: bool = False,
         title_id: int | None = None,
         has_links: bool | None = None,
         include_deleted: bool = False,
     ) -> list[NameSearchRow]:
+        require_known_role(role, action="search_names")
         conditions: list[str] = []
         params: list[Any] = []
 
@@ -103,7 +106,14 @@ class QueryService:
             for row in rows
         ]
 
-    def list_related_rows(self, name_id: int, *, include_deleted: bool = False) -> list[RelatedRow]:
+    def list_related_rows(
+        self,
+        name_id: int,
+        role: ServiceRole = "admin",
+        *,
+        include_deleted: bool = False,
+    ) -> list[RelatedRow]:
+        require_known_role(role, action="list_related_rows")
         rows = self._connection.execute(
             f"""
             SELECT
@@ -141,23 +151,30 @@ class QueryService:
             for row in rows
         ]
 
-    def get_name_detail(self, name_id: int) -> NameDetail:
+    def get_name_detail(self, name_id: int, role: ServiceRole = "admin") -> NameDetail:
+        require_known_role(role, action="get_name_detail")
         row = self._fetch_one("names", name_id)
         return NameDetail(**row)
 
-    def get_title_detail(self, title_id: int) -> TitleDetail:
+    def get_title_detail(self, title_id: int, role: ServiceRole = "admin") -> TitleDetail:
+        require_known_role(role, action="get_title_detail")
         row = self._fetch_one("titles", title_id)
         return TitleDetail(**row)
 
-    def get_subtitle_detail(self, subtitle_id: int) -> SubtitleDetail:
+    def get_subtitle_detail(self, subtitle_id: int, role: ServiceRole = "admin") -> SubtitleDetail:
+        require_known_role(role, action="get_subtitle_detail")
         row = self._fetch_one("subtitles", subtitle_id)
         return SubtitleDetail(**row)
 
-    def list_deleted_names(self) -> list[NameDetail]:
+    def list_deleted_names(self, role: ServiceRole = "admin") -> list[NameDetail]:
+        require_known_role(role, action="list_deleted_names")
         rows = self._list_deleted("names")
         return [NameDetail(**row) for row in rows]
 
-    def list_titles(self, *, include_deleted: bool = False) -> list[TitleDetail]:
+    def list_titles(
+        self, role: ServiceRole = "admin", *, include_deleted: bool = False
+    ) -> list[TitleDetail]:
+        require_known_role(role, action="list_titles")
         rows = self._connection.execute(
             """
             SELECT *
@@ -170,8 +187,13 @@ class QueryService:
         return [TitleDetail(**dict(row)) for row in rows]
 
     def list_subtitles(
-        self, title_id: int, *, include_deleted: bool = False
+        self,
+        title_id: int,
+        role: ServiceRole = "admin",
+        *,
+        include_deleted: bool = False,
     ) -> list[SubtitleDetail]:
+        require_known_role(role, action="list_subtitles")
         rows = self._connection.execute(
             """
             SELECT *
@@ -183,15 +205,18 @@ class QueryService:
         ).fetchall()
         return [SubtitleDetail(**dict(row)) for row in rows]
 
-    def list_deleted_titles(self) -> list[TitleDetail]:
+    def list_deleted_titles(self, role: ServiceRole = "admin") -> list[TitleDetail]:
+        require_known_role(role, action="list_deleted_titles")
         rows = self._list_deleted("titles")
         return [TitleDetail(**row) for row in rows]
 
-    def list_deleted_subtitles(self) -> list[SubtitleDetail]:
+    def list_deleted_subtitles(self, role: ServiceRole = "admin") -> list[SubtitleDetail]:
+        require_known_role(role, action="list_deleted_subtitles")
         rows = self._list_deleted("subtitles")
         return [SubtitleDetail(**row) for row in rows]
 
-    def list_deleted_links(self) -> list[RelatedRow]:
+    def list_deleted_links(self, role: ServiceRole = "admin") -> list[RelatedRow]:
+        require_known_role(role, action="list_deleted_links")
         rows = self._connection.execute(
             """
             SELECT
@@ -228,6 +253,7 @@ class QueryService:
 
     def list_change_logs(
         self,
+        role: ServiceRole = "admin",
         *,
         entity_type: str | None = None,
         action: str | None = None,
@@ -236,6 +262,7 @@ class QueryService:
         created_to: str | None = None,
         limit: int = 200,
     ) -> list[ChangeLogRow]:
+        require_known_role(role, action="list_change_logs")
         conditions: list[str] = []
         params: list[Any] = []
 

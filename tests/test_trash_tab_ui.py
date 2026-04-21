@@ -48,7 +48,8 @@ class StubCoreService:
 
 
 class StubQueryService:
-    def list_deleted_names(self) -> list[NameDetail]:
+    def list_deleted_names(self, role: str = "admin") -> list[NameDetail]:
+        _ = role
         return [
             NameDetail(
                 id=1,
@@ -62,7 +63,8 @@ class StubQueryService:
             )
         ]
 
-    def list_deleted_titles(self) -> list[TitleDetail]:
+    def list_deleted_titles(self, role: str = "admin") -> list[TitleDetail]:
+        _ = role
         return [
             TitleDetail(
                 id=10,
@@ -75,7 +77,8 @@ class StubQueryService:
             )
         ]
 
-    def list_deleted_subtitles(self) -> list[SubtitleDetail]:
+    def list_deleted_subtitles(self, role: str = "admin") -> list[SubtitleDetail]:
+        _ = role
         return [
             SubtitleDetail(
                 id=100,
@@ -91,7 +94,8 @@ class StubQueryService:
             )
         ]
 
-    def list_deleted_links(self) -> list[RelatedRow]:
+    def list_deleted_links(self, role: str = "admin") -> list[RelatedRow]:
+        _ = role
         return [
             RelatedRow(
                 link_id=500,
@@ -108,7 +112,8 @@ class StubQueryService:
 
 
 class ActiveOnlyQueryService(StubQueryService):
-    def list_deleted_names(self) -> list[NameDetail]:
+    def list_deleted_names(self, role: str = "admin") -> list[NameDetail]:
+        _ = role
         return [
             NameDetail(
                 id=1,

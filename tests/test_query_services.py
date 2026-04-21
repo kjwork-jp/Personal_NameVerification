@@ -4,8 +4,11 @@ from __future__ import annotations
 
 import sqlite3
 
+import pytest
+
 from app.application.core_services import CoreService, NameInput, SubtitleInput, TitleInput
 from app.application.query_services import QueryService
+from app.domain.errors import AuthorizationError
 from app.infrastructure.db import apply_schema
 
 
@@ -82,3 +85,11 @@ def test_get_detail_and_related_rows() -> None:
     related_rows = query.list_related_rows(name_id)
     assert len(related_rows) == 1
     assert related_rows[0].relation_type == "primary"
+
+
+def test_query_service_rejects_unknown_role() -> None:
+    _, core, query = _services()
+    core.create_name(NameInput(raw_name="Alice"), operator_id="op")
+
+    with pytest.raises(AuthorizationError):
+        query.search_names("Alice", role="invalid-role")  # type: ignore[arg-type]

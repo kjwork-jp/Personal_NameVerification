@@ -54,8 +54,10 @@ class StubQueryService:
             )
         ]
 
-    def list_titles(self, *, include_deleted: bool = False) -> list[TitleDetail]:
-        _ = include_deleted
+    def list_titles(
+        self, role: str = "admin", *, include_deleted: bool = False
+    ) -> list[TitleDetail]:
+        _ = (role, include_deleted)
         return [
             TitleDetail(
                 id=10,
@@ -69,9 +71,9 @@ class StubQueryService:
         ]
 
     def list_subtitles(
-        self, title_id: int, *, include_deleted: bool = False
+        self, title_id: int, role: str = "admin", *, include_deleted: bool = False
     ) -> list[SubtitleDetail]:
-        _ = (title_id, include_deleted)
+        _ = (title_id, role, include_deleted)
         return [
             SubtitleDetail(
                 id=100,
@@ -87,8 +89,10 @@ class StubQueryService:
             )
         ]
 
-    def list_related_rows(self, name_id: int, *, include_deleted: bool = False) -> list[RelatedRow]:
-        _ = (name_id, include_deleted)
+    def list_related_rows(
+        self, name_id: int, role: str = "admin", *, include_deleted: bool = False
+    ) -> list[RelatedRow]:
+        _ = (name_id, role, include_deleted)
         return [
             RelatedRow(
                 link_id=500,

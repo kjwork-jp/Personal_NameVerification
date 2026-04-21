@@ -22,6 +22,7 @@ class StubQueryService:
 
     def list_change_logs(
         self,
+        role: str = "admin",
         *,
         entity_type: str | None = None,
         action: str | None = None,
@@ -32,6 +33,7 @@ class StubQueryService:
     ) -> list[ChangeLogRow]:
         self.calls.append(
             {
+                "role": role,
                 "entity_type": entity_type,
                 "action": action,
                 "operator_id": operator_id,
@@ -82,6 +84,7 @@ def test_audit_log_tab_reload_with_filters_and_detail() -> None:
     tab._reload()
 
     assert query.calls[-1] == {
+        "role": "admin",
         "entity_type": "names",
         "action": "update",
         "operator_id": "op-1",

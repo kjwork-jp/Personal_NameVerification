@@ -30,7 +30,7 @@ class MainWindow(QMainWindow):
 
         tabs = QTabWidget(self)
         active_role = role_context or RoleContext.admin()
-        tabs.addTab(SearchTab(query_service=query_service), "検索/照合")
+        tabs.addTab(SearchTab(query_service=query_service, role_context=active_role), "検索/照合")
         tabs.addTab(
             NameManagementTab(
                 core_service=core_service,
@@ -64,7 +64,7 @@ class MainWindow(QMainWindow):
             "ゴミ箱",
         )
         tabs.addTab(
-            AuditLogTab(query_service=query_service),
+            AuditLogTab(query_service=query_service, role_context=active_role),
             "監査ログ",
         )
         self.setCentralWidget(tabs)

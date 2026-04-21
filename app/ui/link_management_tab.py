@@ -45,6 +45,7 @@ class LinkReadService(Protocol):
     def search_names(
         self,
         query: str | None = None,
+        role: UserRole = "admin",
         *,
         exact_match: bool = False,
         title_id: int | None = None,
@@ -52,14 +53,24 @@ class LinkReadService(Protocol):
         include_deleted: bool = False,
     ) -> list[NameSearchRow]: ...
 
-    def list_titles(self, *, include_deleted: bool = False) -> list[TitleDetail]: ...
+    def list_titles(
+        self, role: UserRole = "admin", *, include_deleted: bool = False
+    ) -> list[TitleDetail]: ...
 
     def list_subtitles(
-        self, title_id: int, *, include_deleted: bool = False
+        self,
+        title_id: int,
+        role: UserRole = "admin",
+        *,
+        include_deleted: bool = False,
     ) -> list[SubtitleDetail]: ...
 
     def list_related_rows(
-        self, name_id: int, *, include_deleted: bool = False
+        self,
+        name_id: int,
+        role: UserRole = "admin",
+        *,
+        include_deleted: bool = False,
     ) -> list[RelatedRow]: ...
 
 
@@ -198,8 +209,12 @@ class LinkManagementTab(QWidget):
 
     def _refresh_all(self) -> None:
         try:
-            self._names = self._query_service.search_names(include_deleted=False)
-            self._titles = self._query_service.list_titles(include_deleted=False)
+            self._names = self._query_service.search_names(
+                include_deleted=False, role=self._role_context.role
+            )
+            self._titles = self._query_service.list_titles(
+                include_deleted=False, role=self._role_context.role
+            )
         except Exception as exc:  # noqa: BLE001
             self._set_message(f"初期読込に失敗しました: {exc}", is_error=True)
             return
@@ -276,7 +291,9 @@ class LinkManagementTab(QWidget):
 
     def _refresh_subtitles(self, title_id: int) -> None:
         try:
-            self._subtitles = self._query_service.list_subtitles(title_id, include_deleted=False)
+            self._subtitles = self._query_service.list_subtitles(
+                title_id, include_deleted=False, role=self._role_context.role
+            )
         except Exception as exc:  # noqa: BLE001
             self._set_message(f"サブタイトル取得に失敗しました: {exc}", is_error=True)
             return
@@ -298,7 +315,7 @@ class LinkManagementTab(QWidget):
 
         try:
             self._links = self._query_service.list_related_rows(
-                self._selected_name.id, include_deleted=False
+                self._selected_name.id, include_deleted=False, role=self._role_context.role
             )
         except Exception as exc:  # noqa: BLE001
             self._set_message(f"リンク取得に失敗しました: {exc}", is_error=True)

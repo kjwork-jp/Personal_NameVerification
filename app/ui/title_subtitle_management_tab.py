@@ -68,10 +68,16 @@ class TitleSubtitleWriteService(Protocol):
 
 
 class TitleSubtitleReadService(Protocol):
-    def list_titles(self, *, include_deleted: bool = False) -> list[TitleDetail]: ...
+    def list_titles(
+        self, role: UserRole = "admin", *, include_deleted: bool = False
+    ) -> list[TitleDetail]: ...
 
     def list_subtitles(
-        self, title_id: int, *, include_deleted: bool = False
+        self,
+        title_id: int,
+        role: UserRole = "admin",
+        *,
+        include_deleted: bool = False,
     ) -> list[SubtitleDetail]: ...
 
 
@@ -261,7 +267,9 @@ class TitleSubtitleManagementTab(QWidget):
 
     def _refresh_titles(self) -> None:
         try:
-            self._titles = self._query_service.list_titles(include_deleted=True)
+            self._titles = self._query_service.list_titles(
+                role=self._role_context.role, include_deleted=True
+            )
         except Exception as exc:  # noqa: BLE001
             self._set_message(f"タイトル一覧取得に失敗しました: {exc}", is_error=True)
             return
@@ -295,7 +303,11 @@ class TitleSubtitleManagementTab(QWidget):
             return
 
         try:
-            self._subtitles = self._query_service.list_subtitles(selected.id, include_deleted=True)
+            self._subtitles = self._query_service.list_subtitles(
+                selected.id,
+                role=self._role_context.role,
+                include_deleted=True,
+            )
         except Exception as exc:  # noqa: BLE001
             self._set_message(f"サブタイトル一覧取得に失敗しました: {exc}", is_error=True)
             return

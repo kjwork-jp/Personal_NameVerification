@@ -20,11 +20,13 @@ from PySide6.QtWidgets import (
 )
 
 from app.application.read_models import ChangeLogRow
+from app.ui.role_context import RoleContext, UserRole
 
 
 class AuditLogReadService(Protocol):
     def list_change_logs(
         self,
+        role: UserRole = "admin",
         *,
         entity_type: str | None = None,
         action: str | None = None,
@@ -48,9 +50,12 @@ class _FilterValues:
 class AuditLogTab(QWidget):
     """Read-only UI for browsing change logs."""
 
-    def __init__(self, query_service: AuditLogReadService) -> None:
+    def __init__(
+        self, query_service: AuditLogReadService, role_context: RoleContext | None = None
+    ) -> None:
         super().__init__()
         self._query_service = query_service
+        self._role_context = role_context or RoleContext.admin()
         self._rows: list[ChangeLogRow] = []
 
         self.entity_type_input = QLineEdit()
@@ -127,6 +132,7 @@ class AuditLogTab(QWidget):
         try:
             filters = self._collect_filters()
             self._rows = self._query_service.list_change_logs(
+                role=self._role_context.role,
                 entity_type=filters.entity_type,
                 action=filters.action,
                 operator_id=filters.operator_id,

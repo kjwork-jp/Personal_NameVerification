@@ -25,13 +25,13 @@ from app.ui.role_context import RoleContext, UserRole
 
 
 class TrashReadService(Protocol):
-    def list_deleted_names(self) -> list[NameDetail]: ...
+    def list_deleted_names(self, role: UserRole = "admin") -> list[NameDetail]: ...
 
-    def list_deleted_titles(self) -> list[TitleDetail]: ...
+    def list_deleted_titles(self, role: UserRole = "admin") -> list[TitleDetail]: ...
 
-    def list_deleted_subtitles(self) -> list[SubtitleDetail]: ...
+    def list_deleted_subtitles(self, role: UserRole = "admin") -> list[SubtitleDetail]: ...
 
-    def list_deleted_links(self) -> list[RelatedRow]: ...
+    def list_deleted_links(self, role: UserRole = "admin") -> list[RelatedRow]: ...
 
 
 class TrashWriteService(Protocol):
@@ -150,16 +150,18 @@ class TrashTab(QWidget):
 
         try:
             if entity == "Name":
-                self._names = self._query_service.list_deleted_names()
+                self._names = self._query_service.list_deleted_names(role=self._role_context.role)
                 self._fill_name_rows(self._names)
             elif entity == "Title":
-                self._titles = self._query_service.list_deleted_titles()
+                self._titles = self._query_service.list_deleted_titles(role=self._role_context.role)
                 self._fill_title_rows(self._titles)
             elif entity == "Subtitle":
-                self._subtitles = self._query_service.list_deleted_subtitles()
+                self._subtitles = self._query_service.list_deleted_subtitles(
+                    role=self._role_context.role
+                )
                 self._fill_subtitle_rows(self._subtitles)
             elif entity == "Link":
-                self._links = self._query_service.list_deleted_links()
+                self._links = self._query_service.list_deleted_links(role=self._role_context.role)
                 self._fill_link_rows(self._links)
         except Exception as exc:  # noqa: BLE001
             self._set_message(f"一覧取得に失敗しました: {exc}", is_error=True)

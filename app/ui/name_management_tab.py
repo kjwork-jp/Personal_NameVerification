@@ -47,6 +47,7 @@ class NameReadService(Protocol):
     def search_names(
         self,
         query: str | None = None,
+        role: UserRole = "admin",
         *,
         exact_match: bool = False,
         title_id: int | None = None,
@@ -54,7 +55,7 @@ class NameReadService(Protocol):
         include_deleted: bool = False,
     ) -> list[NameSearchRow]: ...
 
-    def get_name_detail(self, name_id: int) -> NameDetail: ...
+    def get_name_detail(self, name_id: int, role: UserRole = "admin") -> NameDetail: ...
 
 
 @dataclass(frozen=True)
@@ -179,7 +180,9 @@ class NameManagementTab(QWidget):
 
     def _refresh_list(self) -> None:
         try:
-            rows = self._query_service.search_names(include_deleted=True)
+            rows = self._query_service.search_names(
+                include_deleted=True, role=self._role_context.role
+            )
         except Exception as exc:  # noqa: BLE001
             self._set_message(f"一覧取得に失敗しました: {exc}", is_error=True)
             return
@@ -211,7 +214,7 @@ class NameManagementTab(QWidget):
         self.raw_name_input.setText(row.raw_name)
 
         try:
-            detail = self._query_service.get_name_detail(row.id)
+            detail = self._query_service.get_name_detail(row.id, role=self._role_context.role)
         except Exception as exc:  # noqa: BLE001
             self._set_message(f"詳細取得に失敗しました: {exc}", is_error=True)
             return

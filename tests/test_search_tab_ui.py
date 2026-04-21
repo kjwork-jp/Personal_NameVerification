@@ -19,13 +19,14 @@ class StubQueryService:
     def search_names(
         self,
         query: str | None = None,
+        role: str = "admin",
         *,
         exact_match: bool = False,
         title_id: int | None = None,
         has_links: bool | None = None,
         include_deleted: bool = False,
     ) -> list[NameSearchRow]:
-        _ = (query, exact_match, title_id, has_links, include_deleted)
+        _ = (query, role, exact_match, title_id, has_links, include_deleted)
         return [
             NameSearchRow(
                 id=1,
@@ -38,8 +39,8 @@ class StubQueryService:
             )
         ]
 
-    def get_name_detail(self, name_id: int) -> NameDetail:
-        _ = name_id
+    def get_name_detail(self, name_id: int, role: str = "admin") -> NameDetail:
+        _ = (name_id, role)
         return NameDetail(
             id=1,
             raw_name="Alice",
@@ -51,8 +52,10 @@ class StubQueryService:
             updated_at="2026-01-01T00:00:00Z",
         )
 
-    def list_related_rows(self, name_id: int, *, include_deleted: bool = False) -> list[RelatedRow]:
-        _ = (name_id, include_deleted)
+    def list_related_rows(
+        self, name_id: int, role: str = "admin", *, include_deleted: bool = False
+    ) -> list[RelatedRow]:
+        _ = (name_id, role, include_deleted)
         return [
             RelatedRow(
                 link_id=1,

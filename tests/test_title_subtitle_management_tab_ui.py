@@ -88,14 +88,16 @@ class StubQueryService:
             ),
         ]
 
-    def list_titles(self, *, include_deleted: bool = False) -> list[TitleDetail]:
-        _ = include_deleted
+    def list_titles(
+        self, role: str = "admin", *, include_deleted: bool = False
+    ) -> list[TitleDetail]:
+        _ = (role, include_deleted)
         return self.titles
 
     def list_subtitles(
-        self, title_id: int, *, include_deleted: bool = False
+        self, title_id: int, role: str = "admin", *, include_deleted: bool = False
     ) -> list[SubtitleDetail]:
-        _ = include_deleted
+        _ = (role, include_deleted)
         if title_id == 2:
             deleted_at = "2026-01-03T00:00:00Z"
         else:

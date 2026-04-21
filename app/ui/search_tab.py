@@ -22,12 +22,14 @@ from PySide6.QtWidgets import (
 )
 
 from app.application.read_models import NameDetail, NameSearchRow, RelatedRow
+from app.ui.role_context import RoleContext, UserRole
 
 
 class SearchQueryService(Protocol):
     def search_names(
         self,
         query: str | None = None,
+        role: UserRole = "admin",
         *,
         exact_match: bool = False,
         title_id: int | None = None,
@@ -35,19 +37,26 @@ class SearchQueryService(Protocol):
         include_deleted: bool = False,
     ) -> list[NameSearchRow]: ...
 
-    def get_name_detail(self, name_id: int) -> NameDetail: ...
+    def get_name_detail(self, name_id: int, role: UserRole = "admin") -> NameDetail: ...
 
     def list_related_rows(
-        self, name_id: int, *, include_deleted: bool = False
+        self,
+        name_id: int,
+        role: UserRole = "admin",
+        *,
+        include_deleted: bool = False,
     ) -> list[RelatedRow]: ...
 
 
 class SearchTab(QWidget):
     """UI for search/read-only query operations."""
 
-    def __init__(self, query_service: SearchQueryService) -> None:
+    def __init__(
+        self, query_service: SearchQueryService, role_context: RoleContext | None = None
+    ) -> None:
         super().__init__()
         self._query_service = query_service
+        self._role_context = role_context or RoleContext.admin()
         self._search_rows: list[NameSearchRow] = []
 
         self.query_input = QLineEdit()
@@ -126,6 +135,7 @@ class SearchTab(QWidget):
             has_links = self._parse_has_links()
             rows = self._query_service.search_names(
                 query=self.query_input.text(),
+                role=self._role_context.role,
                 exact_match=self.match_mode.currentText() == "完全一致",
                 title_id=title_id,
                 has_links=has_links,
@@ -151,9 +161,10 @@ class SearchTab(QWidget):
 
         selected = self._search_rows[index]
         try:
-            detail = self._query_service.get_name_detail(selected.id)
+            detail = self._query_service.get_name_detail(selected.id, role=self._role_context.role)
             related_rows = self._query_service.list_related_rows(
                 selected.id,
+                role=self._role_context.role,
                 include_deleted=self.include_deleted_checkbox.isChecked(),
             )
         except Exception as exc:  # noqa: BLE001
