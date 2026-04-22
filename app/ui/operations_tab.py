@@ -61,6 +61,8 @@ class SettingsLike(Protocol):
 
     def setValue(self, key: str, value: object) -> None: ...
 
+    def remove(self, key: str) -> None: ...
+
 
 class OperationLoggerLike(Protocol):
     def append(
@@ -212,8 +214,10 @@ class OperationsTab(QWidget):
         self.import_csv_button = QPushButton("CSV Import")
         self.import_json_button = QPushButton("JSON Import")
         self.cancel_operation_button = QPushButton("Cancel")
+        self.clear_recent_paths_button = QPushButton("履歴クリア")
         self.cancel_operation_button.setEnabled(False)
         self.cancel_operation_button.clicked.connect(self._request_cancel)
+        self.clear_recent_paths_button.clicked.connect(self._clear_recent_paths)
 
         self.export_csv_button.clicked.connect(self._run_export_csv)
         self.export_json_button.clicked.connect(self._run_export_json)
@@ -304,6 +308,7 @@ class OperationsTab(QWidget):
         self.result_view.setReadOnly(True)
         root.addWidget(self.result_view)
         root.addWidget(self.cancel_operation_button)
+        root.addWidget(self.clear_recent_paths_button)
 
         self._setup_recent_paths()
         self._apply_role_guards()
@@ -332,19 +337,7 @@ class OperationsTab(QWidget):
         return group
 
     def _setup_recent_paths(self) -> None:
-        fields: list[tuple[str, QLineEdit]] = [
-            ("csv_export_dir", self.csv_export_path_input),
-            ("json_export_file", self.json_export_path_input),
-            ("sql_dump_file", self.sql_dump_path_input),
-            ("db_file", self.db_path_input),
-            ("backup_output_file", self.backup_output_path_input),
-            ("restore_backup_file", self.restore_backup_path_input),
-            ("restore_target_file", self.restore_target_db_path_input),
-            ("import_csv_dir", self.import_csv_dir_input),
-            ("import_json_file", self.import_json_path_input),
-        ]
-
-        for field_key, line_edit in fields:
+        for field_key, line_edit in self._history_field_bindings():
             history = self._get_recent_paths(field_key)
             model = QStringListModel(history)
             self._history_models[field_key] = model
@@ -491,6 +484,7 @@ class OperationsTab(QWidget):
             self.restore_target_browse_button,
             self.import_csv_dir_browse_button,
             self.import_json_browse_button,
+            self.clear_recent_paths_button,
         ]
 
         for button in execute_buttons + browse_buttons:
@@ -510,6 +504,35 @@ class OperationsTab(QWidget):
         self.restore_button.setEnabled(admin_only)
         self.import_csv_button.setEnabled(admin_only)
         self.import_json_button.setEnabled(admin_only)
+
+    def _history_field_bindings(self) -> list[tuple[str, QLineEdit]]:
+        return [
+            ("csv_export_dir", self.csv_export_path_input),
+            ("json_export_file", self.json_export_path_input),
+            ("sql_dump_file", self.sql_dump_path_input),
+            ("db_file", self.db_path_input),
+            ("backup_output_file", self.backup_output_path_input),
+            ("restore_backup_file", self.restore_backup_path_input),
+            ("restore_target_file", self.restore_target_db_path_input),
+            ("import_csv_dir", self.import_csv_dir_input),
+            ("import_json_file", self.import_json_path_input),
+        ]
+
+    def _clear_recent_paths(self) -> None:
+        for field_key, line_edit in self._history_field_bindings():
+            key = self._history_settings_key(field_key)
+            if hasattr(self._settings, "remove"):
+                self._settings.remove(key)
+            else:
+                self._settings.setValue(key, [])
+            model = self._history_models.get(field_key)
+            if model is not None:
+                model.setStringList([])
+            line_edit.clear()
+
+        message = "recent path history をクリアしました"
+        self._set_message(message)
+        self._record_operation("clear_recent_paths", "success", message)
 
     def _request_cancel(self) -> None:
         if not self._is_busy:

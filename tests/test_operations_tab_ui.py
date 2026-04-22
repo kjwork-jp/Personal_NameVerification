@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
@@ -28,6 +29,9 @@ class FakeSettings:
 
     def setValue(self, key: str, value: object) -> None:
         self.store[key] = value
+
+    def remove(self, key: str) -> None:
+        self.store.pop(key, None)
 
 
 class FakeOperationLogger:
@@ -507,6 +511,62 @@ def test_operations_log_jsonl_format(tmp_path: Path) -> None:
     assert parsed["path"] == "/tmp/csv"
 
 
+def test_operations_log_rotation_and_ttl(tmp_path: Path) -> None:
+    from app.ui.operations_log import OperationsJsonlLogger
+
+    now = datetime(2026, 4, 22, 12, 0, 0, tzinfo=UTC)
+
+    class TmpLocator:
+        def writableLocation(self, location: object) -> str:
+            return str(tmp_path)
+
+    log_file = tmp_path / "operations_events.jsonl"
+    log_file.write_text("x" * 128, encoding="utf-8")
+
+    old_archived = tmp_path / "operations_events.20200101-000000.jsonl"
+    old_archived.write_text("old", encoding="utf-8")
+    very_old_ts = (now - timedelta(days=40)).timestamp()
+    os.utime(old_archived, (very_old_ts, very_old_ts))
+
+    logger = OperationsJsonlLogger(
+        app_data_locator=TmpLocator(),
+        max_bytes=64,
+        ttl_days=30,
+        now_provider=lambda: now,
+    )
+    logger.append(
+        action="export_csv",
+        role="admin",
+        status="success",
+        message="ok",
+    )
+
+    rotated = tmp_path / "operations_events.20260422-120000.jsonl"
+    assert rotated.exists()
+    assert log_file.exists()
+    assert not old_archived.exists()
+
+
+def test_operations_log_housekeeping_failure_is_best_effort(tmp_path: Path) -> None:
+    from app.ui.operations_log import OperationsJsonlLogger
+
+    class BadLocator:
+        def writableLocation(self, location: object) -> str:
+            return str(tmp_path / "not-created")
+
+    logger = OperationsJsonlLogger(app_data_locator=BadLocator())
+    target_dir = tmp_path / "not-created"
+    target_dir.mkdir(parents=True, exist_ok=True)
+    log_file = target_dir / "operations_events.jsonl"
+
+    def broken_rotate(_: Path) -> None:
+        raise RuntimeError("rotate failed")
+
+    logger._rotate_if_needed = broken_rotate  # type: ignore[method-assign]
+    logger.append(action="export_json", role="admin", status="success", message="ok")
+    assert log_file.exists()
+
+
 def test_operations_tab_busy_state_and_double_start_prevention() -> None:
     _app()
     executor = DeferredOperationExecutor()
@@ -553,3 +613,33 @@ def test_operations_tab_cancel_request_minimum_flow() -> None:
     executor.succeed(1)
     statuses = [event["status"] for event in logger.events]
     assert "cancel" in statuses
+
+
+def test_operations_tab_clear_recent_paths() -> None:
+    _app()
+    settings = FakeSettings(
+        {
+            "operations/recent_paths/csv_export_dir": ["/tmp/a"],
+            "operations/recent_paths/import_json_file": ["/tmp/b.json"],
+        }
+    )
+    logger = FakeOperationLogger()
+    tab = OperationsTab(
+        export_backup_service=StubExportBackupService(),
+        backup_restore_service=StubBackupRestoreService(),
+        import_service=StubImportService(),
+        role_context=RoleContext(role="admin"),
+        settings=settings,
+        operation_logger=logger,
+        operation_executor=ImmediateOperationExecutor(),
+    )
+
+    assert tab.csv_export_path_input.text() == "/tmp/a"
+    tab.clear_recent_paths_button.click()
+
+    assert settings.value("operations/recent_paths/csv_export_dir") is None
+    assert settings.value("operations/recent_paths/import_json_file") is None
+    assert tab.csv_export_path_input.text() == ""
+    assert tab.import_json_path_input.text() == ""
+    assert tab._history_models["csv_export_dir"].stringList() == []
+    assert logger.events[-1]["action"] == "clear_recent_paths"

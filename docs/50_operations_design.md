@@ -10,6 +10,8 @@
 - recent path history 候補を利用して再入力を省力化
 - Operations 実行結果は AppDataLocation 配下の JSONL（append-only）へ記録
 - Operations 実行は async worker で分離し、busy 中は二重起動を防止（cancel request 導線あり）
+- Operations ログは size-based rotation と TTL pruning でローカル保守を行う
+- recent path history は Operations タブから一括クリア可能
 - 代表検索確認
 - 変更ログ確認
 - 必要時の CSV / JSON / SQL dump 出力（editor/admin）
