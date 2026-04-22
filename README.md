@@ -1,63 +1,86 @@
-# NameVerification v3 Repository Bootstrap Package
+# NameVerification v3
 
-## 概要
-本リポジトリは、**Windows ローカル環境で動作する名前照合・登録デスクトップアプリ**を、PySide6 前提でゼロから再構築するための設計・運用・AI連携ドキュメント一式です。
+NameVerification v3 is a **PySide6 desktop application** for local/offline name verification and management.
 
-現時点では**コードは含みません**。  
-このパッケージは、以下の役割分担を前提にした**実装前の完全な土台**です。
+This repository is **not docs-only**: it already contains implementation code, SQLite schema, and automated tests.
 
-- 要件定義～設計: ChatGPT
-- 開発～テスト初期: Codex
-- テスト後期～運用開始前: ChatGPT
+## Current implementation status
 
-## 目的
-- 実装前に、要件・設計・開発工程・品質基準・運用基準を固定する
-- AI 実装時の解釈ブレを抑える
-- Git / PR / テスト / 運用開始判定までを一貫して管理する
+Implemented layers:
+- `app/domain`: normalization rules and domain errors
+- `app/application`: `CoreService` / `QueryService` / read models / minimal authorization helpers
+- `app/infrastructure`: SQLite schema application helpers
+- `app/ui`: PySide6 UI tabs and role-based UI guards
+- `db/`: schema and migration SQL
+- `tests/`: unit + UI tests
 
-## 想定プロダクト
-- 名称: NameVerification v3
-- 方式: Windows デスクトップアプリ
-- UI: PySide6
-- DB: SQLite
-- 配布形態: PyInstaller による exe 配布
-- 利用形態: 原則オフライン、単一拠点ローカル運用
+## Runtime / stack
 
-## まず読む順番
-1. `docs/02_document_priority_order.md`
-2. `docs/00_repository_master_spec.md`
-3. `docs/10_requirements_definition.md`
-4. `docs/12_basic_design.md`
-5. `docs/13_detailed_technical_design.md`
-6. `docs/31_branch_and_pr_policy.md`
-7. `docs/40_test_strategy.md`
-8. `docs/50_operations_design.md`
-9. `prompts/01_codex_work_rules.md`
-10. `prompts/00_codex_bootstrap_prompt.md`
+- Python 3.12+
+- PySide6 (desktop UI)
+- SQLite (local DB)
 
-## このパッケージに含むもの
-- リポジトリ設計書
-- 役割表
-- 要件定義書
-- 基本設計 / 技術詳細設計書
-- 運用設計書
-- 開発工程マップ
-- Codex 用プロンプト群
-- ブランチ / PR 運用規約
-- テスト / UAT / リリース判定基準
+## Entry point
 
-## 実装開始時の大原則
-- main へ直接 push しない
-- 1 PR 1目的
-- 推測で仕様を補わない
-- 設計変更時は docs を先に更新する
-- 各工程末尾に**徹底的な最終見直しレビュー**を行う
+- `app/pyside6_main.py`
 
-## オーナー
-- Repository owner: `kjwork-jp`
+## Main window tabs
 
-## 版管理
-- Bootstrap package version: `v3-bootstrap-2026-04-15`
+- Search
+- Name Management
+- Title / Subtitle Management
+- Link Management
+- Trash
+- Audit Log
+- Operations
 
-## ライセンス
-本パッケージの既定ライセンスは `LICENSE` を参照してください。
+## Setup
+
+```bash
+python -m venv .venv
+source .venv/bin/activate  # Windows: .venv\\Scripts\\activate
+pip install -e .
+```
+
+## Run application
+
+```bash
+python -m app.pyside6_main
+```
+
+## Test / checks
+
+```bash
+pytest -q
+ruff check .
+black --check .
+mypy app
+```
+
+## Export / backup create foundation (service layer)
+
+The application/infrastructure layers now provide file output helpers for:
+- CSV export (`names`, `titles`, `subtitles`, `name_subtitle_links`, `change_logs`)
+- JSON export (same table set)
+- SQL dump export (SQLite `iterdump`)
+- backup file create (SQLite file copy)
+- backup restore foundation (backup file -> target DB file replacement)
+- CSV / JSON import foundation (empty SQLite DB only, admin only)
+
+Import scope note: SQL import is out of scope; DB-wide replacement is handled by restore foundation.
+
+Restore RBAC: restore is destructive and allowed for `admin` only (`viewer` / `editor` are rejected).
+
+Restore safety note: close active SQLite connections for the target DB before running restore.
+
+Current RBAC: export/backup create operations are allowed for `editor` / `admin`, and rejected for `viewer`.
+
+Operations tab provides minimal UI entrypoints for export/import/backup/restore using path inputs, Browse buttons, and execution buttons.
+- Browse buttons use native file/directory dialog for path selection.
+- Recent path history is persisted per input (max 5, deduplicated, latest-first) and offered via completer.
+- Operation execution results are appended to local JSONL (`operations_events.jsonl`) under AppDataLocation with `timestamp/action/role/status/message/path` fields (best-effort write).
+
+## Notes
+
+- The app uses a local SQLite database and is intended for single-site local operation.
+- README/docs wording may be refined over time; functional behavior should be validated against code + tests.

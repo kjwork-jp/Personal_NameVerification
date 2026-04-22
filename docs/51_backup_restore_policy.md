@@ -19,3 +19,18 @@
 
 ## 4. 禁止
 - 未確認バックアップを本番復旧に使う
+
+
+## 5. 実装ステータス（現時点）
+- backup create（DB ファイルコピー）は実装済み。
+- restore foundation（backup file から DB file 置換）は実装済み。
+- backup 実行権限は editor/admin、viewer は不可。
+
+- restore 実行権限は admin のみ（viewer/editor は不可）。
+- restore 前に対象DBへのアクティブ接続をクローズする。
+
+- CSV / JSON import foundation（空DB限定）は実装済み。
+- SQL import は未実装（restore と責務分離）。
+
+- UI では Operations タブから最小導線を提供する。
+- restore/import は destructive 扱いとして実行前確認ダイアログを必須とする。
