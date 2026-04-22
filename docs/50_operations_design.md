@@ -16,6 +16,7 @@
 - change_logs spot review
 - export / backup 出力ファイル妥当性サンプリング
 - restore 実行前の接続クローズ確認
+- 空DBへの初期 import（CSV/JSON, admin）手順確認
 - 未処理課題確認
 
 ## 4. 月次運用

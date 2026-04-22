@@ -1,6 +1,8 @@
 # 97_open_issues_and_constraints.md
 
 ## 未解決事項
+- 非空DBへの merge/overwrite/upsert import 方針
+- SQL import を restore とどう分離して運用するか
 - 実データ件数規模の最終見積
 - アイコン保存方式の最終決定
 - UAT 実施体制

@@ -64,6 +64,9 @@ The application/infrastructure layers now provide file output helpers for:
 - SQL dump export (SQLite `iterdump`)
 - backup file create (SQLite file copy)
 - backup restore foundation (backup file -> target DB file replacement)
+- CSV / JSON import foundation (empty SQLite DB only, admin only)
+
+Import scope note: SQL import is out of scope; DB-wide replacement is handled by restore foundation.
 
 Restore RBAC: restore is destructive and allowed for `admin` only (`viewer` / `editor` are rejected).
 

@@ -8,6 +8,7 @@ from .export_backup import (
     export_tables_to_csv,
     export_tables_to_json,
 )
+from .import_data import IMPORT_TABLES, import_from_csv_directory, import_from_json_file
 from .restore_backup import restore_database_from_backup
 
 __all__ = [
@@ -20,4 +21,7 @@ __all__ = [
     "export_sql_dump",
     "create_backup_file",
     "restore_database_from_backup",
+    "IMPORT_TABLES",
+    "import_from_csv_directory",
+    "import_from_json_file",
 ]
