@@ -42,6 +42,7 @@
 - [ ] restore / import 実行前に確認ダイアログが表示される
 - [ ] Operations タブの Browse ボタンで native file/directory dialog が開く
 - [ ] 入力欄ごとに recent path history（最大5件）が復元・候補表示される
+- [ ] Operations 実行結果（success/error/cancel）がローカル JSONL に追記保存される
 - [ ] destructive 操作に確認ダイアログがある
 - [ ] エラー表示が利用者に理解可能
 - [ ] 主要操作がキーボードでも到達可能

@@ -8,6 +8,7 @@
 - Operations タブで日次運用操作（export/backup create）を実施
 - path 指定は Operations タブの Browse ボタン（native dialog）を優先利用
 - recent path history 候補を利用して再入力を省力化
+- Operations 実行結果は AppDataLocation 配下の JSONL（append-only）へ記録
 - 代表検索確認
 - 変更ログ確認
 - 必要時の CSV / JSON / SQL dump 出力（editor/admin）

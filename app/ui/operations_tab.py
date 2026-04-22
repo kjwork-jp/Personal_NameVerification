@@ -21,6 +21,7 @@ from PySide6.QtWidgets import (
 )
 
 from app.ui.dialogs import confirm_destructive_action
+from app.ui.operations_log import OperationsJsonlLogger
 from app.ui.role_context import RoleContext, UserRole
 
 MAX_RECENT_PATHS = 5
@@ -58,6 +59,19 @@ class SettingsLike(Protocol):
     def setValue(self, key: str, value: object) -> None: ...
 
 
+class OperationLoggerLike(Protocol):
+    def append(
+        self,
+        *,
+        action: str,
+        role: str,
+        status: str,
+        message: str,
+        path: str | None = None,
+        path2: str | None = None,
+    ) -> None: ...
+
+
 class OperationsTab(QWidget):
     """Minimal operations UI for file-based operational workflows."""
 
@@ -68,6 +82,7 @@ class OperationsTab(QWidget):
         import_service: ImportLike,
         role_context: RoleContext | None = None,
         settings: SettingsLike | None = None,
+        operation_logger: OperationLoggerLike | None = None,
     ) -> None:
         super().__init__()
         self._export_backup_service = export_backup_service
@@ -77,6 +92,7 @@ class OperationsTab(QWidget):
         self._settings: SettingsLike = settings or QSettings(
             "NameVerification", "NameVerificationV3"
         )
+        self._operation_logger = operation_logger or OperationsJsonlLogger()
         self._history_models: dict[str, QStringListModel] = {}
 
         root = QVBoxLayout(self)
@@ -440,9 +456,13 @@ class OperationsTab(QWidget):
         try:
             result = self._export_backup_service.export_csv(Path(path), role=self._role)
             self._push_recent_path("csv_export_dir", path)
-            self._set_message(f"CSV export 成功: {len(result)} tables")
+            message = f"CSV export 成功: {len(result)} tables"
+            self._set_message(message)
+            self._record_operation("export_csv", "success", message, path=path)
         except Exception as exc:
-            self._set_message(f"CSV export 失敗: {exc}", is_error=True)
+            message = f"CSV export 失敗: {exc}"
+            self._set_message(message, is_error=True)
+            self._record_operation("export_csv", "error", message, path=path)
 
     def _run_export_json(self) -> None:
         path = self._require_text(self.json_export_path_input, "JSON出力先ファイル")
@@ -451,9 +471,13 @@ class OperationsTab(QWidget):
         try:
             result = self._export_backup_service.export_json(Path(path), role=self._role)
             self._push_recent_path("json_export_file", path)
-            self._set_message(f"JSON export 成功: {result}")
+            message = f"JSON export 成功: {result}"
+            self._set_message(message)
+            self._record_operation("export_json", "success", message, path=path)
         except Exception as exc:
-            self._set_message(f"JSON export 失敗: {exc}", is_error=True)
+            message = f"JSON export 失敗: {exc}"
+            self._set_message(message, is_error=True)
+            self._record_operation("export_json", "error", message, path=path)
 
     def _run_export_sql_dump(self) -> None:
         path = self._require_text(self.sql_dump_path_input, "SQL dump出力先ファイル")
@@ -462,9 +486,13 @@ class OperationsTab(QWidget):
         try:
             result = self._export_backup_service.export_sql_dump(Path(path), role=self._role)
             self._push_recent_path("sql_dump_file", path)
-            self._set_message(f"SQL dump export 成功: {result}")
+            message = f"SQL dump export 成功: {result}"
+            self._set_message(message)
+            self._record_operation("export_sql_dump", "success", message, path=path)
         except Exception as exc:
-            self._set_message(f"SQL dump export 失敗: {exc}", is_error=True)
+            message = f"SQL dump export 失敗: {exc}"
+            self._set_message(message, is_error=True)
+            self._record_operation("export_sql_dump", "error", message, path=path)
 
     def _run_create_backup(self) -> None:
         db_path = self._require_text(self.db_path_input, "DBファイルパス")
@@ -477,9 +505,25 @@ class OperationsTab(QWidget):
             )
             self._push_recent_path("db_file", db_path)
             self._push_recent_path("backup_output_file", backup_path)
-            self._set_message(f"Backup create 成功: {result}")
+            message = f"Backup create 成功: {result}"
+            self._set_message(message)
+            self._record_operation(
+                "create_backup",
+                "success",
+                message,
+                path=db_path,
+                path2=backup_path,
+            )
         except Exception as exc:
-            self._set_message(f"Backup create 失敗: {exc}", is_error=True)
+            message = f"Backup create 失敗: {exc}"
+            self._set_message(message, is_error=True)
+            self._record_operation(
+                "create_backup",
+                "error",
+                message,
+                path=db_path,
+                path2=backup_path,
+            )
 
     def _run_restore(self) -> None:
         backup_path = self._require_text(self.restore_backup_path_input, "バックアップ入力ファイル")
@@ -492,7 +536,15 @@ class OperationsTab(QWidget):
             "復元確認",
             "restore を実行します。対象DBは置換されます。続行しますか？",
         ):
-            self._set_message("Restore はキャンセルされました")
+            message = "Restore はキャンセルされました"
+            self._set_message(message)
+            self._record_operation(
+                "restore",
+                "cancel",
+                message,
+                path=backup_path,
+                path2=target_path,
+            )
             return
 
         try:
@@ -501,9 +553,25 @@ class OperationsTab(QWidget):
             )
             self._push_recent_path("restore_backup_file", backup_path)
             self._push_recent_path("restore_target_file", target_path)
-            self._set_message(f"Restore 成功: {result}")
+            message = f"Restore 成功: {result}"
+            self._set_message(message)
+            self._record_operation(
+                "restore",
+                "success",
+                message,
+                path=backup_path,
+                path2=target_path,
+            )
         except Exception as exc:
-            self._set_message(f"Restore 失敗: {exc}", is_error=True)
+            message = f"Restore 失敗: {exc}"
+            self._set_message(message, is_error=True)
+            self._record_operation(
+                "restore",
+                "error",
+                message,
+                path=backup_path,
+                path2=target_path,
+            )
 
     def _run_import_csv(self) -> None:
         csv_dir = self._require_text(self.import_csv_dir_input, "CSVディレクトリ")
@@ -515,15 +583,21 @@ class OperationsTab(QWidget):
             "CSV Import確認",
             "CSV import を実行します。空DBへの初期取込のみ想定です。続行しますか？",
         ):
-            self._set_message("CSV Import はキャンセルされました")
+            message = "CSV Import はキャンセルされました"
+            self._set_message(message)
+            self._record_operation("import_csv", "cancel", message, path=csv_dir)
             return
 
         try:
             result = self._import_service.import_csv(Path(csv_dir), role=self._role)
             self._push_recent_path("import_csv_dir", csv_dir)
-            self._set_message(f"CSV import 成功: {result}")
+            message = f"CSV import 成功: {result}"
+            self._set_message(message)
+            self._record_operation("import_csv", "success", message, path=csv_dir)
         except Exception as exc:
-            self._set_message(f"CSV import 失敗: {exc}", is_error=True)
+            message = f"CSV import 失敗: {exc}"
+            self._set_message(message, is_error=True)
+            self._record_operation("import_csv", "error", message, path=csv_dir)
 
     def _run_import_json(self) -> None:
         json_path = self._require_text(self.import_json_path_input, "JSONファイル")
@@ -535,15 +609,42 @@ class OperationsTab(QWidget):
             "JSON Import確認",
             "JSON import を実行します。空DBへの初期取込のみ想定です。続行しますか？",
         ):
-            self._set_message("JSON Import はキャンセルされました")
+            message = "JSON Import はキャンセルされました"
+            self._set_message(message)
+            self._record_operation("import_json", "cancel", message, path=json_path)
             return
 
         try:
             result = self._import_service.import_json(Path(json_path), role=self._role)
             self._push_recent_path("import_json_file", json_path)
-            self._set_message(f"JSON import 成功: {result}")
+            message = f"JSON import 成功: {result}"
+            self._set_message(message)
+            self._record_operation("import_json", "success", message, path=json_path)
         except Exception as exc:
-            self._set_message(f"JSON import 失敗: {exc}", is_error=True)
+            message = f"JSON import 失敗: {exc}"
+            self._set_message(message, is_error=True)
+            self._record_operation("import_json", "error", message, path=json_path)
+
+    def _record_operation(
+        self,
+        action: str,
+        status: str,
+        message: str,
+        *,
+        path: str | None = None,
+        path2: str | None = None,
+    ) -> None:
+        try:
+            self._operation_logger.append(
+                action=action,
+                role=self._role,
+                status=status,
+                message=message,
+                path=path,
+                path2=path2,
+            )
+        except Exception:
+            return
 
     def _set_message(self, message: str, *, is_error: bool = False) -> None:
         prefix = "ERROR" if is_error else "OK"

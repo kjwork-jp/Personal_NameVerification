@@ -78,6 +78,7 @@ Current RBAC: export/backup create operations are allowed for `editor` / `admin`
 Operations tab provides minimal UI entrypoints for export/import/backup/restore using path inputs, Browse buttons, and execution buttons.
 - Browse buttons use native file/directory dialog for path selection.
 - Recent path history is persisted per input (max 5, deduplicated, latest-first) and offered via completer.
+- Operation execution results are appended to local JSONL (`operations_events.jsonl`) under AppDataLocation with `timestamp/action/role/status/message/path` fields (best-effort write).
 
 ## Notes
 

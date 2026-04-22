@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 from pathlib import Path
 
@@ -26,6 +27,46 @@ class FakeSettings:
 
     def setValue(self, key: str, value: object) -> None:
         self.store[key] = value
+
+
+class FakeOperationLogger:
+    def __init__(self) -> None:
+        self.events: list[dict[str, str | None]] = []
+
+    def append(
+        self,
+        *,
+        action: str,
+        role: str,
+        status: str,
+        message: str,
+        path: str | None = None,
+        path2: str | None = None,
+    ) -> None:
+        self.events.append(
+            {
+                "action": action,
+                "role": role,
+                "status": status,
+                "message": message,
+                "path": path,
+                "path2": path2,
+            }
+        )
+
+
+class FailingOperationLogger(FakeOperationLogger):
+    def append(
+        self,
+        *,
+        action: str,
+        role: str,
+        status: str,
+        message: str,
+        path: str | None = None,
+        path2: str | None = None,
+    ) -> None:
+        raise RuntimeError("logger failed")
 
 
 class StubExportBackupService:
@@ -131,6 +172,7 @@ def test_operations_tab_service_calls_and_result_messages(monkeypatch: pytest.Mo
         backup_restore_service=restore_service,
         import_service=import_service,
         role_context=RoleContext(role="admin"),
+        operation_logger=FakeOperationLogger(),
     )
 
     tab.csv_export_path_input.setText("/tmp/csv")
@@ -169,6 +211,7 @@ def test_operations_tab_destructive_cancel(monkeypatch: pytest.MonkeyPatch) -> N
         backup_restore_service=restore_service,
         import_service=import_service,
         role_context=RoleContext(role="admin"),
+        operation_logger=FakeOperationLogger(),
     )
 
     tab.restore_backup_path_input.setText("/tmp/backup.sqlite3")
@@ -195,6 +238,7 @@ def test_operations_tab_error_message_display() -> None:
         backup_restore_service=StubBackupRestoreService(),
         import_service=StubImportService(),
         role_context=RoleContext(role="admin"),
+        operation_logger=FakeOperationLogger(),
     )
 
     tab.json_export_path_input.setText("/tmp/export.json")
@@ -231,6 +275,7 @@ def test_operations_tab_browse_updates_inputs_and_history(monkeypatch: pytest.Mo
         import_service=StubImportService(),
         role_context=RoleContext(role="admin"),
         settings=settings,
+        operation_logger=FakeOperationLogger(),
     )
 
     tab.csv_export_browse_button.click()
@@ -268,6 +313,7 @@ def test_operations_tab_browse_cancel_keeps_existing_value_and_history(
         import_service=StubImportService(),
         role_context=RoleContext(role="admin"),
         settings=settings,
+        operation_logger=FakeOperationLogger(),
     )
 
     tab.import_csv_dir_input.setText("/tmp/original-dir")
@@ -295,6 +341,7 @@ def test_operations_tab_history_dedup_max5_and_initial_restore(
         import_service=StubImportService(),
         role_context=RoleContext(role="admin"),
         settings=settings,
+        operation_logger=FakeOperationLogger(),
     )
 
     assert tab.json_export_path_input.text() == "/tmp/recent-1.json"
@@ -336,7 +383,87 @@ def test_operations_tab_history_normalizes_tuple_and_blank_values() -> None:
         import_service=StubImportService(),
         role_context=RoleContext(role="admin"),
         settings=settings,
+        operation_logger=FakeOperationLogger(),
     )
 
     assert tab.sql_dump_path_input.text() == "/tmp/a.sql"
     assert tab._get_recent_paths("sql_dump_file") == ["/tmp/a.sql", "/tmp/b.sql"]
+
+
+def test_operations_tab_persists_success_error_cancel_log_events(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _app()
+    logger = FakeOperationLogger()
+
+    class FailingExportService(StubExportBackupService):
+        def export_json(self, output_path: Path, role: str = "admin") -> Path:
+            raise RuntimeError("json export failed")
+
+    monkeypatch.setattr(
+        operations_tab_module, "confirm_destructive_action", lambda *args, **kwargs: False
+    )
+
+    tab = OperationsTab(
+        export_backup_service=FailingExportService(),
+        backup_restore_service=StubBackupRestoreService(),
+        import_service=StubImportService(),
+        role_context=RoleContext(role="admin"),
+        operation_logger=logger,
+    )
+
+    tab.csv_export_path_input.setText("/tmp/csv")
+    tab._run_export_csv()
+    tab.json_export_path_input.setText("/tmp/export.json")
+    tab._run_export_json()
+    tab.import_json_path_input.setText("/tmp/import.json")
+    tab._run_import_json()
+
+    assert len(logger.events) == 3
+    assert logger.events[0]["action"] == "export_csv"
+    assert logger.events[0]["status"] == "success"
+    assert logger.events[1]["action"] == "export_json"
+    assert logger.events[1]["status"] == "error"
+    assert logger.events[2]["action"] == "import_json"
+    assert logger.events[2]["status"] == "cancel"
+
+
+def test_operations_tab_logger_failure_does_not_break_ui() -> None:
+    _app()
+    tab = OperationsTab(
+        export_backup_service=StubExportBackupService(),
+        backup_restore_service=StubBackupRestoreService(),
+        import_service=StubImportService(),
+        role_context=RoleContext(role="admin"),
+        operation_logger=FailingOperationLogger(),
+    )
+
+    tab.csv_export_path_input.setText("/tmp/csv")
+    tab._run_export_csv()
+
+    assert "CSV export 成功" in tab.result_view.toPlainText()
+
+
+def test_operations_log_jsonl_format(tmp_path: Path) -> None:
+    from app.ui.operations_log import OperationsJsonlLogger
+
+    class TmpLocator:
+        def writableLocation(self, location: object) -> str:
+            return str(tmp_path)
+
+    logger = OperationsJsonlLogger(app_data_locator=TmpLocator())
+    logger.append(
+        action="export_csv",
+        role="editor",
+        status="success",
+        message="CSV export 成功",
+        path="/tmp/csv",
+    )
+
+    log_file = tmp_path / "operations_events.jsonl"
+    raw = log_file.read_text(encoding="utf-8").strip()
+    parsed = json.loads(raw)
+    assert parsed["action"] == "export_csv"
+    assert parsed["status"] == "success"
+    assert parsed["role"] == "editor"
+    assert parsed["path"] == "/tmp/csv"
