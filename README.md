@@ -32,6 +32,7 @@ Implemented layers:
 - Link Management
 - Trash
 - Audit Log
+- Operations
 
 ## Setup
 
@@ -73,6 +74,8 @@ Restore RBAC: restore is destructive and allowed for `admin` only (`viewer` / `e
 Restore safety note: close active SQLite connections for the target DB before running restore.
 
 Current RBAC: export/backup create operations are allowed for `editor` / `admin`, and rejected for `viewer`.
+
+Operations tab provides minimal UI entrypoints for export/import/backup/restore using path inputs and execution buttons.
 
 ## Notes
 

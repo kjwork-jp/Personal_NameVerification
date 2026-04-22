@@ -31,3 +31,6 @@
 
 - CSV / JSON import foundation（空DB限定）は実装済み。
 - SQL import は未実装（restore と責務分離）。
+
+- UI では Operations タブから最小導線を提供する。
+- restore/import は destructive 扱いとして実行前確認ダイアログを必須とする。

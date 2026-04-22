@@ -52,6 +52,40 @@ class EmptyQueryService:
         return []
 
 
+class EmptyExportBackupService:
+    def export_csv(self, *args: object, **kwargs: object) -> dict[str, object]:
+        _ = (args, kwargs)
+        return {}
+
+    def export_json(self, *args: object, **kwargs: object) -> object:
+        _ = (args, kwargs)
+        return ""
+
+    def export_sql_dump(self, *args: object, **kwargs: object) -> object:
+        _ = (args, kwargs)
+        return ""
+
+    def create_backup(self, *args: object, **kwargs: object) -> object:
+        _ = (args, kwargs)
+        return ""
+
+
+class EmptyBackupRestoreService:
+    def restore_database(self, *args: object, **kwargs: object) -> object:
+        _ = (args, kwargs)
+        return ""
+
+
+class EmptyImportService:
+    def import_csv(self, *args: object, **kwargs: object) -> dict[str, int]:
+        _ = (args, kwargs)
+        return {}
+
+    def import_json(self, *args: object, **kwargs: object) -> dict[str, int]:
+        _ = (args, kwargs)
+        return {}
+
+
 class EmptyCoreService:
     def create_name(self, *args: object, **kwargs: object) -> int:
         _ = (args, kwargs)
@@ -124,16 +158,23 @@ def _get_app() -> QApplication:
 
 def test_main_window_has_required_tabs() -> None:
     _get_app()
-    window = MainWindow(query_service=EmptyQueryService(), core_service=EmptyCoreService())
+    window = MainWindow(
+        query_service=EmptyQueryService(),
+        core_service=EmptyCoreService(),
+        export_backup_service=EmptyExportBackupService(),
+        backup_restore_service=EmptyBackupRestoreService(),
+        import_service=EmptyImportService(),
+    )
     tab_widget = window.centralWidget()
     assert tab_widget is not None
-    assert tab_widget.count() == 6
+    assert tab_widget.count() == 7
     assert tab_widget.tabText(0) == "検索/照合"
     assert tab_widget.tabText(1) == "名前管理"
     assert tab_widget.tabText(2) == "タイトル/サブタイトル管理"
     assert tab_widget.tabText(3) == "リンク管理"
     assert tab_widget.tabText(4) == "ゴミ箱"
     assert tab_widget.tabText(5) == "監査ログ"
+    assert tab_widget.tabText(6) == "Operations"
 
 
 def test_main_window_accepts_role_context() -> None:
@@ -142,5 +183,8 @@ def test_main_window_accepts_role_context() -> None:
         query_service=EmptyQueryService(),
         core_service=EmptyCoreService(),
         role_context=RoleContext(role="viewer"),
+        export_backup_service=EmptyExportBackupService(),
+        backup_restore_service=EmptyBackupRestoreService(),
+        import_service=EmptyImportService(),
     )
     assert window.centralWidget() is not None
