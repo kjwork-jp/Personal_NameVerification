@@ -7,12 +7,16 @@
 - 起動確認
 - 代表検索確認
 - 変更ログ確認
-- 終業前バックアップ
+- 必要時の CSV / JSON / SQL dump 出力（editor/admin）
+- 終業前バックアップ作成（editor/admin）
 
 ## 3. 週次運用
-- バックアップ復元リハーサル
+- バックアップ復元リハーサル（restore は admin 実行、事前に対象DB接続クローズ）
 - 運用レポート確認
 - change_logs spot review
+- export / backup 出力ファイル妥当性サンプリング
+- restore 実行前の接続クローズ確認
+- 空DBへの初期 import（CSV/JSON, admin）手順確認
 - 未処理課題確認
 
 ## 4. 月次運用
