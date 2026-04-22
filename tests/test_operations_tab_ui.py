@@ -192,3 +192,60 @@ def test_operations_tab_error_message_display() -> None:
     result_text = tab.result_view.toPlainText()
     assert "ERROR" in result_text
     assert "boom" in result_text
+
+
+def test_operations_tab_browse_updates_inputs(monkeypatch: pytest.MonkeyPatch) -> None:
+    _app()
+
+    monkeypatch.setattr(
+        operations_tab_module.QFileDialog,
+        "getExistingDirectory",
+        lambda *args, **kwargs: "/tmp/chosen-dir",
+    )
+    monkeypatch.setattr(
+        operations_tab_module.QFileDialog,
+        "getOpenFileName",
+        lambda *args, **kwargs: ("/tmp/chosen-open.json", "JSON Files (*.json)"),
+    )
+    monkeypatch.setattr(
+        operations_tab_module.QFileDialog,
+        "getSaveFileName",
+        lambda *args, **kwargs: ("/tmp/chosen-save.sqlite3", "All Files (*)"),
+    )
+
+    tab = OperationsTab(
+        export_backup_service=StubExportBackupService(),
+        backup_restore_service=StubBackupRestoreService(),
+        import_service=StubImportService(),
+        role_context=RoleContext(role="admin"),
+    )
+
+    tab.csv_export_browse_button.click()
+    tab.restore_backup_browse_button.click()
+    tab.backup_output_browse_button.click()
+
+    assert tab.csv_export_path_input.text() == "/tmp/chosen-dir"
+    assert tab.restore_backup_path_input.text() == "/tmp/chosen-open.json"
+    assert tab.backup_output_path_input.text() == "/tmp/chosen-save.sqlite3"
+
+
+def test_operations_tab_browse_cancel_keeps_existing_value(monkeypatch: pytest.MonkeyPatch) -> None:
+    _app()
+
+    monkeypatch.setattr(
+        operations_tab_module.QFileDialog,
+        "getExistingDirectory",
+        lambda *args, **kwargs: "",
+    )
+
+    tab = OperationsTab(
+        export_backup_service=StubExportBackupService(),
+        backup_restore_service=StubBackupRestoreService(),
+        import_service=StubImportService(),
+        role_context=RoleContext(role="admin"),
+    )
+
+    tab.import_csv_dir_input.setText("/tmp/original-dir")
+    tab.import_csv_dir_browse_button.click()
+
+    assert tab.import_csv_dir_input.text() == "/tmp/original-dir"

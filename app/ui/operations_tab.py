@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Protocol
 
 from PySide6.QtWidgets import (
+    QFileDialog,
     QFormLayout,
     QGroupBox,
     QHBoxLayout,
@@ -66,14 +67,92 @@ class OperationsTab(QWidget):
         root.addWidget(QLabel("運用系操作（export/import/backup/restore）"))
 
         self.csv_export_path_input = QLineEdit()
+        self.csv_export_browse_button = QPushButton("Browse")
+        self.csv_export_browse_button.clicked.connect(
+            lambda: self._select_directory(
+                self.csv_export_path_input,
+                "CSV出力先ディレクトリを選択",
+            )
+        )
+
         self.json_export_path_input = QLineEdit()
+        self.json_export_browse_button = QPushButton("Browse")
+        self.json_export_browse_button.clicked.connect(
+            lambda: self._select_save_file(
+                self.json_export_path_input,
+                "JSON出力先ファイルを選択",
+                "JSON Files (*.json);;All Files (*)",
+            )
+        )
+
         self.sql_dump_path_input = QLineEdit()
+        self.sql_dump_browse_button = QPushButton("Browse")
+        self.sql_dump_browse_button.clicked.connect(
+            lambda: self._select_save_file(
+                self.sql_dump_path_input,
+                "SQL dump出力先ファイルを選択",
+                "SQL Files (*.sql);;All Files (*)",
+            )
+        )
+
         self.db_path_input = QLineEdit()
+        self.db_path_browse_button = QPushButton("Browse")
+        self.db_path_browse_button.clicked.connect(
+            lambda: self._select_open_file(
+                self.db_path_input,
+                "DBファイルを選択",
+                "SQLite DB (*.db *.sqlite *.sqlite3);;All Files (*)",
+            )
+        )
+
         self.backup_output_path_input = QLineEdit()
+        self.backup_output_browse_button = QPushButton("Browse")
+        self.backup_output_browse_button.clicked.connect(
+            lambda: self._select_save_file(
+                self.backup_output_path_input,
+                "バックアップ出力先ファイルを選択",
+                "SQLite DB (*.db *.sqlite *.sqlite3);;All Files (*)",
+            )
+        )
+
         self.restore_backup_path_input = QLineEdit()
+        self.restore_backup_browse_button = QPushButton("Browse")
+        self.restore_backup_browse_button.clicked.connect(
+            lambda: self._select_open_file(
+                self.restore_backup_path_input,
+                "restore用バックアップファイルを選択",
+                "SQLite DB (*.db *.sqlite *.sqlite3);;All Files (*)",
+            )
+        )
+
         self.restore_target_db_path_input = QLineEdit()
+        self.restore_target_browse_button = QPushButton("Browse")
+        self.restore_target_browse_button.clicked.connect(
+            lambda: self._select_save_file(
+                self.restore_target_db_path_input,
+                "restore先DBファイルを選択",
+                "SQLite DB (*.db *.sqlite *.sqlite3);;All Files (*)",
+            )
+        )
+
         self.import_csv_dir_input = QLineEdit()
+        self.import_csv_dir_browse_button = QPushButton("Browse")
+        self.import_csv_dir_browse_button.clicked.connect(
+            lambda: self._select_directory(
+                self.import_csv_dir_input,
+                "CSV importディレクトリを選択",
+            )
+        )
+
         self.import_json_path_input = QLineEdit()
+        self.import_json_browse_button = QPushButton("Browse")
+        self.import_json_browse_button.clicked.connect(
+            lambda: self._select_open_file(
+                self.import_json_path_input,
+                "JSON importファイルを選択",
+                "JSON Files (*.json);;All Files (*)",
+            )
+        )
 
         self.export_csv_button = QPushButton("CSV Export")
         self.export_json_button = QPushButton("JSON Export")
@@ -95,9 +174,21 @@ class OperationsTab(QWidget):
             self._build_group(
                 "Export",
                 [
-                    ("CSV出力先ディレクトリ", self.csv_export_path_input),
-                    ("JSON出力先ファイル", self.json_export_path_input),
-                    ("SQL dump出力先ファイル", self.sql_dump_path_input),
+                    (
+                        "CSV出力先ディレクトリ",
+                        self.csv_export_path_input,
+                        self.csv_export_browse_button,
+                    ),
+                    (
+                        "JSON出力先ファイル",
+                        self.json_export_path_input,
+                        self.json_export_browse_button,
+                    ),
+                    (
+                        "SQL dump出力先ファイル",
+                        self.sql_dump_path_input,
+                        self.sql_dump_browse_button,
+                    ),
                 ],
                 [self.export_csv_button, self.export_json_button, self.export_sql_dump_button],
             )
@@ -107,8 +198,12 @@ class OperationsTab(QWidget):
             self._build_group(
                 "Backup",
                 [
-                    ("DBファイルパス", self.db_path_input),
-                    ("バックアップ出力先", self.backup_output_path_input),
+                    ("DBファイルパス", self.db_path_input, self.db_path_browse_button),
+                    (
+                        "バックアップ出力先",
+                        self.backup_output_path_input,
+                        self.backup_output_browse_button,
+                    ),
                 ],
                 [self.create_backup_button],
             )
@@ -118,8 +213,16 @@ class OperationsTab(QWidget):
             self._build_group(
                 "Restore（destructive）",
                 [
-                    ("バックアップ入力ファイル", self.restore_backup_path_input),
-                    ("復元先DBファイル", self.restore_target_db_path_input),
+                    (
+                        "バックアップ入力ファイル",
+                        self.restore_backup_path_input,
+                        self.restore_backup_browse_button,
+                    ),
+                    (
+                        "復元先DBファイル",
+                        self.restore_target_db_path_input,
+                        self.restore_target_browse_button,
+                    ),
                 ],
                 [self.restore_button],
             )
@@ -129,8 +232,16 @@ class OperationsTab(QWidget):
             self._build_group(
                 "Import（destructive）",
                 [
-                    ("CSVディレクトリ", self.import_csv_dir_input),
-                    ("JSONファイル", self.import_json_path_input),
+                    (
+                        "CSVディレクトリ",
+                        self.import_csv_dir_input,
+                        self.import_csv_dir_browse_button,
+                    ),
+                    (
+                        "JSONファイル",
+                        self.import_json_path_input,
+                        self.import_json_browse_button,
+                    ),
                 ],
                 [self.import_csv_button, self.import_json_button],
             )
@@ -145,14 +256,17 @@ class OperationsTab(QWidget):
     def _build_group(
         self,
         title: str,
-        fields: list[tuple[str, QLineEdit]],
+        fields: list[tuple[str, QLineEdit, QPushButton]],
         buttons: list[QPushButton],
     ) -> QGroupBox:
         group = QGroupBox(title)
         box = QVBoxLayout(group)
         form = QFormLayout()
-        for label, widget in fields:
-            form.addRow(label, widget)
+        for label, path_input, browse_button in fields:
+            row = QHBoxLayout()
+            row.addWidget(path_input)
+            row.addWidget(browse_button)
+            form.addRow(label, row)
         box.addLayout(form)
 
         actions = QHBoxLayout()
@@ -161,6 +275,31 @@ class OperationsTab(QWidget):
         actions.addStretch(1)
         box.addLayout(actions)
         return group
+
+    def _select_directory(self, target: QLineEdit, title: str) -> None:
+        chosen = QFileDialog.getExistingDirectory(self, title, target.text().strip())
+        if chosen:
+            target.setText(chosen)
+
+    def _select_open_file(self, target: QLineEdit, title: str, filter_spec: str) -> None:
+        chosen, _ = QFileDialog.getOpenFileName(
+            self,
+            title,
+            target.text().strip(),
+            filter_spec,
+        )
+        if chosen:
+            target.setText(chosen)
+
+    def _select_save_file(self, target: QLineEdit, title: str, filter_spec: str) -> None:
+        chosen, _ = QFileDialog.getSaveFileName(
+            self,
+            title,
+            target.text().strip(),
+            filter_spec,
+        )
+        if chosen:
+            target.setText(chosen)
 
     def _apply_role_guards(self) -> None:
         editor_or_admin = self._role in {"editor", "admin"}

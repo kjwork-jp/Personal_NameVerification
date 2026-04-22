@@ -75,7 +75,8 @@ Restore safety note: close active SQLite connections for the target DB before ru
 
 Current RBAC: export/backup create operations are allowed for `editor` / `admin`, and rejected for `viewer`.
 
-Operations tab provides minimal UI entrypoints for export/import/backup/restore using path inputs and execution buttons.
+Operations tab provides minimal UI entrypoints for export/import/backup/restore using path inputs, Browse buttons, and execution buttons.
+- Browse buttons use native file/directory dialog for path selection.
 
 ## Notes
 
