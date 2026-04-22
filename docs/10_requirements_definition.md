@@ -17,9 +17,9 @@
 - Excel 等の散在管理では整合性が崩れやすい
 
 ## 4. 利用者ロール
-- viewer: 参照のみ
-- editor: 作成・更新・出力
-- admin: 削除・復元・完全削除・インポート・復旧
+- viewer: read-only 操作
+- editor: read-only + write 操作
+- admin: read-only + write + destructive 操作
 
 ## 5. 機能要件
 ### 5.1 検索
@@ -77,6 +77,12 @@
 - 運用レポート出力
 - UAT 実行用補助導線
 - 障害対応手順へのリンク
+
+### 5.9 RBAC（現行最小方針）
+- valid role（viewer/editor/admin）は read-only 操作を実行できる。
+- write 操作（作成/更新/リンク操作）は editor/admin のみ実行できる。
+- destructive 操作（論理削除/復元/完全削除）は admin のみ実行できる。
+- ゴミ箱/削除済み一覧および監査ログは「閲覧」と「操作」を分離し、閲覧は read-only、復元/完全削除等は destructive として扱う。
 
 ## 6. 非機能要件
 ### 6.1 性能
