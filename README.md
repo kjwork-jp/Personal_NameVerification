@@ -63,6 +63,11 @@ The application/infrastructure layers now provide file output helpers for:
 - JSON export (same table set)
 - SQL dump export (SQLite `iterdump`)
 - backup file create (SQLite file copy)
+- backup restore foundation (backup file -> target DB file replacement)
+
+Restore RBAC: restore is destructive and allowed for `admin` only (`viewer` / `editor` are rejected).
+
+Restore safety note: close active SQLite connections for the target DB before running restore.
 
 Current RBAC: export/backup create operations are allowed for `editor` / `admin`, and rejected for `viewer`.
 

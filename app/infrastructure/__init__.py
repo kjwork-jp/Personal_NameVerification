@@ -8,6 +8,7 @@ from .export_backup import (
     export_tables_to_csv,
     export_tables_to_json,
 )
+from .restore_backup import restore_database_from_backup
 
 __all__ = [
     "DEFAULT_SCHEMA_PATH",
@@ -18,4 +19,5 @@ __all__ = [
     "export_tables_to_json",
     "export_sql_dump",
     "create_backup_file",
+    "restore_database_from_backup",
 ]

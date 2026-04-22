@@ -23,5 +23,8 @@
 
 ## 5. 実装ステータス（現時点）
 - backup create（DB ファイルコピー）は実装済み。
-- restore は未実装（後続PRで対応）。
+- restore foundation（backup file から DB file 置換）は実装済み。
 - backup 実行権限は editor/admin、viewer は不可。
+
+- restore 実行権限は admin のみ（viewer/editor は不可）。
+- restore 前に対象DBへのアクティブ接続をクローズする。

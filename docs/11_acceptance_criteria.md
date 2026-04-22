@@ -15,6 +15,7 @@
 - [ ] 監査ログが記録される
 - [ ] CSV / JSON / SQL dump export が editor/admin で成立する
 - [ ] backup create が editor/admin で成立する
+- [ ] backup restore が admin で成立する（viewer/editor は拒否される）
 
 ### 2.2 権限（read / write / destructive 分離）
 #### viewer
