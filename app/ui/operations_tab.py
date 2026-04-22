@@ -330,12 +330,23 @@ class OperationsTab(QWidget):
     def _history_settings_key(self, field_key: str) -> str:
         return f"{HISTORY_PREFIX}/{field_key}"
 
+    def _normalize_recent_paths(self, paths: list[str]) -> list[str]:
+        normalized: list[str] = []
+        for value in paths:
+            candidate = str(value).strip()
+            if not candidate or candidate in normalized:
+                continue
+            normalized.append(candidate)
+            if len(normalized) >= MAX_RECENT_PATHS:
+                break
+        return normalized
+
     def _get_recent_paths(self, field_key: str) -> list[str]:
         raw = self._settings.value(self._history_settings_key(field_key), [])
         if isinstance(raw, str):
-            return [raw] if raw else []
-        if isinstance(raw, list):
-            return [str(item) for item in raw if str(item).strip()]
+            return self._normalize_recent_paths([raw])
+        if isinstance(raw, (list, tuple)):
+            return self._normalize_recent_paths([str(item) for item in raw])
         return []
 
     def _push_recent_path(self, field_key: str, path_value: str) -> None:
@@ -344,8 +355,7 @@ class OperationsTab(QWidget):
             return
 
         existing = self._get_recent_paths(field_key)
-        updated = [value] + [item for item in existing if item != value]
-        updated = updated[:MAX_RECENT_PATHS]
+        updated = self._normalize_recent_paths([value] + existing)
 
         self._settings.setValue(self._history_settings_key(field_key), updated)
 

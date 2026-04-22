@@ -314,3 +314,29 @@ def test_operations_tab_history_dedup_max5_and_initial_restore(
     assert isinstance(history, list)
     assert len(history) == MAX_RECENT_PATHS
     assert history[0] == "/tmp/new-5.json"
+
+
+def test_operations_tab_history_normalizes_tuple_and_blank_values() -> None:
+    _app()
+    settings = FakeSettings(
+        {
+            "operations/recent_paths/sql_dump_file": (
+                "  /tmp/a.sql  ",
+                "",
+                "/tmp/a.sql",
+                "   ",
+                "/tmp/b.sql",
+            )
+        }
+    )
+
+    tab = OperationsTab(
+        export_backup_service=StubExportBackupService(),
+        backup_restore_service=StubBackupRestoreService(),
+        import_service=StubImportService(),
+        role_context=RoleContext(role="admin"),
+        settings=settings,
+    )
+
+    assert tab.sql_dump_path_input.text() == "/tmp/a.sql"
+    assert tab._get_recent_paths("sql_dump_file") == ["/tmp/a.sql", "/tmp/b.sql"]
