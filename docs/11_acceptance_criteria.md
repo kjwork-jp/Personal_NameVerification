@@ -43,6 +43,7 @@
 - [ ] Operations タブの Browse ボタンで native file/directory dialog が開く
 - [ ] 入力欄ごとに recent path history（最大5件）が復元・候補表示される
 - [ ] Operations 実行結果（success/error/cancel）がローカル JSONL に追記保存される
+- [ ] Operations 実行中は busy 表示と二重起動防止が働き、cancel request 導線が利用できる
 - [ ] destructive 操作に確認ダイアログがある
 - [ ] エラー表示が利用者に理解可能
 - [ ] 主要操作がキーボードでも到達可能

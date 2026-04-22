@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
 from typing import Protocol
 
@@ -14,6 +15,7 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QLineEdit,
+    QProgressDialog,
     QPushButton,
     QTextEdit,
     QVBoxLayout,
@@ -22,6 +24,7 @@ from PySide6.QtWidgets import (
 
 from app.ui.dialogs import confirm_destructive_action
 from app.ui.operations_log import OperationsJsonlLogger
+from app.ui.operations_workers import OperationExecutorLike, ThreadPoolOperationExecutor
 from app.ui.role_context import RoleContext, UserRole
 
 MAX_RECENT_PATHS = 5
@@ -83,6 +86,7 @@ class OperationsTab(QWidget):
         role_context: RoleContext | None = None,
         settings: SettingsLike | None = None,
         operation_logger: OperationLoggerLike | None = None,
+        operation_executor: OperationExecutorLike | None = None,
     ) -> None:
         super().__init__()
         self._export_backup_service = export_backup_service
@@ -93,7 +97,12 @@ class OperationsTab(QWidget):
             "NameVerification", "NameVerificationV3"
         )
         self._operation_logger = operation_logger or OperationsJsonlLogger()
+        self._operation_executor = operation_executor or ThreadPoolOperationExecutor()
         self._history_models: dict[str, QStringListModel] = {}
+        self._is_busy = False
+        self._cancel_requested = False
+        self._current_action: str | None = None
+        self._progress_dialog: QProgressDialog | None = None
 
         root = QVBoxLayout(self)
         root.addWidget(QLabel("運用系操作（export/import/backup/restore）"))
@@ -202,6 +211,9 @@ class OperationsTab(QWidget):
         self.restore_button = QPushButton("Restore")
         self.import_csv_button = QPushButton("CSV Import")
         self.import_json_button = QPushButton("JSON Import")
+        self.cancel_operation_button = QPushButton("Cancel")
+        self.cancel_operation_button.setEnabled(False)
+        self.cancel_operation_button.clicked.connect(self._request_cancel)
 
         self.export_csv_button.clicked.connect(self._run_export_csv)
         self.export_json_button.clicked.connect(self._run_export_json)
@@ -291,6 +303,7 @@ class OperationsTab(QWidget):
         self.result_view = QTextEdit()
         self.result_view.setReadOnly(True)
         root.addWidget(self.result_view)
+        root.addWidget(self.cancel_operation_button)
 
         self._setup_recent_paths()
         self._apply_role_guards()
@@ -441,6 +454,107 @@ class OperationsTab(QWidget):
             self.restore_button.setToolTip("このロールでは実行できません")
             self.import_csv_button.setToolTip("このロールでは実行できません")
             self.import_json_button.setToolTip("このロールでは実行できません")
+        self._apply_busy_state()
+
+    def _show_progress(self, action_label: str) -> None:
+        dialog = QProgressDialog(f"{action_label} 実行中...", "Cancel", 0, 0, self)
+        dialog.setWindowModality(Qt.WindowModality.WindowModal)
+        dialog.setMinimumDuration(0)
+        dialog.canceled.connect(self._request_cancel)
+        dialog.setAutoClose(False)
+        dialog.show()
+        self._progress_dialog = dialog
+
+    def _hide_progress(self) -> None:
+        if self._progress_dialog is not None:
+            self._progress_dialog.close()
+            self._progress_dialog.deleteLater()
+            self._progress_dialog = None
+
+    def _apply_busy_state(self) -> None:
+        execute_buttons = [
+            self.export_csv_button,
+            self.export_json_button,
+            self.export_sql_dump_button,
+            self.create_backup_button,
+            self.restore_button,
+            self.import_csv_button,
+            self.import_json_button,
+        ]
+        browse_buttons = [
+            self.csv_export_browse_button,
+            self.json_export_browse_button,
+            self.sql_dump_browse_button,
+            self.db_path_browse_button,
+            self.backup_output_browse_button,
+            self.restore_backup_browse_button,
+            self.restore_target_browse_button,
+            self.import_csv_dir_browse_button,
+            self.import_json_browse_button,
+        ]
+
+        for button in execute_buttons + browse_buttons:
+            button.setEnabled(not self._is_busy)
+        self.cancel_operation_button.setEnabled(self._is_busy)
+
+        if not self._is_busy:
+            self._apply_role_guards_only()
+
+    def _apply_role_guards_only(self) -> None:
+        editor_or_admin = self._role in {"editor", "admin"}
+        admin_only = self._role == "admin"
+        self.export_csv_button.setEnabled(editor_or_admin)
+        self.export_json_button.setEnabled(editor_or_admin)
+        self.export_sql_dump_button.setEnabled(editor_or_admin)
+        self.create_backup_button.setEnabled(editor_or_admin)
+        self.restore_button.setEnabled(admin_only)
+        self.import_csv_button.setEnabled(admin_only)
+        self.import_json_button.setEnabled(admin_only)
+
+    def _request_cancel(self) -> None:
+        if not self._is_busy:
+            return
+        self._cancel_requested = True
+        self._operation_executor.request_cancel()
+        message = "Cancel requested（実行中処理の停止要求を受け付けました）"
+        self._set_message(message)
+        self._record_operation(
+            self._current_action or "unknown",
+            "cancel",
+            message,
+        )
+
+    def _start_async_operation(
+        self,
+        action: str,
+        action_label: str,
+        work: Callable[[], object],
+        on_success: Callable[[object], None],
+        on_error: Callable[[Exception], None],
+    ) -> None:
+        if self._is_busy:
+            self._set_message("別の操作を実行中です。完了を待ってください。", is_error=True)
+            return
+
+        self._is_busy = True
+        self._cancel_requested = False
+        self._current_action = action
+        self._apply_busy_state()
+        self._show_progress(action_label)
+
+        def _success(result: object) -> None:
+            on_success(result)
+
+        def _error(exc: Exception) -> None:
+            on_error(exc)
+
+        def _finished() -> None:
+            self._is_busy = False
+            self._current_action = None
+            self._hide_progress()
+            self._apply_busy_state()
+
+        self._operation_executor.submit(work, _success, _error, _finished)
 
     def _require_text(self, line_edit: QLineEdit, label: str) -> str | None:
         text = line_edit.text().strip()
@@ -453,58 +567,115 @@ class OperationsTab(QWidget):
         path = self._require_text(self.csv_export_path_input, "CSV出力先ディレクトリ")
         if path is None:
             return
-        try:
+
+        def _work() -> object:
             result = self._export_backup_service.export_csv(Path(path), role=self._role)
+            return len(result)
+
+        def _on_success(result: object) -> None:
             self._push_recent_path("csv_export_dir", path)
-            message = f"CSV export 成功: {len(result)} tables"
+            if self._cancel_requested:
+                message = "CSV export 完了（cancel requested 後に完了）"
+                self._set_message(message)
+                self._record_operation("export_csv", "cancel", message, path=path)
+                return
+            message = f"CSV export 成功: {result} tables"
             self._set_message(message)
             self._record_operation("export_csv", "success", message, path=path)
-        except Exception as exc:
+
+        def _on_error(exc: Exception) -> None:
             message = f"CSV export 失敗: {exc}"
             self._set_message(message, is_error=True)
             self._record_operation("export_csv", "error", message, path=path)
+
+        self._start_async_operation("export_csv", "CSV export", _work, _on_success, _on_error)
 
     def _run_export_json(self) -> None:
         path = self._require_text(self.json_export_path_input, "JSON出力先ファイル")
         if path is None:
             return
-        try:
+
+        def _work() -> object:
             result = self._export_backup_service.export_json(Path(path), role=self._role)
+            return result
+
+        def _on_success(result: object) -> None:
             self._push_recent_path("json_export_file", path)
+            if self._cancel_requested:
+                message = "JSON export 完了（cancel requested 後に完了）"
+                self._set_message(message)
+                self._record_operation("export_json", "cancel", message, path=path)
+                return
             message = f"JSON export 成功: {result}"
             self._set_message(message)
             self._record_operation("export_json", "success", message, path=path)
-        except Exception as exc:
+
+        def _on_error(exc: Exception) -> None:
             message = f"JSON export 失敗: {exc}"
             self._set_message(message, is_error=True)
             self._record_operation("export_json", "error", message, path=path)
+
+        self._start_async_operation("export_json", "JSON export", _work, _on_success, _on_error)
 
     def _run_export_sql_dump(self) -> None:
         path = self._require_text(self.sql_dump_path_input, "SQL dump出力先ファイル")
         if path is None:
             return
-        try:
+
+        def _work() -> object:
             result = self._export_backup_service.export_sql_dump(Path(path), role=self._role)
+            return result
+
+        def _on_success(result: object) -> None:
             self._push_recent_path("sql_dump_file", path)
+            if self._cancel_requested:
+                message = "SQL dump export 完了（cancel requested 後に完了）"
+                self._set_message(message)
+                self._record_operation("export_sql_dump", "cancel", message, path=path)
+                return
             message = f"SQL dump export 成功: {result}"
             self._set_message(message)
             self._record_operation("export_sql_dump", "success", message, path=path)
-        except Exception as exc:
+
+        def _on_error(exc: Exception) -> None:
             message = f"SQL dump export 失敗: {exc}"
             self._set_message(message, is_error=True)
             self._record_operation("export_sql_dump", "error", message, path=path)
+
+        self._start_async_operation(
+            "export_sql_dump",
+            "SQL dump export",
+            _work,
+            _on_success,
+            _on_error,
+        )
 
     def _run_create_backup(self) -> None:
         db_path = self._require_text(self.db_path_input, "DBファイルパス")
         backup_path = self._require_text(self.backup_output_path_input, "バックアップ出力先")
         if db_path is None or backup_path is None:
             return
-        try:
+
+        def _work() -> object:
             result = self._export_backup_service.create_backup(
                 Path(db_path), Path(backup_path), role=self._role
             )
+            return result
+
+        def _on_success(result: object) -> None:
             self._push_recent_path("db_file", db_path)
             self._push_recent_path("backup_output_file", backup_path)
+            if self._cancel_requested:
+                message = "Backup create 完了（cancel requested 後に完了）"
+                self._set_message(message)
+                self._record_operation(
+                    "create_backup",
+                    "cancel",
+                    message,
+                    path=db_path,
+                    path2=backup_path,
+                )
+                return
             message = f"Backup create 成功: {result}"
             self._set_message(message)
             self._record_operation(
@@ -514,7 +685,8 @@ class OperationsTab(QWidget):
                 path=db_path,
                 path2=backup_path,
             )
-        except Exception as exc:
+
+        def _on_error(exc: Exception) -> None:
             message = f"Backup create 失敗: {exc}"
             self._set_message(message, is_error=True)
             self._record_operation(
@@ -524,6 +696,14 @@ class OperationsTab(QWidget):
                 path=db_path,
                 path2=backup_path,
             )
+
+        self._start_async_operation(
+            "create_backup",
+            "Backup create",
+            _work,
+            _on_success,
+            _on_error,
+        )
 
     def _run_restore(self) -> None:
         backup_path = self._require_text(self.restore_backup_path_input, "バックアップ入力ファイル")
@@ -547,12 +727,26 @@ class OperationsTab(QWidget):
             )
             return
 
-        try:
+        def _work() -> object:
             result = self._backup_restore_service.restore_database(
                 Path(backup_path), Path(target_path), role=self._role
             )
+            return result
+
+        def _on_success(result: object) -> None:
             self._push_recent_path("restore_backup_file", backup_path)
             self._push_recent_path("restore_target_file", target_path)
+            if self._cancel_requested:
+                message = "Restore 完了（cancel requested 後に完了）"
+                self._set_message(message)
+                self._record_operation(
+                    "restore",
+                    "cancel",
+                    message,
+                    path=backup_path,
+                    path2=target_path,
+                )
+                return
             message = f"Restore 成功: {result}"
             self._set_message(message)
             self._record_operation(
@@ -562,7 +756,8 @@ class OperationsTab(QWidget):
                 path=backup_path,
                 path2=target_path,
             )
-        except Exception as exc:
+
+        def _on_error(exc: Exception) -> None:
             message = f"Restore 失敗: {exc}"
             self._set_message(message, is_error=True)
             self._record_operation(
@@ -572,6 +767,8 @@ class OperationsTab(QWidget):
                 path=backup_path,
                 path2=target_path,
             )
+
+        self._start_async_operation("restore", "Restore", _work, _on_success, _on_error)
 
     def _run_import_csv(self) -> None:
         csv_dir = self._require_text(self.import_csv_dir_input, "CSVディレクトリ")
@@ -588,16 +785,27 @@ class OperationsTab(QWidget):
             self._record_operation("import_csv", "cancel", message, path=csv_dir)
             return
 
-        try:
+        def _work() -> object:
             result = self._import_service.import_csv(Path(csv_dir), role=self._role)
+            return result
+
+        def _on_success(result: object) -> None:
             self._push_recent_path("import_csv_dir", csv_dir)
+            if self._cancel_requested:
+                message = "CSV import 完了（cancel requested 後に完了）"
+                self._set_message(message)
+                self._record_operation("import_csv", "cancel", message, path=csv_dir)
+                return
             message = f"CSV import 成功: {result}"
             self._set_message(message)
             self._record_operation("import_csv", "success", message, path=csv_dir)
-        except Exception as exc:
+
+        def _on_error(exc: Exception) -> None:
             message = f"CSV import 失敗: {exc}"
             self._set_message(message, is_error=True)
             self._record_operation("import_csv", "error", message, path=csv_dir)
+
+        self._start_async_operation("import_csv", "CSV import", _work, _on_success, _on_error)
 
     def _run_import_json(self) -> None:
         json_path = self._require_text(self.import_json_path_input, "JSONファイル")
@@ -614,16 +822,27 @@ class OperationsTab(QWidget):
             self._record_operation("import_json", "cancel", message, path=json_path)
             return
 
-        try:
+        def _work() -> object:
             result = self._import_service.import_json(Path(json_path), role=self._role)
+            return result
+
+        def _on_success(result: object) -> None:
             self._push_recent_path("import_json_file", json_path)
+            if self._cancel_requested:
+                message = "JSON import 完了（cancel requested 後に完了）"
+                self._set_message(message)
+                self._record_operation("import_json", "cancel", message, path=json_path)
+                return
             message = f"JSON import 成功: {result}"
             self._set_message(message)
             self._record_operation("import_json", "success", message, path=json_path)
-        except Exception as exc:
+
+        def _on_error(exc: Exception) -> None:
             message = f"JSON import 失敗: {exc}"
             self._set_message(message, is_error=True)
             self._record_operation("import_json", "error", message, path=json_path)
+
+        self._start_async_operation("import_json", "JSON import", _work, _on_success, _on_error)
 
     def _record_operation(
         self,

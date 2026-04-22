@@ -15,6 +15,7 @@ QApplication = qt_widgets.QApplication
 
 from app.ui import operations_tab as operations_tab_module  # noqa: E402
 from app.ui.operations_tab import MAX_RECENT_PATHS, OperationsTab  # noqa: E402
+from app.ui.operations_workers import ImmediateOperationExecutor  # noqa: E402
 from app.ui.role_context import RoleContext  # noqa: E402
 
 
@@ -121,6 +122,31 @@ def _app() -> QApplication:
     return app
 
 
+class DeferredOperationExecutor:
+    def __init__(self) -> None:
+        self.pending: tuple[object, object, object, object] | None = None
+        self.cancel_requested = False
+
+    def submit(
+        self,
+        work: object,
+        on_success: object,
+        on_error: object,
+        on_finished: object,
+    ) -> None:
+        self.pending = (work, on_success, on_error, on_finished)
+
+    def request_cancel(self) -> None:
+        self.cancel_requested = True
+
+    def succeed(self, result: object) -> None:
+        assert self.pending is not None
+        _, on_success, _, on_finished = self.pending
+        on_success(result)  # type: ignore[misc]
+        on_finished()  # type: ignore[misc]
+        self.pending = None
+
+
 def test_operations_tab_role_guards() -> None:
     _app()
 
@@ -129,6 +155,7 @@ def test_operations_tab_role_guards() -> None:
         backup_restore_service=StubBackupRestoreService(),
         import_service=StubImportService(),
         role_context=RoleContext(role="viewer"),
+        operation_executor=ImmediateOperationExecutor(),
     )
     assert not viewer.export_csv_button.isEnabled()
     assert not viewer.create_backup_button.isEnabled()
@@ -140,6 +167,7 @@ def test_operations_tab_role_guards() -> None:
         backup_restore_service=StubBackupRestoreService(),
         import_service=StubImportService(),
         role_context=RoleContext(role="editor"),
+        operation_executor=ImmediateOperationExecutor(),
     )
     assert editor.export_csv_button.isEnabled()
     assert editor.create_backup_button.isEnabled()
@@ -151,6 +179,7 @@ def test_operations_tab_role_guards() -> None:
         backup_restore_service=StubBackupRestoreService(),
         import_service=StubImportService(),
         role_context=RoleContext(role="admin"),
+        operation_executor=ImmediateOperationExecutor(),
     )
     assert admin.export_csv_button.isEnabled()
     assert admin.create_backup_button.isEnabled()
@@ -173,6 +202,7 @@ def test_operations_tab_service_calls_and_result_messages(monkeypatch: pytest.Mo
         import_service=import_service,
         role_context=RoleContext(role="admin"),
         operation_logger=FakeOperationLogger(),
+        operation_executor=ImmediateOperationExecutor(),
     )
 
     tab.csv_export_path_input.setText("/tmp/csv")
@@ -212,6 +242,7 @@ def test_operations_tab_destructive_cancel(monkeypatch: pytest.MonkeyPatch) -> N
         import_service=import_service,
         role_context=RoleContext(role="admin"),
         operation_logger=FakeOperationLogger(),
+        operation_executor=ImmediateOperationExecutor(),
     )
 
     tab.restore_backup_path_input.setText("/tmp/backup.sqlite3")
@@ -239,6 +270,7 @@ def test_operations_tab_error_message_display() -> None:
         import_service=StubImportService(),
         role_context=RoleContext(role="admin"),
         operation_logger=FakeOperationLogger(),
+        operation_executor=ImmediateOperationExecutor(),
     )
 
     tab.json_export_path_input.setText("/tmp/export.json")
@@ -276,6 +308,7 @@ def test_operations_tab_browse_updates_inputs_and_history(monkeypatch: pytest.Mo
         role_context=RoleContext(role="admin"),
         settings=settings,
         operation_logger=FakeOperationLogger(),
+        operation_executor=ImmediateOperationExecutor(),
     )
 
     tab.csv_export_browse_button.click()
@@ -314,6 +347,7 @@ def test_operations_tab_browse_cancel_keeps_existing_value_and_history(
         role_context=RoleContext(role="admin"),
         settings=settings,
         operation_logger=FakeOperationLogger(),
+        operation_executor=ImmediateOperationExecutor(),
     )
 
     tab.import_csv_dir_input.setText("/tmp/original-dir")
@@ -342,6 +376,7 @@ def test_operations_tab_history_dedup_max5_and_initial_restore(
         role_context=RoleContext(role="admin"),
         settings=settings,
         operation_logger=FakeOperationLogger(),
+        operation_executor=ImmediateOperationExecutor(),
     )
 
     assert tab.json_export_path_input.text() == "/tmp/recent-1.json"
@@ -384,6 +419,7 @@ def test_operations_tab_history_normalizes_tuple_and_blank_values() -> None:
         role_context=RoleContext(role="admin"),
         settings=settings,
         operation_logger=FakeOperationLogger(),
+        operation_executor=ImmediateOperationExecutor(),
     )
 
     assert tab.sql_dump_path_input.text() == "/tmp/a.sql"
@@ -410,6 +446,7 @@ def test_operations_tab_persists_success_error_cancel_log_events(
         import_service=StubImportService(),
         role_context=RoleContext(role="admin"),
         operation_logger=logger,
+        operation_executor=ImmediateOperationExecutor(),
     )
 
     tab.csv_export_path_input.setText("/tmp/csv")
@@ -436,6 +473,7 @@ def test_operations_tab_logger_failure_does_not_break_ui() -> None:
         import_service=StubImportService(),
         role_context=RoleContext(role="admin"),
         operation_logger=FailingOperationLogger(),
+        operation_executor=ImmediateOperationExecutor(),
     )
 
     tab.csv_export_path_input.setText("/tmp/csv")
@@ -467,3 +505,51 @@ def test_operations_log_jsonl_format(tmp_path: Path) -> None:
     assert parsed["status"] == "success"
     assert parsed["role"] == "editor"
     assert parsed["path"] == "/tmp/csv"
+
+
+def test_operations_tab_busy_state_and_double_start_prevention() -> None:
+    _app()
+    executor = DeferredOperationExecutor()
+    tab = OperationsTab(
+        export_backup_service=StubExportBackupService(),
+        backup_restore_service=StubBackupRestoreService(),
+        import_service=StubImportService(),
+        role_context=RoleContext(role="admin"),
+        operation_logger=FakeOperationLogger(),
+        operation_executor=executor,
+    )
+
+    tab.csv_export_path_input.setText("/tmp/csv")
+    tab._run_export_csv()
+    assert not tab.export_csv_button.isEnabled()
+    assert tab.cancel_operation_button.isEnabled()
+
+    tab._run_export_json()
+    assert "実行中" in tab.result_view.toPlainText()
+
+    executor.succeed(1)
+    assert tab.export_csv_button.isEnabled()
+    assert not tab.cancel_operation_button.isEnabled()
+
+
+def test_operations_tab_cancel_request_minimum_flow() -> None:
+    _app()
+    logger = FakeOperationLogger()
+    executor = DeferredOperationExecutor()
+    tab = OperationsTab(
+        export_backup_service=StubExportBackupService(),
+        backup_restore_service=StubBackupRestoreService(),
+        import_service=StubImportService(),
+        role_context=RoleContext(role="admin"),
+        operation_logger=logger,
+        operation_executor=executor,
+    )
+
+    tab.csv_export_path_input.setText("/tmp/csv")
+    tab._run_export_csv()
+    tab._request_cancel()
+    assert executor.cancel_requested
+
+    executor.succeed(1)
+    statuses = [event["status"] for event in logger.events]
+    assert "cancel" in statuses

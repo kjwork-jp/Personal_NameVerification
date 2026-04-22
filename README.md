@@ -79,6 +79,7 @@ Operations tab provides minimal UI entrypoints for export/import/backup/restore 
 - Browse buttons use native file/directory dialog for path selection.
 - Recent path history is persisted per input (max 5, deduplicated, latest-first) and offered via completer.
 - Operation execution results are appended to local JSONL (`operations_events.jsonl`) under AppDataLocation with `timestamp/action/role/status/message/path` fields (best-effort write).
+- Operation execution uses async worker foundation (QThreadPool/QRunnable), with busy-state guard, duplicate-start prevention, and minimum cancel-request UI.
 
 ## Notes
 
