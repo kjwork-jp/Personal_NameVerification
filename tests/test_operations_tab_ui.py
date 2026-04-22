@@ -13,8 +13,19 @@ qt_widgets = pytest.importorskip("PySide6.QtWidgets", exc_type=ImportError)
 QApplication = qt_widgets.QApplication
 
 from app.ui import operations_tab as operations_tab_module  # noqa: E402
-from app.ui.operations_tab import OperationsTab  # noqa: E402
+from app.ui.operations_tab import MAX_RECENT_PATHS, OperationsTab  # noqa: E402
 from app.ui.role_context import RoleContext  # noqa: E402
+
+
+class FakeSettings:
+    def __init__(self, seed: dict[str, object] | None = None) -> None:
+        self.store: dict[str, object] = seed.copy() if seed else {}
+
+    def value(self, key: str, defaultValue: object | None = None) -> object | None:
+        return self.store.get(key, defaultValue)
+
+    def setValue(self, key: str, value: object) -> None:
+        self.store[key] = value
 
 
 class StubExportBackupService:
@@ -194,8 +205,9 @@ def test_operations_tab_error_message_display() -> None:
     assert "boom" in result_text
 
 
-def test_operations_tab_browse_updates_inputs(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_operations_tab_browse_updates_inputs_and_history(monkeypatch: pytest.MonkeyPatch) -> None:
     _app()
+    settings = FakeSettings()
 
     monkeypatch.setattr(
         operations_tab_module.QFileDialog,
@@ -218,6 +230,7 @@ def test_operations_tab_browse_updates_inputs(monkeypatch: pytest.MonkeyPatch) -
         backup_restore_service=StubBackupRestoreService(),
         import_service=StubImportService(),
         role_context=RoleContext(role="admin"),
+        settings=settings,
     )
 
     tab.csv_export_browse_button.click()
@@ -228,9 +241,20 @@ def test_operations_tab_browse_updates_inputs(monkeypatch: pytest.MonkeyPatch) -
     assert tab.restore_backup_path_input.text() == "/tmp/chosen-open.json"
     assert tab.backup_output_path_input.text() == "/tmp/chosen-save.sqlite3"
 
+    assert settings.value("operations/recent_paths/csv_export_dir") == ["/tmp/chosen-dir"]
+    assert settings.value("operations/recent_paths/restore_backup_file") == [
+        "/tmp/chosen-open.json"
+    ]
+    assert settings.value("operations/recent_paths/backup_output_file") == [
+        "/tmp/chosen-save.sqlite3"
+    ]
 
-def test_operations_tab_browse_cancel_keeps_existing_value(monkeypatch: pytest.MonkeyPatch) -> None:
+
+def test_operations_tab_browse_cancel_keeps_existing_value_and_history(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     _app()
+    settings = FakeSettings({"operations/recent_paths/import_csv_dir": ["/tmp/original-dir"]})
 
     monkeypatch.setattr(
         operations_tab_module.QFileDialog,
@@ -243,9 +267,50 @@ def test_operations_tab_browse_cancel_keeps_existing_value(monkeypatch: pytest.M
         backup_restore_service=StubBackupRestoreService(),
         import_service=StubImportService(),
         role_context=RoleContext(role="admin"),
+        settings=settings,
     )
 
     tab.import_csv_dir_input.setText("/tmp/original-dir")
     tab.import_csv_dir_browse_button.click()
 
     assert tab.import_csv_dir_input.text() == "/tmp/original-dir"
+    assert settings.value("operations/recent_paths/import_csv_dir") == ["/tmp/original-dir"]
+
+
+def test_operations_tab_history_dedup_max5_and_initial_restore(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _app()
+    seed = {
+        "operations/recent_paths/json_export_file": [
+            "/tmp/recent-1.json",
+            "/tmp/recent-2.json",
+        ]
+    }
+    settings = FakeSettings(seed)
+
+    tab = OperationsTab(
+        export_backup_service=StubExportBackupService(),
+        backup_restore_service=StubBackupRestoreService(),
+        import_service=StubImportService(),
+        role_context=RoleContext(role="admin"),
+        settings=settings,
+    )
+
+    assert tab.json_export_path_input.text() == "/tmp/recent-1.json"
+
+    tab.json_export_path_input.setText("/tmp/recent-2.json")
+    tab._run_export_json()
+    assert settings.value("operations/recent_paths/json_export_file") == [
+        "/tmp/recent-2.json",
+        "/tmp/recent-1.json",
+    ]
+
+    for i in range(6):
+        tab.json_export_path_input.setText(f"/tmp/new-{i}.json")
+        tab._run_export_json()
+
+    history = settings.value("operations/recent_paths/json_export_file")
+    assert isinstance(history, list)
+    assert len(history) == MAX_RECENT_PATHS
+    assert history[0] == "/tmp/new-5.json"

@@ -5,7 +5,9 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Protocol
 
+from PySide6.QtCore import QSettings, QStringListModel, Qt
 from PySide6.QtWidgets import (
+    QCompleter,
     QFileDialog,
     QFormLayout,
     QGroupBox,
@@ -20,6 +22,9 @@ from PySide6.QtWidgets import (
 
 from app.ui.dialogs import confirm_destructive_action
 from app.ui.role_context import RoleContext, UserRole
+
+MAX_RECENT_PATHS = 5
+HISTORY_PREFIX = "operations/recent_paths"
 
 
 class ExportBackupLike(Protocol):
@@ -47,6 +52,12 @@ class ImportLike(Protocol):
     def import_json(self, json_path: Path, role: UserRole = "admin") -> dict[str, int]: ...
 
 
+class SettingsLike(Protocol):
+    def value(self, key: str, defaultValue: object | None = None) -> object | None: ...
+
+    def setValue(self, key: str, value: object) -> None: ...
+
+
 class OperationsTab(QWidget):
     """Minimal operations UI for file-based operational workflows."""
 
@@ -56,12 +67,17 @@ class OperationsTab(QWidget):
         backup_restore_service: BackupRestoreLike,
         import_service: ImportLike,
         role_context: RoleContext | None = None,
+        settings: SettingsLike | None = None,
     ) -> None:
         super().__init__()
         self._export_backup_service = export_backup_service
         self._backup_restore_service = backup_restore_service
         self._import_service = import_service
         self._role = (role_context or RoleContext.admin()).role
+        self._settings: SettingsLike = settings or QSettings(
+            "NameVerification", "NameVerificationV3"
+        )
+        self._history_models: dict[str, QStringListModel] = {}
 
         root = QVBoxLayout(self)
         root.addWidget(QLabel("運用系操作（export/import/backup/restore）"))
@@ -72,6 +88,7 @@ class OperationsTab(QWidget):
             lambda: self._select_directory(
                 self.csv_export_path_input,
                 "CSV出力先ディレクトリを選択",
+                field_key="csv_export_dir",
             )
         )
 
@@ -82,6 +99,7 @@ class OperationsTab(QWidget):
                 self.json_export_path_input,
                 "JSON出力先ファイルを選択",
                 "JSON Files (*.json);;All Files (*)",
+                field_key="json_export_file",
             )
         )
 
@@ -92,6 +110,7 @@ class OperationsTab(QWidget):
                 self.sql_dump_path_input,
                 "SQL dump出力先ファイルを選択",
                 "SQL Files (*.sql);;All Files (*)",
+                field_key="sql_dump_file",
             )
         )
 
@@ -102,6 +121,7 @@ class OperationsTab(QWidget):
                 self.db_path_input,
                 "DBファイルを選択",
                 "SQLite DB (*.db *.sqlite *.sqlite3);;All Files (*)",
+                field_key="db_file",
             )
         )
 
@@ -112,6 +132,7 @@ class OperationsTab(QWidget):
                 self.backup_output_path_input,
                 "バックアップ出力先ファイルを選択",
                 "SQLite DB (*.db *.sqlite *.sqlite3);;All Files (*)",
+                field_key="backup_output_file",
             )
         )
 
@@ -122,6 +143,7 @@ class OperationsTab(QWidget):
                 self.restore_backup_path_input,
                 "restore用バックアップファイルを選択",
                 "SQLite DB (*.db *.sqlite *.sqlite3);;All Files (*)",
+                field_key="restore_backup_file",
             )
         )
 
@@ -132,6 +154,7 @@ class OperationsTab(QWidget):
                 self.restore_target_db_path_input,
                 "restore先DBファイルを選択",
                 "SQLite DB (*.db *.sqlite *.sqlite3);;All Files (*)",
+                field_key="restore_target_file",
             )
         )
 
@@ -141,6 +164,7 @@ class OperationsTab(QWidget):
             lambda: self._select_directory(
                 self.import_csv_dir_input,
                 "CSV importディレクトリを選択",
+                field_key="import_csv_dir",
             )
         )
 
@@ -151,6 +175,7 @@ class OperationsTab(QWidget):
                 self.import_json_path_input,
                 "JSON importファイルを選択",
                 "JSON Files (*.json);;All Files (*)",
+                field_key="import_json_file",
             )
         )
 
@@ -251,6 +276,7 @@ class OperationsTab(QWidget):
         self.result_view.setReadOnly(True)
         root.addWidget(self.result_view)
 
+        self._setup_recent_paths()
         self._apply_role_guards()
 
     def _build_group(
@@ -276,12 +302,71 @@ class OperationsTab(QWidget):
         box.addLayout(actions)
         return group
 
-    def _select_directory(self, target: QLineEdit, title: str) -> None:
+    def _setup_recent_paths(self) -> None:
+        fields: list[tuple[str, QLineEdit]] = [
+            ("csv_export_dir", self.csv_export_path_input),
+            ("json_export_file", self.json_export_path_input),
+            ("sql_dump_file", self.sql_dump_path_input),
+            ("db_file", self.db_path_input),
+            ("backup_output_file", self.backup_output_path_input),
+            ("restore_backup_file", self.restore_backup_path_input),
+            ("restore_target_file", self.restore_target_db_path_input),
+            ("import_csv_dir", self.import_csv_dir_input),
+            ("import_json_file", self.import_json_path_input),
+        ]
+
+        for field_key, line_edit in fields:
+            history = self._get_recent_paths(field_key)
+            model = QStringListModel(history)
+            self._history_models[field_key] = model
+
+            completer = QCompleter(model, line_edit)
+            completer.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
+            line_edit.setCompleter(completer)
+
+            if history and not line_edit.text().strip():
+                line_edit.setText(history[0])
+
+    def _history_settings_key(self, field_key: str) -> str:
+        return f"{HISTORY_PREFIX}/{field_key}"
+
+    def _get_recent_paths(self, field_key: str) -> list[str]:
+        raw = self._settings.value(self._history_settings_key(field_key), [])
+        if isinstance(raw, str):
+            return [raw] if raw else []
+        if isinstance(raw, list):
+            return [str(item) for item in raw if str(item).strip()]
+        return []
+
+    def _push_recent_path(self, field_key: str, path_value: str) -> None:
+        value = path_value.strip()
+        if not value:
+            return
+
+        existing = self._get_recent_paths(field_key)
+        updated = [value] + [item for item in existing if item != value]
+        updated = updated[:MAX_RECENT_PATHS]
+
+        self._settings.setValue(self._history_settings_key(field_key), updated)
+
+        model = self._history_models.get(field_key)
+        if model is not None:
+            model.setStringList(updated)
+
+    def _select_directory(self, target: QLineEdit, title: str, *, field_key: str) -> None:
         chosen = QFileDialog.getExistingDirectory(self, title, target.text().strip())
         if chosen:
             target.setText(chosen)
+            self._push_recent_path(field_key, chosen)
 
-    def _select_open_file(self, target: QLineEdit, title: str, filter_spec: str) -> None:
+    def _select_open_file(
+        self,
+        target: QLineEdit,
+        title: str,
+        filter_spec: str,
+        *,
+        field_key: str,
+    ) -> None:
         chosen, _ = QFileDialog.getOpenFileName(
             self,
             title,
@@ -290,8 +375,16 @@ class OperationsTab(QWidget):
         )
         if chosen:
             target.setText(chosen)
+            self._push_recent_path(field_key, chosen)
 
-    def _select_save_file(self, target: QLineEdit, title: str, filter_spec: str) -> None:
+    def _select_save_file(
+        self,
+        target: QLineEdit,
+        title: str,
+        filter_spec: str,
+        *,
+        field_key: str,
+    ) -> None:
         chosen, _ = QFileDialog.getSaveFileName(
             self,
             title,
@@ -300,6 +393,7 @@ class OperationsTab(QWidget):
         )
         if chosen:
             target.setText(chosen)
+            self._push_recent_path(field_key, chosen)
 
     def _apply_role_guards(self) -> None:
         editor_or_admin = self._role in {"editor", "admin"}
@@ -335,6 +429,7 @@ class OperationsTab(QWidget):
             return
         try:
             result = self._export_backup_service.export_csv(Path(path), role=self._role)
+            self._push_recent_path("csv_export_dir", path)
             self._set_message(f"CSV export 成功: {len(result)} tables")
         except Exception as exc:
             self._set_message(f"CSV export 失敗: {exc}", is_error=True)
@@ -345,6 +440,7 @@ class OperationsTab(QWidget):
             return
         try:
             result = self._export_backup_service.export_json(Path(path), role=self._role)
+            self._push_recent_path("json_export_file", path)
             self._set_message(f"JSON export 成功: {result}")
         except Exception as exc:
             self._set_message(f"JSON export 失敗: {exc}", is_error=True)
@@ -355,6 +451,7 @@ class OperationsTab(QWidget):
             return
         try:
             result = self._export_backup_service.export_sql_dump(Path(path), role=self._role)
+            self._push_recent_path("sql_dump_file", path)
             self._set_message(f"SQL dump export 成功: {result}")
         except Exception as exc:
             self._set_message(f"SQL dump export 失敗: {exc}", is_error=True)
@@ -368,6 +465,8 @@ class OperationsTab(QWidget):
             result = self._export_backup_service.create_backup(
                 Path(db_path), Path(backup_path), role=self._role
             )
+            self._push_recent_path("db_file", db_path)
+            self._push_recent_path("backup_output_file", backup_path)
             self._set_message(f"Backup create 成功: {result}")
         except Exception as exc:
             self._set_message(f"Backup create 失敗: {exc}", is_error=True)
@@ -390,6 +489,8 @@ class OperationsTab(QWidget):
             result = self._backup_restore_service.restore_database(
                 Path(backup_path), Path(target_path), role=self._role
             )
+            self._push_recent_path("restore_backup_file", backup_path)
+            self._push_recent_path("restore_target_file", target_path)
             self._set_message(f"Restore 成功: {result}")
         except Exception as exc:
             self._set_message(f"Restore 失敗: {exc}", is_error=True)
@@ -409,6 +510,7 @@ class OperationsTab(QWidget):
 
         try:
             result = self._import_service.import_csv(Path(csv_dir), role=self._role)
+            self._push_recent_path("import_csv_dir", csv_dir)
             self._set_message(f"CSV import 成功: {result}")
         except Exception as exc:
             self._set_message(f"CSV import 失敗: {exc}", is_error=True)
@@ -428,6 +530,7 @@ class OperationsTab(QWidget):
 
         try:
             result = self._import_service.import_json(Path(json_path), role=self._role)
+            self._push_recent_path("import_json_file", json_path)
             self._set_message(f"JSON import 成功: {result}")
         except Exception as exc:
             self._set_message(f"JSON import 失敗: {exc}", is_error=True)
