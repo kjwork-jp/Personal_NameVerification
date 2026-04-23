@@ -8,6 +8,8 @@ from typing import Protocol
 
 from PySide6.QtCore import QSettings, QStringListModel, Qt
 from PySide6.QtWidgets import (
+    QCheckBox,
+    QComboBox,
     QCompleter,
     QFileDialog,
     QFormLayout,
@@ -220,10 +222,23 @@ class OperationsTab(QWidget):
         self.cancel_operation_button = QPushButton("Cancel")
         self.clear_recent_paths_button = QPushButton("履歴クリア")
         self.reload_logs_button = QPushButton("ログ再読込")
+        self.include_archives_checkbox = QCheckBox("archive を含める")
+        self.log_status_filter = QComboBox()
+        self.log_status_filter.addItems(["all", "success", "error", "cancel"])
+        self.log_action_filter = QComboBox()
+        self.log_action_filter.addItem("all")
+        self.log_message_search_input = QLineEdit()
+        self.log_message_search_input.setPlaceholderText("message 検索（部分一致）")
         self.cancel_operation_button.setEnabled(False)
         self.cancel_operation_button.clicked.connect(self._request_cancel)
         self.clear_recent_paths_button.clicked.connect(self._clear_recent_paths)
         self.reload_logs_button.clicked.connect(self._reload_operation_logs)
+        self.include_archives_checkbox.stateChanged.connect(
+            lambda *_: self._reload_operation_logs()
+        )
+        self.log_status_filter.currentTextChanged.connect(lambda *_: self._reload_operation_logs())
+        self.log_action_filter.currentTextChanged.connect(lambda *_: self._reload_operation_logs())
+        self.log_message_search_input.textChanged.connect(lambda *_: self._reload_operation_logs())
 
         self.export_csv_button.clicked.connect(self._run_export_csv)
         self.export_json_button.clicked.connect(self._run_export_json)
@@ -321,6 +336,14 @@ class OperationsTab(QWidget):
         logs_group = QGroupBox("Operations 実行ログ（最新100件）")
         logs_box = QVBoxLayout(logs_group)
         logs_box.addWidget(self.reload_logs_button)
+        logs_controls = QHBoxLayout()
+        logs_controls.addWidget(self.include_archives_checkbox)
+        logs_controls.addWidget(QLabel("status"))
+        logs_controls.addWidget(self.log_status_filter)
+        logs_controls.addWidget(QLabel("action"))
+        logs_controls.addWidget(self.log_action_filter)
+        logs_controls.addWidget(self.log_message_search_input)
+        logs_box.addLayout(logs_controls)
         logs_box.addWidget(self.operation_log_view)
         root.addWidget(logs_group)
 
@@ -501,6 +524,10 @@ class OperationsTab(QWidget):
             self.import_json_browse_button,
             self.clear_recent_paths_button,
             self.reload_logs_button,
+            self.include_archives_checkbox,
+            self.log_status_filter,
+            self.log_action_filter,
+            self.log_message_search_input,
         ]
 
         for button in execute_buttons + browse_buttons:
@@ -555,7 +582,13 @@ class OperationsTab(QWidget):
             self.operation_log_view.setPlainText("ログ読み取り未対応です。")
             return
 
-        events, decode_errors = self._operation_logger.read_latest(100, include_archives=False)
+        raw_events, decode_errors = self._operation_logger.read_latest(
+            100,
+            include_archives=self.include_archives_checkbox.isChecked(),
+        )
+        events: list[object] = list(raw_events)
+        self._sync_action_filter_options(events)
+        events = self._filter_log_events(events)
         if not events:
             message = "ログはまだありません。"
             if decode_errors > 0:
@@ -582,6 +615,47 @@ class OperationsTab(QWidget):
         if decode_errors > 0:
             lines.append(f"[WARN] 壊れたログ行を読み飛ばしました: {decode_errors}件")
         self.operation_log_view.setPlainText("\n".join(lines))
+
+    def _sync_action_filter_options(self, events: list[object]) -> None:
+        current = self.log_action_filter.currentText() or "all"
+        actions = sorted(
+            {
+                str(getattr(event, "action", "")).strip()
+                for event in events
+                if str(getattr(event, "action", "")).strip()
+            }
+        )
+        self.log_action_filter.blockSignals(True)
+        self.log_action_filter.clear()
+        self.log_action_filter.addItem("all")
+        self.log_action_filter.addItems(actions)
+        if current in {"all", *actions}:
+            self.log_action_filter.setCurrentText(current)
+        self.log_action_filter.blockSignals(False)
+
+    def _filter_log_events(self, events: list[object]) -> list[object]:
+        status_filter = self.log_status_filter.currentText()
+        action_filter = self.log_action_filter.currentText()
+        query = self.log_message_search_input.text().strip().lower()
+
+        filtered: list[object] = []
+        for event in events:
+            status = str(getattr(event, "status", ""))
+            action = str(getattr(event, "action", ""))
+            message = str(getattr(event, "message", ""))
+            path = str(getattr(event, "path", "") or "")
+            path2 = str(getattr(event, "path2", "") or "")
+
+            if status_filter != "all" and status != status_filter:
+                continue
+            if action_filter != "all" and action != action_filter:
+                continue
+
+            haystack = " ".join([message, action, status, path, path2]).lower()
+            if query and query not in haystack:
+                continue
+            filtered.append(event)
+        return filtered
 
     def _request_cancel(self) -> None:
         if not self._is_busy:

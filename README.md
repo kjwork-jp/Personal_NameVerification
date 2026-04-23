@@ -82,6 +82,7 @@ Operations tab provides minimal UI entrypoints for export/import/backup/restore 
 - Operation execution uses async worker foundation (QThreadPool/QRunnable), with busy-state guard, duplicate-start prevention, and minimum cancel-request UI.
 - Local housekeeping controls: log size-based rotation + TTL pruning for archived JSONL logs, and a single-click recent path history clear button.
 - Operations tab includes a minimal log viewer UI (reload + latest 100 lines from current JSONL, broken lines are skipped).
+- Log viewer supports archive toggle, status/action filters, and message partial-match search.
 
 ## Notes
 

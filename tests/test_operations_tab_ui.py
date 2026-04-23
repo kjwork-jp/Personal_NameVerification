@@ -37,6 +37,7 @@ class FakeSettings:
 class FakeOperationLogger:
     def __init__(self) -> None:
         self.events: list[dict[str, str | None]] = []
+        self.last_include_archives: bool | None = None
 
     def append(
         self,
@@ -62,6 +63,8 @@ class FakeOperationLogger:
     def read_latest(
         self, limit: int = 100, *, include_archives: bool = False
     ) -> tuple[list[object], int]:
+        self.last_include_archives = include_archives
+
         class _Event:
             def __init__(self, payload: dict[str, str | None]) -> None:
                 self.timestamp = "2026-04-23T00:00:00+00:00"
@@ -701,6 +704,75 @@ def test_operations_tab_log_viewer_displays_latest_events() -> None:
     assert "export_csv" in text
     assert "CSV export 成功" in text
     assert "/tmp/csv" in text
+
+
+def test_operations_tab_log_viewer_archive_toggle() -> None:
+    _app()
+    logger = FakeOperationLogger()
+    tab = OperationsTab(
+        export_backup_service=StubExportBackupService(),
+        backup_restore_service=StubBackupRestoreService(),
+        import_service=StubImportService(),
+        role_context=RoleContext(role="admin"),
+        operation_logger=logger,
+        operation_executor=ImmediateOperationExecutor(),
+    )
+
+    assert logger.last_include_archives is False
+    tab.include_archives_checkbox.setChecked(True)
+    assert logger.last_include_archives is True
+
+
+def test_operations_tab_log_viewer_status_action_search_filters() -> None:
+    _app()
+    logger = FakeOperationLogger()
+    logger.append(
+        action="export_csv",
+        role="admin",
+        status="success",
+        message="alpha csv",
+        path="/tmp/a",
+    )
+    logger.append(
+        action="restore",
+        role="admin",
+        status="error",
+        message="restore boom",
+        path="/tmp/r1",
+        path2="/tmp/r2",
+    )
+    logger.append(
+        action="import_json",
+        role="admin",
+        status="cancel",
+        message="cancel requested",
+    )
+
+    tab = OperationsTab(
+        export_backup_service=StubExportBackupService(),
+        backup_restore_service=StubBackupRestoreService(),
+        import_service=StubImportService(),
+        role_context=RoleContext(role="admin"),
+        operation_logger=logger,
+        operation_executor=ImmediateOperationExecutor(),
+    )
+
+    tab.log_status_filter.setCurrentText("error")
+    text = tab.operation_log_view.toPlainText()
+    assert "restore boom" in text
+    assert "alpha csv" not in text
+
+    tab.log_status_filter.setCurrentText("all")
+    tab.log_action_filter.setCurrentText("import_json")
+    text = tab.operation_log_view.toPlainText()
+    assert "cancel requested" in text
+    assert "restore boom" not in text
+
+    tab.log_action_filter.setCurrentText("all")
+    tab.log_message_search_input.setText("alpha")
+    text = tab.operation_log_view.toPlainText()
+    assert "alpha csv" in text
+    assert "cancel requested" not in text
 
 
 def test_operations_log_reader_skips_broken_lines_and_continues(tmp_path: Path) -> None:
