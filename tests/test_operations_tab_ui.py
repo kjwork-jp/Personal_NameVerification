@@ -59,6 +59,22 @@ class FakeOperationLogger:
             }
         )
 
+    def read_latest(
+        self, limit: int = 100, *, include_archives: bool = False
+    ) -> tuple[list[object], int]:
+        class _Event:
+            def __init__(self, payload: dict[str, str | None]) -> None:
+                self.timestamp = "2026-04-23T00:00:00+00:00"
+                self.action = payload.get("action") or ""
+                self.role = payload.get("role") or ""
+                self.status = payload.get("status") or ""
+                self.message = payload.get("message") or ""
+                self.path = payload.get("path")
+                self.path2 = payload.get("path2")
+
+        data = [_Event(payload) for payload in reversed(self.events[-limit:])]
+        return data, 0
+
 
 class FailingOperationLogger(FakeOperationLogger):
     def append(
@@ -643,3 +659,65 @@ def test_operations_tab_clear_recent_paths() -> None:
     assert tab.import_json_path_input.text() == ""
     assert tab._history_models["csv_export_dir"].stringList() == []
     assert logger.events[-1]["action"] == "clear_recent_paths"
+
+
+def test_operations_tab_log_viewer_empty_and_reload() -> None:
+    _app()
+    logger = FakeOperationLogger()
+    tab = OperationsTab(
+        export_backup_service=StubExportBackupService(),
+        backup_restore_service=StubBackupRestoreService(),
+        import_service=StubImportService(),
+        role_context=RoleContext(role="admin"),
+        operation_logger=logger,
+        operation_executor=ImmediateOperationExecutor(),
+    )
+
+    assert "ログはまだありません" in tab.operation_log_view.toPlainText()
+    tab.reload_logs_button.click()
+    assert "ログはまだありません" in tab.operation_log_view.toPlainText()
+
+
+def test_operations_tab_log_viewer_displays_latest_events() -> None:
+    _app()
+    logger = FakeOperationLogger()
+    logger.append(
+        action="export_csv",
+        role="admin",
+        status="success",
+        message="CSV export 成功",
+        path="/tmp/csv",
+    )
+    tab = OperationsTab(
+        export_backup_service=StubExportBackupService(),
+        backup_restore_service=StubBackupRestoreService(),
+        import_service=StubImportService(),
+        role_context=RoleContext(role="admin"),
+        operation_logger=logger,
+        operation_executor=ImmediateOperationExecutor(),
+    )
+
+    text = tab.operation_log_view.toPlainText()
+    assert "export_csv" in text
+    assert "CSV export 成功" in text
+    assert "/tmp/csv" in text
+
+
+def test_operations_log_reader_skips_broken_lines_and_continues(tmp_path: Path) -> None:
+    from app.ui.operations_log import OperationsJsonlLogger
+
+    class TmpLocator:
+        def writableLocation(self, location: object) -> str:
+            return str(tmp_path)
+
+    log_file = tmp_path / "operations_events.jsonl"
+    log_file.write_text(
+        '{"timestamp":"2026-04-23T00:00:00+00:00","action":"a","role":"admin","status":"success","message":"ok"}\n'
+        '{"broken"\n',
+        encoding="utf-8",
+    )
+
+    logger = OperationsJsonlLogger(app_data_locator=TmpLocator())
+    events, errors = logger.read_latest(100)
+    assert len(events) == 1
+    assert errors == 1

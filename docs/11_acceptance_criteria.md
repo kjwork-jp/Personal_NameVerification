@@ -46,6 +46,7 @@
 - [ ] Operations 実行中は busy 表示と二重起動防止が働き、cancel request 導線が利用できる
 - [ ] Operations ログの rotation / TTL pruning が動作する
 - [ ] recent path history を一括クリアできる
+- [ ] Operations 実行ログの最新N件をアプリ内で再読込・閲覧できる
 - [ ] destructive 操作に確認ダイアログがある
 - [ ] エラー表示が利用者に理解可能
 - [ ] 主要操作がキーボードでも到達可能

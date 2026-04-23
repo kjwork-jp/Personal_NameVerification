@@ -76,6 +76,10 @@ class OperationLoggerLike(Protocol):
         path2: str | None = None,
     ) -> None: ...
 
+    def read_latest(
+        self, limit: int = 100, *, include_archives: bool = False
+    ) -> tuple[list[object], int]: ...
+
 
 class OperationsTab(QWidget):
     """Minimal operations UI for file-based operational workflows."""
@@ -215,9 +219,11 @@ class OperationsTab(QWidget):
         self.import_json_button = QPushButton("JSON Import")
         self.cancel_operation_button = QPushButton("Cancel")
         self.clear_recent_paths_button = QPushButton("履歴クリア")
+        self.reload_logs_button = QPushButton("ログ再読込")
         self.cancel_operation_button.setEnabled(False)
         self.cancel_operation_button.clicked.connect(self._request_cancel)
         self.clear_recent_paths_button.clicked.connect(self._clear_recent_paths)
+        self.reload_logs_button.clicked.connect(self._reload_operation_logs)
 
         self.export_csv_button.clicked.connect(self._run_export_csv)
         self.export_json_button.clicked.connect(self._run_export_json)
@@ -310,8 +316,17 @@ class OperationsTab(QWidget):
         root.addWidget(self.cancel_operation_button)
         root.addWidget(self.clear_recent_paths_button)
 
+        self.operation_log_view = QTextEdit()
+        self.operation_log_view.setReadOnly(True)
+        logs_group = QGroupBox("Operations 実行ログ（最新100件）")
+        logs_box = QVBoxLayout(logs_group)
+        logs_box.addWidget(self.reload_logs_button)
+        logs_box.addWidget(self.operation_log_view)
+        root.addWidget(logs_group)
+
         self._setup_recent_paths()
         self._apply_role_guards()
+        self._reload_operation_logs()
 
     def _build_group(
         self,
@@ -485,6 +500,7 @@ class OperationsTab(QWidget):
             self.import_csv_dir_browse_button,
             self.import_json_browse_button,
             self.clear_recent_paths_button,
+            self.reload_logs_button,
         ]
 
         for button in execute_buttons + browse_buttons:
@@ -533,6 +549,39 @@ class OperationsTab(QWidget):
         message = "recent path history をクリアしました"
         self._set_message(message)
         self._record_operation("clear_recent_paths", "success", message)
+
+    def _reload_operation_logs(self) -> None:
+        if not hasattr(self._operation_logger, "read_latest"):
+            self.operation_log_view.setPlainText("ログ読み取り未対応です。")
+            return
+
+        events, decode_errors = self._operation_logger.read_latest(100, include_archives=False)
+        if not events:
+            message = "ログはまだありません。"
+            if decode_errors > 0:
+                message += f"（読み飛ばし: {decode_errors}件）"
+            self.operation_log_view.setPlainText(message)
+            return
+
+        lines: list[str] = []
+        for event in events:
+            timestamp = getattr(event, "timestamp", "")
+            action = getattr(event, "action", "")
+            role = getattr(event, "role", "")
+            status = getattr(event, "status", "")
+            text = getattr(event, "message", "")
+            path = getattr(event, "path", None)
+            path2 = getattr(event, "path2", None)
+            extra = []
+            if path:
+                extra.append(f"path={path}")
+            if path2:
+                extra.append(f"path2={path2}")
+            suffix = f" ({', '.join(extra)})" if extra else ""
+            lines.append(f"{timestamp} | {action} | {role} | {status} | {text}{suffix}")
+        if decode_errors > 0:
+            lines.append(f"[WARN] 壊れたログ行を読み飛ばしました: {decode_errors}件")
+        self.operation_log_view.setPlainText("\n".join(lines))
 
     def _request_cancel(self) -> None:
         if not self._is_busy:
@@ -887,6 +936,7 @@ class OperationsTab(QWidget):
             )
         except Exception:
             return
+        self._reload_operation_logs()
 
     def _set_message(self, message: str, *, is_error: bool = False) -> None:
         prefix = "ERROR" if is_error else "OK"
