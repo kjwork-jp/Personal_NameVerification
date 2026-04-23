@@ -82,6 +82,8 @@ class OperationLoggerLike(Protocol):
         self, limit: int = 100, *, include_archives: bool = False
     ) -> tuple[list[object], int]: ...
 
+    def list_archives(self) -> list[Path]: ...
+
 
 class OperationsTab(QWidget):
     """Minimal operations UI for file-based operational workflows."""
@@ -107,6 +109,7 @@ class OperationsTab(QWidget):
         self._operation_logger = operation_logger or OperationsJsonlLogger()
         self._operation_executor = operation_executor or ThreadPoolOperationExecutor()
         self._history_models: dict[str, QStringListModel] = {}
+        self._clear_history_buttons: dict[str, QPushButton] = {}
         self._is_busy = False
         self._cancel_requested = False
         self._current_action: str | None = None
@@ -221,8 +224,11 @@ class OperationsTab(QWidget):
         self.import_json_button = QPushButton("JSON Import")
         self.cancel_operation_button = QPushButton("Cancel")
         self.clear_recent_paths_button = QPushButton("履歴クリア")
+        self.export_logs_button = QPushButton("ログエクスポート")
         self.reload_logs_button = QPushButton("ログ再読込")
         self.include_archives_checkbox = QCheckBox("archive を含める")
+        self.log_source_selector = QComboBox()
+        self.log_source_selector.addItems(["current only", "all (current + archives)"])
         self.log_status_filter = QComboBox()
         self.log_status_filter.addItems(["all", "success", "error", "cancel"])
         self.log_action_filter = QComboBox()
@@ -232,10 +238,12 @@ class OperationsTab(QWidget):
         self.cancel_operation_button.setEnabled(False)
         self.cancel_operation_button.clicked.connect(self._request_cancel)
         self.clear_recent_paths_button.clicked.connect(self._clear_recent_paths)
+        self.export_logs_button.clicked.connect(self._export_visible_logs)
         self.reload_logs_button.clicked.connect(self._reload_operation_logs)
         self.include_archives_checkbox.stateChanged.connect(
             lambda *_: self._reload_operation_logs()
         )
+        self.log_source_selector.currentTextChanged.connect(lambda *_: self._reload_operation_logs())
         self.log_status_filter.currentTextChanged.connect(lambda *_: self._reload_operation_logs())
         self.log_action_filter.currentTextChanged.connect(lambda *_: self._reload_operation_logs())
         self.log_message_search_input.textChanged.connect(lambda *_: self._reload_operation_logs())
@@ -256,16 +264,19 @@ class OperationsTab(QWidget):
                         "CSV出力先ディレクトリ",
                         self.csv_export_path_input,
                         self.csv_export_browse_button,
+                        "csv_export_dir",
                     ),
                     (
                         "JSON出力先ファイル",
                         self.json_export_path_input,
                         self.json_export_browse_button,
+                        "json_export_file",
                     ),
                     (
                         "SQL dump出力先ファイル",
                         self.sql_dump_path_input,
                         self.sql_dump_browse_button,
+                        "sql_dump_file",
                     ),
                 ],
                 [self.export_csv_button, self.export_json_button, self.export_sql_dump_button],
@@ -276,11 +287,12 @@ class OperationsTab(QWidget):
             self._build_group(
                 "Backup",
                 [
-                    ("DBファイルパス", self.db_path_input, self.db_path_browse_button),
+                    ("DBファイルパス", self.db_path_input, self.db_path_browse_button, "db_file"),
                     (
                         "バックアップ出力先",
                         self.backup_output_path_input,
                         self.backup_output_browse_button,
+                        "backup_output_file",
                     ),
                 ],
                 [self.create_backup_button],
@@ -295,11 +307,13 @@ class OperationsTab(QWidget):
                         "バックアップ入力ファイル",
                         self.restore_backup_path_input,
                         self.restore_backup_browse_button,
+                        "restore_backup_file",
                     ),
                     (
                         "復元先DBファイル",
                         self.restore_target_db_path_input,
                         self.restore_target_browse_button,
+                        "restore_target_file",
                     ),
                 ],
                 [self.restore_button],
@@ -314,11 +328,13 @@ class OperationsTab(QWidget):
                         "CSVディレクトリ",
                         self.import_csv_dir_input,
                         self.import_csv_dir_browse_button,
+                        "import_csv_dir",
                     ),
                     (
                         "JSONファイル",
                         self.import_json_path_input,
                         self.import_json_browse_button,
+                        "import_json_file",
                     ),
                 ],
                 [self.import_csv_button, self.import_json_button],
@@ -335,9 +351,15 @@ class OperationsTab(QWidget):
         self.operation_log_view.setReadOnly(True)
         logs_group = QGroupBox("Operations 実行ログ（最新100件）")
         logs_box = QVBoxLayout(logs_group)
-        logs_box.addWidget(self.reload_logs_button)
+        logs_header = QHBoxLayout()
+        logs_header.addWidget(self.reload_logs_button)
+        logs_header.addWidget(self.export_logs_button)
+        logs_header.addStretch(1)
+        logs_box.addLayout(logs_header)
         logs_controls = QHBoxLayout()
         logs_controls.addWidget(self.include_archives_checkbox)
+        logs_controls.addWidget(QLabel("source"))
+        logs_controls.addWidget(self.log_source_selector)
         logs_controls.addWidget(QLabel("status"))
         logs_controls.addWidget(self.log_status_filter)
         logs_controls.addWidget(QLabel("action"))
@@ -354,16 +376,20 @@ class OperationsTab(QWidget):
     def _build_group(
         self,
         title: str,
-        fields: list[tuple[str, QLineEdit, QPushButton]],
+        fields: list[tuple[str, QLineEdit, QPushButton, str]],
         buttons: list[QPushButton],
     ) -> QGroupBox:
         group = QGroupBox(title)
         box = QVBoxLayout(group)
         form = QFormLayout()
-        for label, path_input, browse_button in fields:
+        for label, path_input, browse_button, field_key in fields:
             row = QHBoxLayout()
             row.addWidget(path_input)
             row.addWidget(browse_button)
+            clear_button = QPushButton("履歴削除")
+            clear_button.clicked.connect(lambda *_args, key=field_key: self._clear_recent_path(key))
+            self._clear_history_buttons[field_key] = clear_button
+            row.addWidget(clear_button)
             form.addRow(label, row)
         box.addLayout(form)
 
@@ -524,11 +550,14 @@ class OperationsTab(QWidget):
             self.import_json_browse_button,
             self.clear_recent_paths_button,
             self.reload_logs_button,
+            self.export_logs_button,
             self.include_archives_checkbox,
+            self.log_source_selector,
             self.log_status_filter,
             self.log_action_filter,
             self.log_message_search_input,
         ]
+        browse_buttons.extend(self._clear_history_buttons.values())
 
         for button in execute_buttons + browse_buttons:
             button.setEnabled(not self._is_busy)
@@ -577,16 +606,50 @@ class OperationsTab(QWidget):
         self._set_message(message)
         self._record_operation("clear_recent_paths", "success", message)
 
+    def _clear_recent_path(self, field_key: str) -> None:
+        for key, line_edit in self._history_field_bindings():
+            if key != field_key:
+                continue
+            settings_key = self._history_settings_key(field_key)
+            if hasattr(self._settings, "remove"):
+                self._settings.remove(settings_key)
+            else:
+                self._settings.setValue(settings_key, [])
+            model = self._history_models.get(field_key)
+            if model is not None:
+                model.setStringList([])
+            line_edit.clear()
+            message = f"{field_key} の recent path history をクリアしました"
+            self._set_message(message)
+            self._record_operation("clear_recent_path", "success", message, path=field_key)
+            return
+
     def _reload_operation_logs(self) -> None:
         if not hasattr(self._operation_logger, "read_latest"):
             self.operation_log_view.setPlainText("ログ読み取り未対応です。")
             return
 
+        source = self.log_source_selector.currentText()
+        include_archives = self.include_archives_checkbox.isChecked()
+        archive_path: Path | None = None
+        if source == "current only":
+            include_archives = False
+        elif source.startswith("archive:"):
+            include_archives = False
+            archive_path = Path(source.removeprefix("archive:").strip())
+
         raw_events, decode_errors = self._operation_logger.read_latest(
             100,
-            include_archives=self.include_archives_checkbox.isChecked(),
+            include_archives=include_archives,
         )
         events: list[object] = list(raw_events)
+        if archive_path is not None:
+            events = [
+                item
+                for item in events
+                if str(getattr(item, "source", "") or "") == str(archive_path)
+            ]
+        self._sync_log_source_selector()
         self._sync_action_filter_options(events)
         events = self._filter_log_events(events)
         if not events:
@@ -615,6 +678,43 @@ class OperationsTab(QWidget):
         if decode_errors > 0:
             lines.append(f"[WARN] 壊れたログ行を読み飛ばしました: {decode_errors}件")
         self.operation_log_view.setPlainText("\n".join(lines))
+
+    def _sync_log_source_selector(self) -> None:
+        current = self.log_source_selector.currentText() or "current only"
+        options = ["current only", "all (current + archives)"]
+        if hasattr(self._operation_logger, "list_archives"):
+            for archive in self._operation_logger.list_archives():
+                options.append(f"archive:{archive}")
+        self.log_source_selector.blockSignals(True)
+        self.log_source_selector.clear()
+        self.log_source_selector.addItems(options)
+        if current in options:
+            self.log_source_selector.setCurrentText(current)
+        self.log_source_selector.blockSignals(False)
+
+    def _export_visible_logs(self) -> None:
+        body = self.operation_log_view.toPlainText().strip()
+        if not body:
+            self._set_message("エクスポート対象ログがありません。", is_error=True)
+            return
+        chosen, _ = QFileDialog.getSaveFileName(
+            self,
+            "ログエクスポート先ファイルを選択",
+            "",
+            "Text Files (*.txt);;All Files (*)",
+        )
+        if not chosen:
+            return
+        try:
+            Path(chosen).write_text(body + "\n", encoding="utf-8")
+        except Exception as exc:
+            message = f"ログエクスポート失敗: {exc}"
+            self._set_message(message, is_error=True)
+            self._record_operation("export_logs", "error", message, path=chosen)
+            return
+        message = f"ログエクスポート成功: {chosen}"
+        self._set_message(message)
+        self._record_operation("export_logs", "success", message, path=chosen)
 
     def _sync_action_filter_options(self, events: list[object]) -> None:
         current = self.log_action_filter.currentText() or "all"

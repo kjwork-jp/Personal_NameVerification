@@ -38,6 +38,7 @@ class FakeOperationLogger:
     def __init__(self) -> None:
         self.events: list[dict[str, str | None]] = []
         self.last_include_archives: bool | None = None
+        self.archives: list[Path] = []
 
     def append(
         self,
@@ -74,9 +75,13 @@ class FakeOperationLogger:
                 self.message = payload.get("message") or ""
                 self.path = payload.get("path")
                 self.path2 = payload.get("path2")
+                self.source = payload.get("source") or "/tmp/operations_events.jsonl"
 
         data = [_Event(payload) for payload in reversed(self.events[-limit:])]
         return data, 0
+
+    def list_archives(self) -> list[Path]:
+        return list(self.archives)
 
 
 class FailingOperationLogger(FakeOperationLogger):
@@ -664,6 +669,33 @@ def test_operations_tab_clear_recent_paths() -> None:
     assert logger.events[-1]["action"] == "clear_recent_paths"
 
 
+def test_operations_tab_clear_single_recent_path() -> None:
+    _app()
+    settings = FakeSettings(
+        {
+            "operations/recent_paths/csv_export_dir": ["/tmp/a"],
+            "operations/recent_paths/import_json_file": ["/tmp/b.json"],
+        }
+    )
+    logger = FakeOperationLogger()
+    tab = OperationsTab(
+        export_backup_service=StubExportBackupService(),
+        backup_restore_service=StubBackupRestoreService(),
+        import_service=StubImportService(),
+        role_context=RoleContext(role="admin"),
+        settings=settings,
+        operation_logger=logger,
+        operation_executor=ImmediateOperationExecutor(),
+    )
+
+    tab._clear_history_buttons["csv_export_dir"].click()
+    assert settings.value("operations/recent_paths/csv_export_dir") is None
+    assert settings.value("operations/recent_paths/import_json_file") == ["/tmp/b.json"]
+    assert tab.csv_export_path_input.text() == ""
+    assert tab.import_json_path_input.text() == "/tmp/b.json"
+    assert logger.events[-1]["action"] == "clear_recent_path"
+
+
 def test_operations_tab_log_viewer_empty_and_reload() -> None:
     _app()
     logger = FakeOperationLogger()
@@ -773,6 +805,78 @@ def test_operations_tab_log_viewer_status_action_search_filters() -> None:
     text = tab.operation_log_view.toPlainText()
     assert "alpha csv" in text
     assert "cancel requested" not in text
+
+
+def test_operations_tab_log_viewer_source_selector(monkeypatch: pytest.MonkeyPatch) -> None:
+    _app()
+    logger = FakeOperationLogger()
+    archive = Path("/tmp/operations_events.20260422-120000.jsonl")
+    logger.archives = [archive]
+    logger.events.append(
+        {
+            "action": "export_csv",
+            "role": "admin",
+            "status": "success",
+            "message": "current",
+            "path": None,
+            "path2": None,
+            "source": "/tmp/operations_events.jsonl",
+        }
+    )
+    logger.events.append(
+        {
+            "action": "export_csv",
+            "role": "admin",
+            "status": "success",
+            "message": "archived",
+            "path": None,
+            "path2": None,
+            "source": str(archive),
+        }
+    )
+    tab = OperationsTab(
+        export_backup_service=StubExportBackupService(),
+        backup_restore_service=StubBackupRestoreService(),
+        import_service=StubImportService(),
+        role_context=RoleContext(role="admin"),
+        operation_logger=logger,
+        operation_executor=ImmediateOperationExecutor(),
+    )
+
+    tab.log_source_selector.setCurrentText(f"archive:{archive}")
+    text = tab.operation_log_view.toPlainText()
+    assert "archived" in text
+    assert "current" not in text
+
+
+def test_operations_tab_export_visible_logs(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    _app()
+    logger = FakeOperationLogger()
+    logger.append(
+        action="export_csv",
+        role="admin",
+        status="success",
+        message="CSV export 成功",
+        path="/tmp/csv",
+    )
+    target = tmp_path / "ops-log.txt"
+    monkeypatch.setattr(
+        operations_tab_module.QFileDialog,
+        "getSaveFileName",
+        lambda *args, **kwargs: (str(target), "Text Files (*.txt)"),
+    )
+    tab = OperationsTab(
+        export_backup_service=StubExportBackupService(),
+        backup_restore_service=StubBackupRestoreService(),
+        import_service=StubImportService(),
+        role_context=RoleContext(role="admin"),
+        operation_logger=logger,
+        operation_executor=ImmediateOperationExecutor(),
+    )
+
+    tab.export_logs_button.click()
+    assert target.exists()
+    assert "CSV export 成功" in target.read_text(encoding="utf-8")
 
 
 def test_operations_log_reader_skips_broken_lines_and_continues(tmp_path: Path) -> None:

@@ -25,6 +25,7 @@ class OperationLogEvent:
     message: str
     path: str | None = None
     path2: str | None = None
+    source: str | None = None
 
 
 class OperationsJsonlLogger:
@@ -62,6 +63,7 @@ class OperationsJsonlLogger:
         path: str | None = None,
         path2: str | None = None,
     ) -> None:
+        log_path = self._log_path()
         event = OperationLogEvent(
             timestamp=self._now_provider().isoformat(),
             action=action,
@@ -70,9 +72,9 @@ class OperationsJsonlLogger:
             message=message,
             path=path,
             path2=path2,
+            source=str(log_path),
         )
         payload = json.dumps(event.__dict__, ensure_ascii=False)
-        log_path = self._log_path()
         self._run_housekeeping(log_path)
         with log_path.open("a", encoding="utf-8") as fp:
             fp.write(payload + "\n")
@@ -162,6 +164,7 @@ class OperationsJsonlLogger:
                             path2=(
                                 str(payload["path2"]) if payload.get("path2") is not None else None
                             ),
+                            source=str(path),
                         )
                     )
                 except Exception:

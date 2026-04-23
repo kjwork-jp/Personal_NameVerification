@@ -80,9 +80,9 @@ Operations tab provides minimal UI entrypoints for export/import/backup/restore 
 - Recent path history is persisted per input (max 5, deduplicated, latest-first) and offered via completer.
 - Operation execution results are appended to local JSONL (`operations_events.jsonl`) under AppDataLocation with `timestamp/action/role/status/message/path` fields (best-effort write).
 - Operation execution uses async worker foundation (QThreadPool/QRunnable), with busy-state guard, duplicate-start prevention, and minimum cancel-request UI.
-- Local housekeeping controls: log size-based rotation + TTL pruning for archived JSONL logs, and a single-click recent path history clear button.
-- Operations tab includes a minimal log viewer UI (reload + latest 100 lines from current JSONL, broken lines are skipped).
-- Log viewer supports archive toggle, status/action filters, and message partial-match search.
+- Local housekeeping controls: log size-based rotation + TTL pruning for archived JSONL logs, field単位/全体の recent path history クリア。
+- Operations tab includes a minimal log viewer UI (reload + latest 100 lines, broken lines are skipped) and visible-lines export.
+- Log viewer supports archive toggle, source selector（current/all/archive file）, status/action filters, and message partial-match search.
 
 ## Notes
 
