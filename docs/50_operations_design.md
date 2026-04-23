@@ -5,14 +5,27 @@
 
 ## 2. 日次運用
 - 起動確認
+- Operations タブで日次運用操作（export/backup create）を実施
+- path 指定は Operations タブの Browse ボタン（native dialog）を優先利用
+- recent path history 候補を利用して再入力を省力化
+- Operations 実行結果は AppDataLocation 配下の JSONL（append-only）へ記録
+- Operations 実行は async worker で分離し、busy 中は二重起動を防止（cancel request 導線あり）
+- Operations ログは size-based rotation と TTL pruning でローカル保守を行う
+- recent path history は Operations タブから一括クリア可能
+- Operations タブのログビューで最新実行ログを再読込して確認する
+- 必要に応じて archive 含有切替 / status-action filter / message 検索で絞り込む
 - 代表検索確認
 - 変更ログ確認
-- 終業前バックアップ
+- 必要時の CSV / JSON / SQL dump 出力（editor/admin）
+- 終業前バックアップ作成（editor/admin）
 
 ## 3. 週次運用
-- バックアップ復元リハーサル
+- Operations タブ経由でバックアップ復元リハーサル（restore は admin 実行、事前に対象DB接続クローズ）
 - 運用レポート確認
 - change_logs spot review
+- export / backup 出力ファイル妥当性サンプリング
+- restore 実行前の接続クローズ確認
+- 空DBへの初期 import（CSV/JSON, admin）手順確認
 - 未処理課題確認
 
 ## 4. 月次運用
