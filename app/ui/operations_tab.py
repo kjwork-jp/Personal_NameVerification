@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import Callable
 from pathlib import Path
 from typing import Protocol
@@ -31,6 +32,7 @@ from app.ui.role_context import RoleContext, UserRole
 
 MAX_RECENT_PATHS = 5
 HISTORY_PREFIX = "operations/recent_paths"
+LOGS_PAGE_SIZE = 100
 
 
 class ExportBackupLike(Protocol):
@@ -110,6 +112,7 @@ class OperationsTab(QWidget):
         self._operation_executor = operation_executor or ThreadPoolOperationExecutor()
         self._history_models: dict[str, QStringListModel] = {}
         self._clear_history_buttons: dict[str, QPushButton] = {}
+        self._log_page_index = 0
         self._is_busy = False
         self._cancel_requested = False
         self._current_action: str | None = None
@@ -226,6 +229,10 @@ class OperationsTab(QWidget):
         self.clear_recent_paths_button = QPushButton("履歴クリア")
         self.export_logs_button = QPushButton("ログエクスポート")
         self.reload_logs_button = QPushButton("ログ再読込")
+        self.log_prev_button = QPushButton("Prev")
+        self.log_next_button = QPushButton("Next")
+        self.log_page_label = QLabel("Page 0/0")
+        self.log_source_info_label = QLabel("source: current")
         self.include_archives_checkbox = QCheckBox("archive を含める")
         self.log_source_selector = QComboBox()
         self.log_source_selector.addItems(["current only", "all (current + archives)"])
@@ -235,18 +242,33 @@ class OperationsTab(QWidget):
         self.log_action_filter.addItem("all")
         self.log_message_search_input = QLineEdit()
         self.log_message_search_input.setPlaceholderText("message 検索（部分一致）")
+        self.log_regex_checkbox = QCheckBox("Regex")
+        self.log_sort_order = QComboBox()
+        self.log_sort_order.addItems(["最新順", "古い順"])
         self.cancel_operation_button.setEnabled(False)
         self.cancel_operation_button.clicked.connect(self._request_cancel)
         self.clear_recent_paths_button.clicked.connect(self._clear_recent_paths)
         self.export_logs_button.clicked.connect(self._export_visible_logs)
-        self.reload_logs_button.clicked.connect(self._reload_operation_logs)
+        self.reload_logs_button.clicked.connect(self._reset_log_page_and_reload)
+        self.log_prev_button.clicked.connect(self._go_prev_log_page)
+        self.log_next_button.clicked.connect(self._go_next_log_page)
         self.include_archives_checkbox.stateChanged.connect(
-            lambda *_: self._reload_operation_logs()
+            lambda *_: self._reset_log_page_and_reload()
         )
-        self.log_source_selector.currentTextChanged.connect(lambda *_: self._reload_operation_logs())
-        self.log_status_filter.currentTextChanged.connect(lambda *_: self._reload_operation_logs())
-        self.log_action_filter.currentTextChanged.connect(lambda *_: self._reload_operation_logs())
-        self.log_message_search_input.textChanged.connect(lambda *_: self._reload_operation_logs())
+        self.log_source_selector.currentTextChanged.connect(
+            lambda *_: self._reset_log_page_and_reload()
+        )
+        self.log_status_filter.currentTextChanged.connect(
+            lambda *_: self._reset_log_page_and_reload()
+        )
+        self.log_action_filter.currentTextChanged.connect(
+            lambda *_: self._reset_log_page_and_reload()
+        )
+        self.log_message_search_input.textChanged.connect(
+            lambda *_: self._reset_log_page_and_reload()
+        )
+        self.log_regex_checkbox.stateChanged.connect(lambda *_: self._reset_log_page_and_reload())
+        self.log_sort_order.currentTextChanged.connect(lambda *_: self._reset_log_page_and_reload())
 
         self.export_csv_button.clicked.connect(self._run_export_csv)
         self.export_json_button.clicked.connect(self._run_export_json)
@@ -354,6 +376,9 @@ class OperationsTab(QWidget):
         logs_header = QHBoxLayout()
         logs_header.addWidget(self.reload_logs_button)
         logs_header.addWidget(self.export_logs_button)
+        logs_header.addWidget(self.log_prev_button)
+        logs_header.addWidget(self.log_next_button)
+        logs_header.addWidget(self.log_page_label)
         logs_header.addStretch(1)
         logs_box.addLayout(logs_header)
         logs_controls = QHBoxLayout()
@@ -364,8 +389,12 @@ class OperationsTab(QWidget):
         logs_controls.addWidget(self.log_status_filter)
         logs_controls.addWidget(QLabel("action"))
         logs_controls.addWidget(self.log_action_filter)
+        logs_controls.addWidget(self.log_regex_checkbox)
+        logs_controls.addWidget(QLabel("sort"))
+        logs_controls.addWidget(self.log_sort_order)
         logs_controls.addWidget(self.log_message_search_input)
         logs_box.addLayout(logs_controls)
+        logs_box.addWidget(self.log_source_info_label)
         logs_box.addWidget(self.operation_log_view)
         root.addWidget(logs_group)
 
@@ -550,11 +579,15 @@ class OperationsTab(QWidget):
             self.import_json_browse_button,
             self.clear_recent_paths_button,
             self.reload_logs_button,
+            self.log_prev_button,
+            self.log_next_button,
             self.export_logs_button,
             self.include_archives_checkbox,
             self.log_source_selector,
             self.log_status_filter,
             self.log_action_filter,
+            self.log_regex_checkbox,
+            self.log_sort_order,
             self.log_message_search_input,
         ]
         browse_buttons.extend(self._clear_history_buttons.values())
@@ -632,14 +665,20 @@ class OperationsTab(QWidget):
         source = self.log_source_selector.currentText()
         include_archives = self.include_archives_checkbox.isChecked()
         archive_path: Path | None = None
+        selected_mode = "current"
         if source == "current only":
             include_archives = False
+            selected_mode = "current"
+        elif source == "all (current + archives)":
+            include_archives = True
+            selected_mode = "all"
         elif source.startswith("archive:"):
             include_archives = False
             archive_path = Path(source.removeprefix("archive:").strip())
+            selected_mode = "archive"
 
         raw_events, decode_errors = self._operation_logger.read_latest(
-            100,
+            LOGS_PAGE_SIZE * 20,
             include_archives=include_archives,
         )
         events: list[object] = list(raw_events)
@@ -650,17 +689,27 @@ class OperationsTab(QWidget):
                 if str(getattr(item, "source", "") or "") == str(archive_path)
             ]
         self._sync_log_source_selector()
+        self._sync_log_source_info(selected_mode, archive_path)
         self._sync_action_filter_options(events)
-        events = self._filter_log_events(events)
+        events, regex_error = self._filter_log_events(events)
+        events = self._sort_log_events(events)
+        paged_events, page_no, total_pages = self._paginate_log_events(events)
+        self.log_page_label.setText(f"Page {page_no}/{total_pages}")
+        self.log_prev_button.setEnabled(page_no > 1 and not self._is_busy)
+        self.log_next_button.setEnabled(page_no < total_pages and not self._is_busy)
         if not events:
             message = "ログはまだありません。"
+            if regex_error:
+                message = f"[WARN] regex エラー: {regex_error}"
             if decode_errors > 0:
                 message += f"（読み飛ばし: {decode_errors}件）"
             self.operation_log_view.setPlainText(message)
+            if regex_error:
+                self._set_message(f"regex エラー: {regex_error}", is_error=True)
             return
 
         lines: list[str] = []
-        for event in events:
+        for event in paged_events:
             timestamp = getattr(event, "timestamp", "")
             action = getattr(event, "action", "")
             role = getattr(event, "role", "")
@@ -675,9 +724,53 @@ class OperationsTab(QWidget):
                 extra.append(f"path2={path2}")
             suffix = f" ({', '.join(extra)})" if extra else ""
             lines.append(f"{timestamp} | {action} | {role} | {status} | {text}{suffix}")
+        if regex_error:
+            lines.append(f"[WARN] regex エラー: {regex_error}")
+            self._set_message(f"regex エラー: {regex_error}", is_error=True)
         if decode_errors > 0:
             lines.append(f"[WARN] 壊れたログ行を読み飛ばしました: {decode_errors}件")
         self.operation_log_view.setPlainText("\n".join(lines))
+
+    def _sync_log_source_info(self, mode: str, archive_path: Path | None) -> None:
+        archive_names: list[str] = []
+        if hasattr(self._operation_logger, "list_archives"):
+            archive_names = [item.name for item in self._operation_logger.list_archives()]
+        if mode == "current":
+            text = f"source: current（archives: {len(archive_names)}件）"
+        elif mode == "all":
+            text = f"source: all（current + archives {len(archive_names)}件）"
+        else:
+            selected_name = archive_path.name if archive_path is not None else "(unknown)"
+            text = f"source: archive（{selected_name}）"
+        self.log_source_info_label.setText(text)
+        if archive_names:
+            self.log_source_info_label.setToolTip("\n".join(archive_names))
+        else:
+            self.log_source_info_label.setToolTip("archive はありません。")
+
+    def _paginate_log_events(self, events: list[object]) -> tuple[list[object], int, int]:
+        if not events:
+            self._log_page_index = 0
+            return [], 0, 0
+        total_pages = (len(events) + LOGS_PAGE_SIZE - 1) // LOGS_PAGE_SIZE
+        self._log_page_index = max(0, min(self._log_page_index, total_pages - 1))
+        start = self._log_page_index * LOGS_PAGE_SIZE
+        end = start + LOGS_PAGE_SIZE
+        return events[start:end], self._log_page_index + 1, total_pages
+
+    def _go_prev_log_page(self) -> None:
+        if self._log_page_index <= 0:
+            return
+        self._log_page_index -= 1
+        self._reload_operation_logs()
+
+    def _go_next_log_page(self) -> None:
+        self._log_page_index += 1
+        self._reload_operation_logs()
+
+    def _reset_log_page_and_reload(self) -> None:
+        self._log_page_index = 0
+        self._reload_operation_logs()
 
     def _sync_log_source_selector(self) -> None:
         current = self.log_source_selector.currentText() or "current only"
@@ -733,15 +826,32 @@ class OperationsTab(QWidget):
             self.log_action_filter.setCurrentText(current)
         self.log_action_filter.blockSignals(False)
 
-    def _filter_log_events(self, events: list[object]) -> list[object]:
+    def _sort_log_events(self, events: list[object]) -> list[object]:
+        reverse = self.log_sort_order.currentText() != "古い順"
+        return sorted(
+            events,
+            key=lambda item: str(getattr(item, "timestamp", "")),
+            reverse=reverse,
+        )
+
+    def _filter_log_events(self, events: list[object]) -> tuple[list[object], str | None]:
         status_filter = self.log_status_filter.currentText()
         action_filter = self.log_action_filter.currentText()
-        query = self.log_message_search_input.text().strip().lower()
+        query = self.log_message_search_input.text().strip()
+        regex_error: str | None = None
+        pattern: re.Pattern[str] | None = None
+        if query and self.log_regex_checkbox.isChecked():
+            try:
+                pattern = re.compile(query, re.IGNORECASE)
+            except re.error as exc:
+                regex_error = str(exc)
 
         filtered: list[object] = []
         for event in events:
+            timestamp = str(getattr(event, "timestamp", ""))
             status = str(getattr(event, "status", ""))
             action = str(getattr(event, "action", ""))
+            role = str(getattr(event, "role", ""))
             message = str(getattr(event, "message", ""))
             path = str(getattr(event, "path", "") or "")
             path2 = str(getattr(event, "path2", "") or "")
@@ -751,11 +861,17 @@ class OperationsTab(QWidget):
             if action_filter != "all" and action != action_filter:
                 continue
 
-            haystack = " ".join([message, action, status, path, path2]).lower()
-            if query and query not in haystack:
-                continue
+            haystack = " ".join([timestamp, message, action, status, role, path, path2])
+            if query:
+                if pattern is not None:
+                    if not pattern.search(haystack):
+                        continue
+                elif self.log_regex_checkbox.isChecked() and regex_error is not None:
+                    pass
+                elif query.lower() not in haystack.lower():
+                    continue
             filtered.append(event)
-        return filtered
+        return filtered, regex_error
 
     def _request_cancel(self) -> None:
         if not self._is_busy:

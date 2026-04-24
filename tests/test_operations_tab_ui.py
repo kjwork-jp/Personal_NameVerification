@@ -58,6 +58,7 @@ class FakeOperationLogger:
                 "message": message,
                 "path": path,
                 "path2": path2,
+                "timestamp": "2026-04-23T00:00:00+00:00",
             }
         )
 
@@ -68,7 +69,7 @@ class FakeOperationLogger:
 
         class _Event:
             def __init__(self, payload: dict[str, str | None]) -> None:
-                self.timestamp = "2026-04-23T00:00:00+00:00"
+                self.timestamp = payload.get("timestamp") or "2026-04-23T00:00:00+00:00"
                 self.action = payload.get("action") or ""
                 self.role = payload.get("role") or ""
                 self.status = payload.get("status") or ""
@@ -807,6 +808,195 @@ def test_operations_tab_log_viewer_status_action_search_filters() -> None:
     assert "cancel requested" not in text
 
 
+def test_operations_tab_log_viewer_regex_search() -> None:
+    _app()
+    logger = FakeOperationLogger()
+    logger.append(
+        action="export_csv",
+        role="admin",
+        status="success",
+        message="alpha csv",
+        path="/tmp/a",
+    )
+    logger.append(
+        action="import_json",
+        role="admin",
+        status="cancel",
+        message="beta json",
+        path="/tmp/b",
+    )
+    tab = OperationsTab(
+        export_backup_service=StubExportBackupService(),
+        backup_restore_service=StubBackupRestoreService(),
+        import_service=StubImportService(),
+        role_context=RoleContext(role="admin"),
+        operation_logger=logger,
+        operation_executor=ImmediateOperationExecutor(),
+    )
+
+    tab.log_regex_checkbox.setChecked(True)
+    tab.log_message_search_input.setText("^alpha.*")
+    text = tab.operation_log_view.toPlainText()
+    assert "alpha csv" in text
+    assert "beta json" not in text
+
+
+def test_operations_tab_log_viewer_invalid_regex_does_not_crash() -> None:
+    _app()
+    logger = FakeOperationLogger()
+    logger.append(
+        action="export_csv",
+        role="admin",
+        status="success",
+        message="alpha csv",
+        path="/tmp/a",
+    )
+    tab = OperationsTab(
+        export_backup_service=StubExportBackupService(),
+        backup_restore_service=StubBackupRestoreService(),
+        import_service=StubImportService(),
+        role_context=RoleContext(role="admin"),
+        operation_logger=logger,
+        operation_executor=ImmediateOperationExecutor(),
+    )
+
+    tab.log_regex_checkbox.setChecked(True)
+    tab.log_message_search_input.setText("[")
+    assert "regex エラー" in tab.operation_log_view.toPlainText()
+    assert "regex エラー" in tab.result_view.toPlainText()
+
+
+def test_operations_tab_log_viewer_sort_order_toggle() -> None:
+    _app()
+    logger = FakeOperationLogger()
+    logger.events.append(
+        {
+            "timestamp": "2026-04-23T00:00:01+00:00",
+            "action": "a",
+            "role": "admin",
+            "status": "success",
+            "message": "first",
+            "path": None,
+            "path2": None,
+            "source": "/tmp/operations_events.jsonl",
+        }
+    )
+    logger.events.append(
+        {
+            "timestamp": "2026-04-23T00:00:03+00:00",
+            "action": "b",
+            "role": "admin",
+            "status": "success",
+            "message": "third",
+            "path": None,
+            "path2": None,
+            "source": "/tmp/operations_events.jsonl",
+        }
+    )
+    logger.events.append(
+        {
+            "timestamp": "2026-04-23T00:00:02+00:00",
+            "action": "c",
+            "role": "admin",
+            "status": "success",
+            "message": "second",
+            "path": None,
+            "path2": None,
+            "source": "/tmp/operations_events.jsonl",
+        }
+    )
+    tab = OperationsTab(
+        export_backup_service=StubExportBackupService(),
+        backup_restore_service=StubBackupRestoreService(),
+        import_service=StubImportService(),
+        role_context=RoleContext(role="admin"),
+        operation_logger=logger,
+        operation_executor=ImmediateOperationExecutor(),
+    )
+
+    lines = tab.operation_log_view.toPlainText().splitlines()
+    assert "third" in lines[0]
+    tab.log_sort_order.setCurrentText("古い順")
+    lines = tab.operation_log_view.toPlainText().splitlines()
+    assert "first" in lines[0]
+
+
+def test_operations_tab_log_viewer_paging_next_prev_and_boundaries() -> None:
+    _app()
+    logger = FakeOperationLogger()
+    for i in range(205):
+        logger.events.append(
+            {
+                "timestamp": f"2026-04-23T00:00:{i:02d}+00:00",
+                "action": "bulk",
+                "role": "admin",
+                "status": "success",
+                "message": f"item-{i}",
+                "path": None,
+                "path2": None,
+                "source": "/tmp/operations_events.jsonl",
+            }
+        )
+    tab = OperationsTab(
+        export_backup_service=StubExportBackupService(),
+        backup_restore_service=StubBackupRestoreService(),
+        import_service=StubImportService(),
+        role_context=RoleContext(role="admin"),
+        operation_logger=logger,
+        operation_executor=ImmediateOperationExecutor(),
+    )
+
+    assert tab.log_page_label.text() == "Page 1/3"
+    assert not tab.log_prev_button.isEnabled()
+    assert tab.log_next_button.isEnabled()
+
+    tab.log_next_button.click()
+    assert tab.log_page_label.text() == "Page 2/3"
+    tab.log_next_button.click()
+    assert tab.log_page_label.text() == "Page 3/3"
+    assert not tab.log_next_button.isEnabled()
+    tab.log_next_button.click()
+    assert tab.log_page_label.text() == "Page 3/3"
+
+    tab.log_prev_button.click()
+    assert tab.log_page_label.text() == "Page 2/3"
+    tab.log_prev_button.click()
+    assert tab.log_page_label.text() == "Page 1/3"
+    assert not tab.log_prev_button.isEnabled()
+
+
+def test_operations_tab_log_viewer_paging_resets_after_filter() -> None:
+    _app()
+    logger = FakeOperationLogger()
+    for i in range(205):
+        logger.events.append(
+            {
+                "timestamp": f"2026-04-23T01:00:{i:02d}+00:00",
+                "action": "bulk",
+                "role": "admin",
+                "status": "success",
+                "message": f"item-{i}",
+                "path": None,
+                "path2": None,
+                "source": "/tmp/operations_events.jsonl",
+            }
+        )
+    tab = OperationsTab(
+        export_backup_service=StubExportBackupService(),
+        backup_restore_service=StubBackupRestoreService(),
+        import_service=StubImportService(),
+        role_context=RoleContext(role="admin"),
+        operation_logger=logger,
+        operation_executor=ImmediateOperationExecutor(),
+    )
+
+    tab.log_next_button.click()
+    assert tab.log_page_label.text() == "Page 2/3"
+    tab.log_message_search_input.setText("item-0")
+    assert tab.log_page_label.text() == "Page 1/1"
+    assert not tab.log_next_button.isEnabled()
+
+
 def test_operations_tab_log_viewer_source_selector(monkeypatch: pytest.MonkeyPatch) -> None:
     _app()
     logger = FakeOperationLogger()
@@ -847,9 +1037,14 @@ def test_operations_tab_log_viewer_source_selector(monkeypatch: pytest.MonkeyPat
     text = tab.operation_log_view.toPlainText()
     assert "archived" in text
     assert "current" not in text
+    assert "source: archive" in tab.log_source_info_label.text()
+    assert "operations_events.20260422-120000.jsonl" in tab.log_source_info_label.text()
+    assert "operations_events.20260422-120000.jsonl" in tab.log_source_info_label.toolTip()
 
 
-def test_operations_tab_export_visible_logs(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_operations_tab_export_visible_logs(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     _app()
     logger = FakeOperationLogger()
     logger.append(
