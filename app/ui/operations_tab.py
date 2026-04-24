@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import re
 from collections.abc import Callable
 from pathlib import Path
 from typing import Protocol
@@ -236,9 +235,6 @@ class OperationsTab(QWidget):
         self.log_action_filter.addItem("all")
         self.log_message_search_input = QLineEdit()
         self.log_message_search_input.setPlaceholderText("message 検索（部分一致）")
-        self.log_regex_checkbox = QCheckBox("Regex")
-        self.log_sort_order = QComboBox()
-        self.log_sort_order.addItems(["最新順", "古い順"])
         self.cancel_operation_button.setEnabled(False)
         self.cancel_operation_button.clicked.connect(self._request_cancel)
         self.clear_recent_paths_button.clicked.connect(self._clear_recent_paths)
@@ -247,14 +243,10 @@ class OperationsTab(QWidget):
         self.include_archives_checkbox.stateChanged.connect(
             lambda *_: self._reload_operation_logs()
         )
-        self.log_source_selector.currentTextChanged.connect(
-            lambda *_: self._reload_operation_logs()
-        )
+        self.log_source_selector.currentTextChanged.connect(lambda *_: self._reload_operation_logs())
         self.log_status_filter.currentTextChanged.connect(lambda *_: self._reload_operation_logs())
         self.log_action_filter.currentTextChanged.connect(lambda *_: self._reload_operation_logs())
         self.log_message_search_input.textChanged.connect(lambda *_: self._reload_operation_logs())
-        self.log_regex_checkbox.stateChanged.connect(lambda *_: self._reload_operation_logs())
-        self.log_sort_order.currentTextChanged.connect(lambda *_: self._reload_operation_logs())
 
         self.export_csv_button.clicked.connect(self._run_export_csv)
         self.export_json_button.clicked.connect(self._run_export_json)
@@ -372,9 +364,6 @@ class OperationsTab(QWidget):
         logs_controls.addWidget(self.log_status_filter)
         logs_controls.addWidget(QLabel("action"))
         logs_controls.addWidget(self.log_action_filter)
-        logs_controls.addWidget(self.log_regex_checkbox)
-        logs_controls.addWidget(QLabel("sort"))
-        logs_controls.addWidget(self.log_sort_order)
         logs_controls.addWidget(self.log_message_search_input)
         logs_box.addLayout(logs_controls)
         logs_box.addWidget(self.operation_log_view)
@@ -566,8 +555,6 @@ class OperationsTab(QWidget):
             self.log_source_selector,
             self.log_status_filter,
             self.log_action_filter,
-            self.log_regex_checkbox,
-            self.log_sort_order,
             self.log_message_search_input,
         ]
         browse_buttons.extend(self._clear_history_buttons.values())
@@ -664,17 +651,12 @@ class OperationsTab(QWidget):
             ]
         self._sync_log_source_selector()
         self._sync_action_filter_options(events)
-        events, regex_error = self._filter_log_events(events)
-        events = self._sort_log_events(events)
+        events = self._filter_log_events(events)
         if not events:
             message = "ログはまだありません。"
-            if regex_error:
-                message = f"[WARN] regex エラー: {regex_error}"
             if decode_errors > 0:
                 message += f"（読み飛ばし: {decode_errors}件）"
             self.operation_log_view.setPlainText(message)
-            if regex_error:
-                self._set_message(f"regex エラー: {regex_error}", is_error=True)
             return
 
         lines: list[str] = []
@@ -693,9 +675,6 @@ class OperationsTab(QWidget):
                 extra.append(f"path2={path2}")
             suffix = f" ({', '.join(extra)})" if extra else ""
             lines.append(f"{timestamp} | {action} | {role} | {status} | {text}{suffix}")
-        if regex_error:
-            lines.append(f"[WARN] regex エラー: {regex_error}")
-            self._set_message(f"regex エラー: {regex_error}", is_error=True)
         if decode_errors > 0:
             lines.append(f"[WARN] 壊れたログ行を読み飛ばしました: {decode_errors}件")
         self.operation_log_view.setPlainText("\n".join(lines))
@@ -754,32 +733,15 @@ class OperationsTab(QWidget):
             self.log_action_filter.setCurrentText(current)
         self.log_action_filter.blockSignals(False)
 
-    def _sort_log_events(self, events: list[object]) -> list[object]:
-        reverse = self.log_sort_order.currentText() != "古い順"
-        return sorted(
-            events,
-            key=lambda item: str(getattr(item, "timestamp", "")),
-            reverse=reverse,
-        )
-
-    def _filter_log_events(self, events: list[object]) -> tuple[list[object], str | None]:
+    def _filter_log_events(self, events: list[object]) -> list[object]:
         status_filter = self.log_status_filter.currentText()
         action_filter = self.log_action_filter.currentText()
-        query = self.log_message_search_input.text().strip()
-        regex_error: str | None = None
-        pattern: re.Pattern[str] | None = None
-        if query and self.log_regex_checkbox.isChecked():
-            try:
-                pattern = re.compile(query, re.IGNORECASE)
-            except re.error as exc:
-                regex_error = str(exc)
+        query = self.log_message_search_input.text().strip().lower()
 
         filtered: list[object] = []
         for event in events:
-            timestamp = str(getattr(event, "timestamp", ""))
             status = str(getattr(event, "status", ""))
             action = str(getattr(event, "action", ""))
-            role = str(getattr(event, "role", ""))
             message = str(getattr(event, "message", ""))
             path = str(getattr(event, "path", "") or "")
             path2 = str(getattr(event, "path2", "") or "")
@@ -789,17 +751,11 @@ class OperationsTab(QWidget):
             if action_filter != "all" and action != action_filter:
                 continue
 
-            haystack = " ".join([timestamp, message, action, status, role, path, path2])
-            if query:
-                if pattern is not None:
-                    if not pattern.search(haystack):
-                        continue
-                elif self.log_regex_checkbox.isChecked() and regex_error is not None:
-                    pass
-                elif query.lower() not in haystack.lower():
-                    continue
+            haystack = " ".join([message, action, status, path, path2]).lower()
+            if query and query not in haystack:
+                continue
             filtered.append(event)
-        return filtered, regex_error
+        return filtered
 
     def _request_cancel(self) -> None:
         if not self._is_busy:
