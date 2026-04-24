@@ -48,6 +48,8 @@
 - [ ] recent path history を一括クリアできる
 - [ ] Operations 実行ログの最新N件をアプリ内で再読込・閲覧できる
 - [ ] log viewer で archive 含有切替 / status-action filter / message 検索ができる
+- [ ] log viewer の message 検索で regex モードを切替できる（無効 regex はエラー表示のみでUI継続）
+- [ ] log viewer の表示順を 最新順 / 古い順 で切替できる
 - [ ] destructive 操作に確認ダイアログがある
 - [ ] エラー表示が利用者に理解可能
 - [ ] 主要操作がキーボードでも到達可能
