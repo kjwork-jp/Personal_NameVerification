@@ -14,8 +14,10 @@
 - recent path history は Operations タブから一括クリア可能
 - Operations タブのログビューで最新実行ログを再読込して確認する
 - 必要に応じて archive 含有切替 / status-action filter / message 検索（部分一致・regex）で絞り込む
+- regex 利用時は Ignore case / Multiline / Dotall を必要に応じて切替する
 - ログ表示順は 最新順 / 古い順 を切替して確認する
 - ログ結果は Prev/Next ページングで確認し、選択 source（current/all/archive）補助表示を併用する
+- ログ表示件数（50/100/200/500）を切替して確認観点に合わせる
 - 代表検索確認
 - 変更ログ確認
 - 必要時の CSV / JSON / SQL dump 出力（editor/admin）

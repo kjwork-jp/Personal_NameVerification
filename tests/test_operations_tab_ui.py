@@ -841,6 +841,70 @@ def test_operations_tab_log_viewer_regex_search() -> None:
     assert "beta json" not in text
 
 
+def test_operations_tab_log_viewer_regex_flags_ignore_case() -> None:
+    _app()
+    logger = FakeOperationLogger()
+    logger.append(
+        action="export_csv",
+        role="admin",
+        status="success",
+        message="Alpha Case",
+        path="/tmp/a",
+    )
+    tab = OperationsTab(
+        export_backup_service=StubExportBackupService(),
+        backup_restore_service=StubBackupRestoreService(),
+        import_service=StubImportService(),
+        role_context=RoleContext(role="admin"),
+        operation_logger=logger,
+        operation_executor=ImmediateOperationExecutor(),
+    )
+
+    tab.log_regex_checkbox.setChecked(True)
+    tab.log_regex_ignore_case_checkbox.setChecked(False)
+    tab.log_message_search_input.setText("^alpha")
+    assert "ログはまだありません" in tab.operation_log_view.toPlainText()
+
+    tab.log_regex_ignore_case_checkbox.setChecked(True)
+    assert "Alpha Case" in tab.operation_log_view.toPlainText()
+
+
+def test_operations_tab_log_viewer_regex_flags_multiline_and_dotall() -> None:
+    _app()
+    logger = FakeOperationLogger()
+    logger.append(
+        action="export_csv",
+        role="admin",
+        status="success",
+        message="alpha\nbeta",
+        path="/tmp/a",
+    )
+    tab = OperationsTab(
+        export_backup_service=StubExportBackupService(),
+        backup_restore_service=StubBackupRestoreService(),
+        import_service=StubImportService(),
+        role_context=RoleContext(role="admin"),
+        operation_logger=logger,
+        operation_executor=ImmediateOperationExecutor(),
+    )
+
+    tab.log_regex_checkbox.setChecked(True)
+    tab.log_regex_ignore_case_checkbox.setChecked(False)
+    tab.log_regex_multiline_checkbox.setChecked(False)
+    tab.log_message_search_input.setText("^beta$")
+    assert "ログはまだありません" in tab.operation_log_view.toPlainText()
+
+    tab.log_regex_multiline_checkbox.setChecked(True)
+    assert "alpha" in tab.operation_log_view.toPlainText()
+
+    tab.log_regex_multiline_checkbox.setChecked(False)
+    tab.log_regex_dotall_checkbox.setChecked(False)
+    tab.log_message_search_input.setText("alpha.*beta")
+    assert "ログはまだありません" in tab.operation_log_view.toPlainText()
+    tab.log_regex_dotall_checkbox.setChecked(True)
+    assert "alpha" in tab.operation_log_view.toPlainText()
+
+
 def test_operations_tab_log_viewer_invalid_regex_does_not_crash() -> None:
     _app()
     logger = FakeOperationLogger()
@@ -995,6 +1059,38 @@ def test_operations_tab_log_viewer_paging_resets_after_filter() -> None:
     tab.log_message_search_input.setText("item-0")
     assert tab.log_page_label.text() == "Page 1/1"
     assert not tab.log_next_button.isEnabled()
+
+
+def test_operations_tab_log_viewer_limit_selector_affects_paging() -> None:
+    _app()
+    logger = FakeOperationLogger()
+    for i in range(205):
+        logger.events.append(
+            {
+                "timestamp": f"2026-04-23T02:00:{i:02d}+00:00",
+                "action": "bulk",
+                "role": "admin",
+                "status": "success",
+                "message": f"item-{i}",
+                "path": None,
+                "path2": None,
+                "source": "/tmp/operations_events.jsonl",
+            }
+        )
+    tab = OperationsTab(
+        export_backup_service=StubExportBackupService(),
+        backup_restore_service=StubBackupRestoreService(),
+        import_service=StubImportService(),
+        role_context=RoleContext(role="admin"),
+        operation_logger=logger,
+        operation_executor=ImmediateOperationExecutor(),
+    )
+
+    assert tab.log_page_label.text() == "Page 1/3"
+    tab.log_limit_selector.setCurrentText("50")
+    assert tab.log_page_label.text() == "Page 1/5"
+    tab.log_next_button.click()
+    assert tab.log_page_label.text() == "Page 2/5"
 
 
 def test_operations_tab_log_viewer_source_selector(monkeypatch: pytest.MonkeyPatch) -> None:

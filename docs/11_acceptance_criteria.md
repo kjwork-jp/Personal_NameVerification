@@ -49,8 +49,10 @@
 - [ ] Operations 実行ログの最新N件をアプリ内で再読込・閲覧できる
 - [ ] log viewer で archive 含有切替 / status-action filter / message 検索ができる
 - [ ] log viewer の message 検索で regex モードを切替できる（無効 regex はエラー表示のみでUI継続）
+- [ ] regex モード時に Ignore case / Multiline / Dotall を切替できる
 - [ ] log viewer の表示順を 最新順 / 古い順 で切替できる
 - [ ] log viewer で Prev/Next ページングと現在ページ表示ができる（filter/search/sort 後結果に適用）
+- [ ] log viewer の表示件数上限（例: 50/100/200/500）を切替でき、paging と整合する
 - [ ] log viewer で選択中 source（current/all/archive）と archive 補助情報が視認できる
 - [ ] destructive 操作に確認ダイアログがある
 - [ ] エラー表示が利用者に理解可能

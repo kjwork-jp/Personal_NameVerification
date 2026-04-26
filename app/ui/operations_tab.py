@@ -32,7 +32,7 @@ from app.ui.role_context import RoleContext, UserRole
 
 MAX_RECENT_PATHS = 5
 HISTORY_PREFIX = "operations/recent_paths"
-LOGS_PAGE_SIZE = 100
+DEFAULT_LOGS_PAGE_SIZE = 100
 
 
 class ExportBackupLike(Protocol):
@@ -233,6 +233,9 @@ class OperationsTab(QWidget):
         self.log_next_button = QPushButton("Next")
         self.log_page_label = QLabel("Page 0/0")
         self.log_source_info_label = QLabel("source: current")
+        self.log_limit_selector = QComboBox()
+        self.log_limit_selector.addItems(["50", "100", "200", "500"])
+        self.log_limit_selector.setCurrentText(str(DEFAULT_LOGS_PAGE_SIZE))
         self.include_archives_checkbox = QCheckBox("archive を含める")
         self.log_source_selector = QComboBox()
         self.log_source_selector.addItems(["current only", "all (current + archives)"])
@@ -243,6 +246,10 @@ class OperationsTab(QWidget):
         self.log_message_search_input = QLineEdit()
         self.log_message_search_input.setPlaceholderText("message 検索（部分一致）")
         self.log_regex_checkbox = QCheckBox("Regex")
+        self.log_regex_ignore_case_checkbox = QCheckBox("Ignore case")
+        self.log_regex_ignore_case_checkbox.setChecked(True)
+        self.log_regex_multiline_checkbox = QCheckBox("Multiline")
+        self.log_regex_dotall_checkbox = QCheckBox("Dotall")
         self.log_sort_order = QComboBox()
         self.log_sort_order.addItems(["最新順", "古い順"])
         self.cancel_operation_button.setEnabled(False)
@@ -264,10 +271,22 @@ class OperationsTab(QWidget):
         self.log_action_filter.currentTextChanged.connect(
             lambda *_: self._reset_log_page_and_reload()
         )
+        self.log_limit_selector.currentTextChanged.connect(
+            lambda *_: self._reset_log_page_and_reload()
+        )
         self.log_message_search_input.textChanged.connect(
             lambda *_: self._reset_log_page_and_reload()
         )
         self.log_regex_checkbox.stateChanged.connect(lambda *_: self._reset_log_page_and_reload())
+        self.log_regex_ignore_case_checkbox.stateChanged.connect(
+            lambda *_: self._reset_log_page_and_reload()
+        )
+        self.log_regex_multiline_checkbox.stateChanged.connect(
+            lambda *_: self._reset_log_page_and_reload()
+        )
+        self.log_regex_dotall_checkbox.stateChanged.connect(
+            lambda *_: self._reset_log_page_and_reload()
+        )
         self.log_sort_order.currentTextChanged.connect(lambda *_: self._reset_log_page_and_reload())
 
         self.export_csv_button.clicked.connect(self._run_export_csv)
@@ -379,6 +398,8 @@ class OperationsTab(QWidget):
         logs_header.addWidget(self.log_prev_button)
         logs_header.addWidget(self.log_next_button)
         logs_header.addWidget(self.log_page_label)
+        logs_header.addWidget(QLabel("表示件数"))
+        logs_header.addWidget(self.log_limit_selector)
         logs_header.addStretch(1)
         logs_box.addLayout(logs_header)
         logs_controls = QHBoxLayout()
@@ -390,6 +411,9 @@ class OperationsTab(QWidget):
         logs_controls.addWidget(QLabel("action"))
         logs_controls.addWidget(self.log_action_filter)
         logs_controls.addWidget(self.log_regex_checkbox)
+        logs_controls.addWidget(self.log_regex_ignore_case_checkbox)
+        logs_controls.addWidget(self.log_regex_multiline_checkbox)
+        logs_controls.addWidget(self.log_regex_dotall_checkbox)
         logs_controls.addWidget(QLabel("sort"))
         logs_controls.addWidget(self.log_sort_order)
         logs_controls.addWidget(self.log_message_search_input)
@@ -581,12 +605,16 @@ class OperationsTab(QWidget):
             self.reload_logs_button,
             self.log_prev_button,
             self.log_next_button,
+            self.log_limit_selector,
             self.export_logs_button,
             self.include_archives_checkbox,
             self.log_source_selector,
             self.log_status_filter,
             self.log_action_filter,
             self.log_regex_checkbox,
+            self.log_regex_ignore_case_checkbox,
+            self.log_regex_multiline_checkbox,
+            self.log_regex_dotall_checkbox,
             self.log_sort_order,
             self.log_message_search_input,
         ]
@@ -678,7 +706,7 @@ class OperationsTab(QWidget):
             selected_mode = "archive"
 
         raw_events, decode_errors = self._operation_logger.read_latest(
-            LOGS_PAGE_SIZE * 20,
+            self._log_page_size() * 20,
             include_archives=include_archives,
         )
         events: list[object] = list(raw_events)
@@ -752,11 +780,18 @@ class OperationsTab(QWidget):
         if not events:
             self._log_page_index = 0
             return [], 0, 0
-        total_pages = (len(events) + LOGS_PAGE_SIZE - 1) // LOGS_PAGE_SIZE
+        page_size = self._log_page_size()
+        total_pages = (len(events) + page_size - 1) // page_size
         self._log_page_index = max(0, min(self._log_page_index, total_pages - 1))
-        start = self._log_page_index * LOGS_PAGE_SIZE
-        end = start + LOGS_PAGE_SIZE
+        start = self._log_page_index * page_size
+        end = start + page_size
         return events[start:end], self._log_page_index + 1, total_pages
+
+    def _log_page_size(self) -> int:
+        text = self.log_limit_selector.currentText().strip()
+        if text.isdigit():
+            return max(1, int(text))
+        return DEFAULT_LOGS_PAGE_SIZE
 
     def _go_prev_log_page(self) -> None:
         if self._log_page_index <= 0:
@@ -840,9 +875,16 @@ class OperationsTab(QWidget):
         query = self.log_message_search_input.text().strip()
         regex_error: str | None = None
         pattern: re.Pattern[str] | None = None
+        regex_flags = 0
+        if self.log_regex_ignore_case_checkbox.isChecked():
+            regex_flags |= re.IGNORECASE
+        if self.log_regex_multiline_checkbox.isChecked():
+            regex_flags |= re.MULTILINE
+        if self.log_regex_dotall_checkbox.isChecked():
+            regex_flags |= re.DOTALL
         if query and self.log_regex_checkbox.isChecked():
             try:
-                pattern = re.compile(query, re.IGNORECASE)
+                pattern = re.compile(query, regex_flags)
             except re.error as exc:
                 regex_error = str(exc)
 

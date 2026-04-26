@@ -85,6 +85,8 @@ Operations tab provides minimal UI entrypoints for export/import/backup/restore 
 - Log viewer supports archive toggle, source selector（current/all/archive file）, status/action filters, message partial-match / regex search, and sort toggle（最新順/古い順）.
 - Log viewer supports paging（Prev/Next, current page label）after filter/search/sort application.
 - Source helper label shows current/all/archive mode and archive summary (count / filenames tooltip).
+- Regex mode can use flags from UI (`Ignore case` / `Multiline` / `Dotall`).
+- Log viewer `表示件数` selector controls per-page size and read limit basis.
 
 ## Notes
 
