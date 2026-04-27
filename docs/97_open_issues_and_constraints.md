@@ -1,6 +1,7 @@
 # 97_open_issues_and_constraints.md
 
 ## 未解決事項
+- UAT/Go-Live判定に使う「リリース基準SHA」の運用ルール（確定・変更時の再判定）
 - 非空DBへの merge/overwrite/upsert import 方針
 - SQL import を restore とどう分離して運用するか
 - 実データ件数規模の最終見積
