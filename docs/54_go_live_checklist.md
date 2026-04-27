@@ -1,6 +1,8 @@
 # 54_go_live_checklist.md
 
 ## 運用開始前チェック
+- [ ] リリース対象 Git SHA 確定（配布物と一致確認）
+- [ ] Operations ログビューア確認（source/filter/regex/paging/表示件数）
 - [ ] UAT 完了
 - [ ] 主要バグ解消
 - [ ] バックアップ実行確認
