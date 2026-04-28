@@ -18,7 +18,7 @@
 
 ### 2.2 起動確認
 1. アプリを起動する（`python -m app.pyside6_main` または配布実行ファイル）。
-2. タブが表示されることを確認する（検索 / 名前管理 / Title-Subtitle / Link / ゴミ箱 / Audit / 運用操作）。
+2. タブが表示されることを確認する（検索 / 名前管理 / タイトル/サブタイトル管理 / リンク管理 / ゴミ箱 / 監査ログ / 運用操作）。
 3. 異常終了がないことを確認する。
 
 ### 2.3 DB 初期化・存在確認
@@ -49,6 +49,9 @@
    - 完全一致/部分一致、絞込、結果表示を確認。
 2. CRUD（Name / Title / Subtitle / Link）
    - 作成→更新→参照まで実施。
+   - 新規作成時に ID 手入力欄が必須でないことを確認。
+   - タイトル作成時に名前を複数選択して紐づけできることを確認。
+   - 名前↔タイトル direct link（name_title_links）が作成・参照できることを確認。
 3. ゴミ箱
    - 論理削除後に一覧へ反映されることを確認。
    - admin で復元/完全削除を確認。
@@ -62,6 +65,7 @@
 ### 3.2 export / import / backup / restore の注意点
 - path 指定は 参照 ボタンを優先し、手入力ミスを避ける。
 - import（CSV/JSON）は空 DB 限定で実施する。
+- `name_title_links` が CSV/JSON export/import の対象に含まれることを確認する。
 - restore は破壊的操作のため、対象 DB 接続をクローズしてから実施する。
 - restore/import 前に現状退避（バックアップ）を必ず取得する。
 - viewer は 運用操作 実行不可、editor は export/backup のみ可能。
@@ -84,6 +88,11 @@
 - 当日 運用操作 実行ログを確認し、必要に応じてエクスポート。
 - 未解決事項・不具合を `docs/97_open_issues_and_constraints.md` に追記する。
 
+### 3.6 role 別の title-name link 操作確認（UAT 必須）
+- viewer: 名前↔タイトルの link/unlink/復元/完全削除操作は不可（参照のみ）。
+- editor: 名前↔タイトルの link 操作は可、unlink/復元/完全削除は不可。
+- admin: 名前↔タイトルの link/unlink/復元/完全削除が可。
+
 ---
 
 ## 4. 初回運用チェックリスト（Day 1 用）
@@ -103,6 +112,8 @@
 - [ ] admin 権限確認
 - [ ] 検索 確認
 - [ ] CRUD 確認
+- [ ] タイトル作成時の名前複数紐づけ確認
+- [ ] 名前↔タイトル direct link（name_title_links）確認
 - [ ] ゴミ箱 確認
 - [ ] Audit 確認
 - [ ] 運用操作（export / backup）確認

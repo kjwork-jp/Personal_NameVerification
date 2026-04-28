@@ -96,6 +96,12 @@ Current RBAC: export/backup create operations are allowed for `editor` / `admin`
 - Go-Live checklist: `docs/54_go_live_checklist.md`
 - Incident runbook: `docs/55_incident_response_runbook.md`
 
+## Manuals
+
+- 運用操作マニュアル（Excel）: `docs/manuals/NameVerification_運用操作マニュアル_機能説明.md`
+- 運用手順書（詳細版）: `docs/manuals/NameVerification_運用手順書_詳細版.md`
+- 初回教育用（簡易マニュアル）: `docs/manuals/NameVerification_初回教育用_簡易マニュアル.md`
+
 ## Notes
 
 - The app uses a local SQLite database and is intended for single-site local operation.

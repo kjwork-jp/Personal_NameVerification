@@ -18,6 +18,9 @@
 - [ ] backup restore が admin で成立する（viewer/editor は拒否される）
 - [ ] CSV / JSON import が空DBに対して admin で成立する（viewer/editor は拒否される）
 - [ ] 非空DBへの import は拒否される
+- [ ] 名前↔タイトルの直接リンク（`name_title_links`）が成立する
+- [ ] タイトル作成時に名前を複数選択して紐づけできる
+- [ ] `name_title_links` が CSV / JSON export/import の対象に含まれる
 
 ### 2.2 権限（read / write / destructive 分離）
 #### viewer
@@ -30,6 +33,7 @@
 - [ ] viewer の read-only 操作をすべて実行できる
 - [ ] 作成/更新/リンク操作（write）を実行できる
 - [ ] 論理削除/復元/完全削除（destructive）ができない
+- [ ] 名前↔タイトル link は実行できるが、unlink/restore/hard_delete は実行できない
 
 #### admin
 - [ ] read-only / write / destructive を実行できる
@@ -37,6 +41,8 @@
 
 ### 2.3 UI
 - [ ] 検索主導線が明確
+- [ ] 主要な利用者向け UI 文言が日本語で統一されている
+- [ ] 作成時に ID 手入力を要求しない（ID は自動採番前提）
 - [ ] 運用操作 タブから export / import / backup / restore 導線に到達できる
 - [ ] viewer は 運用操作 操作ボタンが無効、editor は export/backup create のみ有効、admin は全操作有効
 - [ ] restore / import 実行前に確認ダイアログが表示される
@@ -57,6 +63,7 @@
 - [ ] destructive 操作に確認ダイアログがある
 - [ ] エラー表示が利用者に理解可能
 - [ ] 主要操作がキーボードでも到達可能
+- [ ] タイトル作成画面で「名前の複数選択紐づけ」と「紐づき名前表示」が確認できる
 
 ### 2.4 品質
 - [ ] 単体テストが通る
