@@ -10,6 +10,8 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QLineEdit,
+    QListWidget,
+    QListWidgetItem,
     QPushButton,
     QSplitter,
     QTableWidget,
@@ -19,7 +21,7 @@ from PySide6.QtWidgets import (
 )
 
 from app.application.core_services import SubtitleInput, TitleInput
-from app.application.read_models import SubtitleDetail, TitleDetail
+from app.application.read_models import NameSearchRow, NameTitleLinkRow, SubtitleDetail, TitleDetail
 from app.ui.dialogs import confirm_destructive_action
 from app.ui.permissions import can_create_or_update, can_run_destructive_actions
 from app.ui.role_context import RoleContext, UserRole
@@ -27,7 +29,12 @@ from app.ui.role_context import RoleContext, UserRole
 
 class TitleSubtitleWriteService(Protocol):
     def create_title(
-        self, payload: TitleInput, operator_id: str, role: UserRole = "admin"
+        self,
+        payload: TitleInput,
+        operator_id: str,
+        role: UserRole = "admin",
+        *,
+        name_ids: list[int] | None = None,
     ) -> int: ...
 
     def update_title(
@@ -68,6 +75,25 @@ class TitleSubtitleWriteService(Protocol):
 
 
 class TitleSubtitleReadService(Protocol):
+    def search_names(
+        self,
+        query: str | None = None,
+        role: UserRole = "admin",
+        *,
+        exact_match: bool = False,
+        title_id: int | None = None,
+        has_links: bool | None = None,
+        include_deleted: bool = False,
+    ) -> list[NameSearchRow]: ...
+
+    def list_names_for_title(
+        self,
+        title_id: int,
+        role: UserRole = "admin",
+        *,
+        include_deleted: bool = False,
+    ) -> list[NameTitleLinkRow]: ...
+
     def list_titles(
         self, role: UserRole = "admin", *, include_deleted: bool = False
     ) -> list[TitleDetail]: ...
@@ -109,12 +135,13 @@ class TitleSubtitleManagementTab(QWidget):
 
         self._titles: list[TitleDetail] = []
         self._subtitles: list[SubtitleDetail] = []
+        self._name_rows: list[NameSearchRow] = []
         self._selected_title: _TitleSelection | None = None
         self._selected_subtitle: _SubtitleSelection | None = None
 
         self.operator_input = QLineEdit()
-        self.operator_input.setPlaceholderText("operator_id")
-        self.operator_input.setToolTip("operator_id が必要です")
+        self.operator_input.setPlaceholderText("操作者ID")
+        self.operator_input.setToolTip("操作者ID が必要です")
 
         self.title_name_input = QLineEdit()
         self.title_note_input = QLineEdit()
@@ -128,6 +155,9 @@ class TitleSubtitleManagementTab(QWidget):
         self.message_label = QLabel("")
         self.selected_title_label = QLabel("選択中タイトル: 未選択")
         self.subtitle_hint_label = QLabel("タイトルを選択するとサブタイトル操作が有効になります")
+        self.title_link_names_list = QListWidget()
+        self.title_link_names_list.setSelectionMode(QListWidget.SelectionMode.MultiSelection)
+        self.linked_names_label = QLabel("紐づき名前: なし")
 
         self.titles_table = QTableWidget(0, 3)
         self.titles_table.setHorizontalHeaderLabels(["ID", "タイトル", "状態"])
@@ -164,7 +194,7 @@ class TitleSubtitleManagementTab(QWidget):
         self.subtitle_hard_delete_button.clicked.connect(self._hard_delete_subtitle)
 
         top_form = QFormLayout()
-        top_form.addRow("operator_id", self.operator_input)
+        top_form.addRow("操作者ID", self.operator_input)
 
         title_form = QFormLayout()
         title_form.addRow("タイトル名", self.title_name_input)
@@ -186,6 +216,9 @@ class TitleSubtitleManagementTab(QWidget):
         title_layout.addWidget(QLabel("タイトル"))
         title_layout.addLayout(title_form)
         title_layout.addLayout(title_actions)
+        title_layout.addWidget(QLabel("タイトル作成時に紐づける名前"))
+        title_layout.addWidget(self.title_link_names_list)
+        title_layout.addWidget(self.linked_names_label)
         title_layout.addWidget(self.titles_table)
 
         subtitle_form = QFormLayout()
@@ -289,6 +322,7 @@ class TitleSubtitleManagementTab(QWidget):
         self.subtitles_table.setRowCount(0)
         self._clear_subtitle_form()
         self._update_action_states()
+        self._refresh_name_candidates()
         if self._titles:
             self.titles_table.selectRow(0)
 
@@ -345,6 +379,7 @@ class TitleSubtitleManagementTab(QWidget):
         self.title_name_input.setText(selected.title_name)
         self.title_note_input.setText(selected.note or "")
         self._refresh_subtitles()
+        self._refresh_linked_names(selected.id)
 
     def _on_subtitle_selected(self) -> None:
         idx = self.subtitles_table.currentRow()
@@ -373,7 +408,10 @@ class TitleSubtitleManagementTab(QWidget):
             return
         try:
             self._core_service.create_title(
-                self._title_payload(), operator_id=operator_id, role=self._role_context.role
+                self._title_payload(),
+                operator_id=operator_id,
+                role=self._role_context.role,
+                name_ids=self._selected_name_ids_for_create(),
             )
             self._set_message("タイトル作成しました")
             self._refresh_titles()
@@ -687,10 +725,39 @@ class TitleSubtitleManagementTab(QWidget):
             note=self.subtitle_note_input.text() or None,
         )
 
+    def _refresh_name_candidates(self) -> None:
+        try:
+            self._name_rows = self._query_service.search_names(
+                include_deleted=False, role=self._role_context.role
+            )
+        except Exception:
+            self._name_rows = []
+        self.title_link_names_list.clear()
+        for row in self._name_rows:
+            item = QListWidgetItem(f"{row.raw_name} (ID={row.id})")
+            item.setData(0x0100, row.id)
+            self.title_link_names_list.addItem(item)
+
+    def _selected_name_ids_for_create(self) -> list[int]:
+        return [int(item.data(0x0100)) for item in self.title_link_names_list.selectedItems()]
+
+    def _refresh_linked_names(self, title_id: int) -> None:
+        try:
+            rows = self._query_service.list_names_for_title(
+                title_id, role=self._role_context.role, include_deleted=False
+            )
+        except Exception:
+            self.linked_names_label.setText("紐づき名前: 取得失敗")
+            return
+        if not rows:
+            self.linked_names_label.setText("紐づき名前: なし")
+            return
+        self.linked_names_label.setText(f"紐づき名前: {', '.join(r.raw_name for r in rows)}")
+
     def _require_operator_id(self) -> str | None:
         operator_id = self.operator_input.text().strip()
         if not operator_id:
-            self._set_message("operator_id を入力してください", is_error=True)
+            self._set_message("操作者ID を入力してください", is_error=True)
             return None
         return operator_id
 

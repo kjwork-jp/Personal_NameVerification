@@ -81,7 +81,7 @@ class NameManagementTab(QWidget):
         self._selected: _SelectedName | None = None
 
         self.operator_input = QLineEdit()
-        self.operator_input.setPlaceholderText("operator_id")
+        self.operator_input.setPlaceholderText("操作者ID")
         self.operator_input.setToolTip("operator_id が必要です")
 
         self.raw_name_input = QLineEdit()
@@ -117,7 +117,7 @@ class NameManagementTab(QWidget):
         self.hard_delete_button.clicked.connect(self._hard_delete_name)
 
         form = QFormLayout()
-        form.addRow("operator_id", self.operator_input)
+        form.addRow("操作者ID", self.operator_input)
         form.addRow("名前", self.raw_name_input)
         form.addRow("備考", self.note_input)
 

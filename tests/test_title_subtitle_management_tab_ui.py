@@ -6,7 +6,7 @@ import os
 
 import pytest
 
-from app.application.read_models import SubtitleDetail, TitleDetail
+from app.application.read_models import NameSearchRow, NameTitleLinkRow, SubtitleDetail, TitleDetail
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
@@ -22,7 +22,7 @@ class StubCoreService:
     def __init__(self) -> None:
         self.calls: list[str] = []
 
-    def create_title(self, payload, operator_id: str, role: str = "admin") -> int:  # type: ignore[no-untyped-def]
+    def create_title(self, payload, operator_id: str, role: str = "admin", *, name_ids=None) -> int:  # type: ignore[no-untyped-def]
         self.calls.append(f"create_title:{payload.title_name}:{operator_id}:{role}")
         return 1
 
@@ -180,7 +180,7 @@ def test_title_subtitle_management_requires_operator_id() -> None:
     tab.operator_input.setText("")
     tab._create_title()
 
-    assert "operator_id" in tab.message_label.text()
+    assert "操作者ID" in tab.message_label.text()
 
 
 def test_title_subtitle_cancel_does_not_call_service(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -226,7 +226,7 @@ def test_title_subtitle_role_guards() -> None:
     assert not admin.title_restore_button.isEnabled()
     assert admin.subtitle_delete_button.isEnabled()
     assert not admin.subtitle_hard_delete_button.isEnabled()
-    assert "operator_id" in admin.operator_input.toolTip()
+    assert "操作者ID" in admin.operator_input.toolTip()
 
 
 def test_selected_title_label_and_subtitle_form_clear_on_title_change() -> None:
@@ -335,3 +335,23 @@ def test_subtitle_destructive_buttons_follow_subtitle_deleted_state() -> None:
     assert not tab.subtitle_delete_button.isEnabled()
     assert tab.subtitle_restore_button.isEnabled()
     assert tab.subtitle_hard_delete_button.isEnabled()
+
+    def search_names(self, *args, **kwargs) -> list[NameSearchRow]:  # type: ignore[no-untyped-def]
+        _ = (args, kwargs)
+        return [
+            NameSearchRow(
+                id=100,
+                raw_name="Alice",
+                normalized_name="alice",
+                note=None,
+                deleted_at=None,
+                linked_count=0,
+                title_ids=(),
+            )
+        ]
+
+    def list_names_for_title(
+        self, title_id: int, role: str = "admin", *, include_deleted: bool = False
+    ) -> list[NameTitleLinkRow]:
+        _ = (title_id, role, include_deleted)
+        return []

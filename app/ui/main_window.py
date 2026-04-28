@@ -86,6 +86,6 @@ class MainWindow(QMainWindow):
                     import_service=import_service,
                     role_context=active_role,
                 ),
-                "Operations",
+                "運用操作",
             )
         self.setCentralWidget(tabs)

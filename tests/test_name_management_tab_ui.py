@@ -132,7 +132,7 @@ def test_name_management_tab_requires_operator_id() -> None:
     tab.operator_input.setText("")
     tab._create_name()
 
-    assert "operator_id" in tab.message_label.text()
+    assert "操作者ID" in tab.message_label.text()
 
 
 def test_name_management_cancel_does_not_call_service(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -179,7 +179,7 @@ def test_name_management_role_guards() -> None:
     assert tab_admin.delete_button.isEnabled()
     assert tab_admin.restore_button.isEnabled()
     assert tab_admin.hard_delete_button.isEnabled()
-    assert "operator_id" in tab_admin.operator_input.toolTip()
+    assert "操作者ID" in tab_admin.operator_input.toolTip()
 
 
 def test_name_management_propagates_editor_role_to_service() -> None:
