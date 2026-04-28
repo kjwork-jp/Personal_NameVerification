@@ -3,6 +3,8 @@
 ## 1. 目的
 運用開始後に必要な日次・週次・障害時運用を定義する。
 
+補助手順（Day0/Day1、初回チェック、一次切り分け）は `docs/58_operations_handoff_runbook_and_day1_checklist.md` を参照。
+
 ## 2. 日次運用
 - 起動確認
 - Operations タブで日次運用操作（export/backup create）を実施

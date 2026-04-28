@@ -22,6 +22,7 @@
 
 
 ## 5. 実装ステータス（現時点）
+- Day0/Day1 の実行順・初回チェック観点は `docs/58_operations_handoff_runbook_and_day1_checklist.md` を参照する。
 - backup create（DB ファイルコピー）は実装済み。
 - restore foundation（backup file から DB file 置換）は実装済み。
 - backup 実行権限は editor/admin、viewer は不可。

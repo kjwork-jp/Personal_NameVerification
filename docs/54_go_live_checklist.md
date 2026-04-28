@@ -11,3 +11,6 @@
 - [ ] Runbook 確認
 - [ ] 配布物確認
 - [ ] 最終見直しレビュー完了
+
+
+補助: Day 1 実施テンプレートは `docs/58_operations_handoff_runbook_and_day1_checklist.md` を参照。

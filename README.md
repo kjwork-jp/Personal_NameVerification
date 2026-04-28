@@ -88,6 +88,14 @@ Operations tab provides minimal UI entrypoints for export/import/backup/restore 
 - Regex mode can use flags from UI (`Ignore case` / `Multiline` / `Dotall`).
 - Log viewer `表示件数` selector controls per-page size and read limit basis.
 
+
+## Operations handoff docs
+
+- Day0/Day1 runbook + initial operations checklist: `docs/58_operations_handoff_runbook_and_day1_checklist.md`
+- UAT plan: `docs/45_uat_plan.md`
+- Go-Live checklist: `docs/54_go_live_checklist.md`
+- Incident runbook: `docs/55_incident_response_runbook.md`
+
 ## Notes
 
 - The app uses a local SQLite database and is intended for single-site local operation.
