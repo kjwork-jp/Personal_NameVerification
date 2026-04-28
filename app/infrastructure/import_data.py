@@ -15,6 +15,7 @@ IMPORT_TABLES: tuple[str, ...] = (
     "titles",
     "subtitles",
     "name_subtitle_links",
+    "name_title_links",
     "change_logs",
 )
 
@@ -23,6 +24,7 @@ _IMPORT_ORDER: tuple[str, ...] = (
     "names",
     "subtitles",
     "name_subtitle_links",
+    "name_title_links",
     "change_logs",
 )
 

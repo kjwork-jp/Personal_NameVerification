@@ -7,18 +7,18 @@
 
 ## 2. 日次運用
 - 起動確認
-- Operations タブで日次運用操作（export/backup create）を実施
-- path 指定は Operations タブの Browse ボタン（native dialog）を優先利用
+- 運用操作 タブで日次運用操作（export/backup create）を実施
+- path 指定は 運用操作 タブの 参照 ボタン（native dialog）を優先利用
 - recent path history 候補を利用して再入力を省力化
-- Operations 実行結果は AppDataLocation 配下の JSONL（append-only）へ記録
-- Operations 実行は async worker で分離し、busy 中は二重起動を防止（cancel request 導線あり）
-- Operations ログは size-based rotation と TTL pruning でローカル保守を行う
-- recent path history は Operations タブから一括クリア可能
-- Operations タブのログビューで最新実行ログを再読込して確認する
+- 運用操作 実行結果は AppDataLocation 配下の JSONL（append-only）へ記録
+- 運用操作 実行は async worker で分離し、busy 中は二重起動を防止（cancel request 導線あり）
+- 運用操作 ログは size-based rotation と TTL pruning でローカル保守を行う
+- recent path history は 運用操作 タブから一括クリア可能
+- 運用操作 タブのログビューで最新実行ログを再読込して確認する
 - 必要に応じて archive 含有切替 / status-action filter / message 検索（部分一致・regex）で絞り込む
-- regex 利用時は Ignore case / Multiline / Dotall を必要に応じて切替する
+- regex 利用時は 大文字小文字を無視 / 複数行 / ドット改行一致 を必要に応じて切替する
 - ログ表示順は 最新順 / 古い順 を切替して確認する
-- ログ結果は Prev/Next ページングで確認し、選択 source（current/all/archive）補助表示を併用する
+- ログ結果は 前へ/次へ ページングで確認し、選択 source（current/all/archive）補助表示を併用する
 - ログ表示件数（50/100/200/500）を切替して確認観点に合わせる
 - 代表検索確認
 - 変更ログ確認
@@ -26,7 +26,7 @@
 - 終業前バックアップ作成（editor/admin）
 
 ## 3. 週次運用
-- Operations タブ経由でバックアップ復元リハーサル（restore は admin 実行、事前に対象DB接続クローズ）
+- 運用操作 タブ経由でバックアップ復元リハーサル（restore は admin 実行、事前に対象DB接続クローズ）
 - 運用レポート確認
 - change_logs spot review
 - export / backup 出力ファイル妥当性サンプリング

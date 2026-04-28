@@ -18,6 +18,9 @@
 - [ ] backup restore が admin で成立する（viewer/editor は拒否される）
 - [ ] CSV / JSON import が空DBに対して admin で成立する（viewer/editor は拒否される）
 - [ ] 非空DBへの import は拒否される
+- [ ] 名前↔タイトルの直接リンク（`name_title_links`）が成立する
+- [ ] タイトル作成時に名前を複数選択して紐づけできる
+- [ ] `name_title_links` が CSV / JSON export/import の対象に含まれる
 
 ### 2.2 権限（read / write / destructive 分離）
 #### viewer
@@ -30,6 +33,7 @@
 - [ ] viewer の read-only 操作をすべて実行できる
 - [ ] 作成/更新/リンク操作（write）を実行できる
 - [ ] 論理削除/復元/完全削除（destructive）ができない
+- [ ] 名前↔タイトル link は実行できるが、unlink/restore/hard_delete は実行できない
 
 #### admin
 - [ ] read-only / write / destructive を実行できる
@@ -37,26 +41,29 @@
 
 ### 2.3 UI
 - [ ] 検索主導線が明確
-- [ ] Operations タブから export / import / backup / restore 導線に到達できる
-- [ ] viewer は Operations 操作ボタンが無効、editor は export/backup create のみ有効、admin は全操作有効
+- [ ] 主要な利用者向け UI 文言が日本語で統一されている
+- [ ] 作成時に ID 手入力を要求しない（ID は自動採番前提）
+- [ ] 運用操作 タブから export / import / backup / restore 導線に到達できる
+- [ ] viewer は 運用操作 操作ボタンが無効、editor は export/backup create のみ有効、admin は全操作有効
 - [ ] restore / import 実行前に確認ダイアログが表示される
-- [ ] Operations タブの Browse ボタンで native file/directory dialog が開く
+- [ ] 運用操作 タブの 参照 ボタンで native file/directory dialog が開く
 - [ ] 入力欄ごとに recent path history（最大5件）が復元・候補表示される
-- [ ] Operations 実行結果（success/error/cancel）がローカル JSONL に追記保存される
-- [ ] Operations 実行中は busy 表示と二重起動防止が働き、cancel request 導線が利用できる
-- [ ] Operations ログの rotation / TTL pruning が動作する
+- [ ] 運用操作 実行結果（success/error/cancel）がローカル JSONL に追記保存される
+- [ ] 運用操作 実行中は busy 表示と二重起動防止が働き、cancel request 導線が利用できる
+- [ ] 運用操作 ログの rotation / TTL pruning が動作する
 - [ ] recent path history を一括クリアできる
-- [ ] Operations 実行ログの最新N件をアプリ内で再読込・閲覧できる
+- [ ] 運用操作 実行ログの最新N件をアプリ内で再読込・閲覧できる
 - [ ] log viewer で archive 含有切替 / status-action filter / message 検索ができる
 - [ ] log viewer の message 検索で regex モードを切替できる（無効 regex はエラー表示のみでUI継続）
-- [ ] regex モード時に Ignore case / Multiline / Dotall を切替できる
+- [ ] regex モード時に 大文字小文字を無視 / 複数行 / ドット改行一致 を切替できる
 - [ ] log viewer の表示順を 最新順 / 古い順 で切替できる
-- [ ] log viewer で Prev/Next ページングと現在ページ表示ができる（filter/search/sort 後結果に適用）
+- [ ] log viewer で 前へ/次へ ページングと現在ページ表示ができる（filter/search/sort 後結果に適用）
 - [ ] log viewer の表示件数上限（例: 50/100/200/500）を切替でき、paging と整合する
 - [ ] log viewer で選択中 source（current/all/archive）と archive 補助情報が視認できる
 - [ ] destructive 操作に確認ダイアログがある
 - [ ] エラー表示が利用者に理解可能
 - [ ] 主要操作がキーボードでも到達可能
+- [ ] タイトル作成画面で「名前の複数選択紐づけ」と「紐づき名前表示」が確認できる
 
 ### 2.4 品質
 - [ ] 単体テストが通る

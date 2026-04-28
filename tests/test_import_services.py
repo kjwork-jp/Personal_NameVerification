@@ -13,7 +13,14 @@ from app.application.import_services import ImportService
 from app.domain.errors import AuthorizationError, ValidationError
 from app.infrastructure.db import initialize_database
 
-TABLES = ("names", "titles", "subtitles", "name_subtitle_links", "change_logs")
+TABLES = (
+    "names",
+    "titles",
+    "subtitles",
+    "name_subtitle_links",
+    "name_title_links",
+    "change_logs",
+)
 
 
 def _build_source_db(db_path: Path) -> sqlite3.Connection:

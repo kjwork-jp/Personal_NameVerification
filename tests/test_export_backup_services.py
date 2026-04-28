@@ -44,12 +44,14 @@ def test_export_csv_json_sql_dump_success_for_editor(
     assert (csv_dir / "titles.csv").exists()
     assert (csv_dir / "subtitles.csv").exists()
     assert (csv_dir / "name_subtitle_links.csv").exists()
+    assert (csv_dir / "name_title_links.csv").exists()
     assert (csv_dir / "change_logs.csv").exists()
     assert set(csv_outputs.keys()) == {
         "names",
         "titles",
         "subtitles",
         "name_subtitle_links",
+        "name_title_links",
         "change_logs",
     }
 

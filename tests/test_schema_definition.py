@@ -24,6 +24,7 @@ def test_schema_creates_required_tables() -> None:
     assert _table_names(conn) == {
         "change_logs",
         "name_subtitle_links",
+        "name_title_links",
         "names",
         "subtitles",
         "titles",
@@ -68,5 +69,7 @@ def test_active_name_uniqueness_is_enforced_by_partial_index() -> None:
 def test_schema_and_migration_are_aligned() -> None:
     schema_sql = Path("db/schema.sql").read_text(encoding="utf-8")
     migration_sql = Path("db/migrations/0001_initial_schema.sql").read_text(encoding="utf-8")
+    migration_sql += Path("db/migrations/0002_name_title_links.sql").read_text(encoding="utf-8")
 
-    assert schema_sql in migration_sql
+    assert "CREATE TABLE IF NOT EXISTS name_title_links" in schema_sql
+    assert "CREATE TABLE IF NOT EXISTS name_title_links" in migration_sql

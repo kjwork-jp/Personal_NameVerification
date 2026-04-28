@@ -15,6 +15,7 @@ EXPORT_TABLES: tuple[str, ...] = (
     "titles",
     "subtitles",
     "name_subtitle_links",
+    "name_title_links",
     "change_logs",
 )
 

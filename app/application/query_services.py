@@ -10,6 +10,7 @@ from app.application.read_models import (
     ChangeLogRow,
     NameDetail,
     NameSearchRow,
+    NameTitleLinkRow,
     RelatedRow,
     SubtitleDetail,
     TitleDetail,
@@ -185,6 +186,46 @@ class QueryService:
             (1 if include_deleted else 0,),
         ).fetchall()
         return [TitleDetail(**dict(row)) for row in rows]
+
+    def list_names_for_title(
+        self,
+        title_id: int,
+        role: ServiceRole = "admin",
+        *,
+        include_deleted: bool = False,
+    ) -> list[NameTitleLinkRow]:
+        require_known_role(role, action="list_names_for_title")
+        rows = self._connection.execute(
+            f"""
+            SELECT
+                nt.id AS link_id,
+                nt.name_id,
+                nt.title_id,
+                nt.relation_type,
+                n.raw_name,
+                t.title_name,
+                nt.deleted_at AS link_deleted_at
+            FROM name_title_links nt
+            JOIN names n ON n.id = nt.name_id
+            JOIN titles t ON t.id = nt.title_id
+            WHERE nt.title_id = ?
+            {"AND nt.deleted_at IS NULL" if not include_deleted else ""}
+            ORDER BY n.raw_name ASC, nt.id ASC
+            """,
+            (title_id,),
+        ).fetchall()
+        return [
+            NameTitleLinkRow(
+                link_id=int(row["link_id"]),
+                name_id=int(row["name_id"]),
+                title_id=int(row["title_id"]),
+                relation_type=row["relation_type"],
+                raw_name=row["raw_name"],
+                title_name=row["title_name"],
+                link_deleted_at=row["link_deleted_at"],
+            )
+            for row in rows
+        ]
 
     def list_subtitles(
         self,

@@ -116,7 +116,13 @@ class CoreService:
         self._hard_delete("names", name_id, operator_id, role)
 
     def create_title(
-        self, payload: TitleInput, operator_id: str, role: ServiceRole = "admin"
+        self,
+        payload: TitleInput,
+        operator_id: str,
+        role: ServiceRole = "admin",
+        *,
+        name_ids: list[int] | None = None,
+        relation_type: str = "primary",
     ) -> int:
         require_editor_or_admin(role, action="create_title")
         self._validate_operator_id(operator_id)
@@ -132,6 +138,14 @@ class CoreService:
         self._insert_change_log(
             "titles", title_id, "create", operator_id, None, self._get_title(title_id)
         )
+        for name_id in name_ids or []:
+            self.link_name_to_title(
+                name_id=name_id,
+                title_id=title_id,
+                relation_type=relation_type,
+                operator_id=operator_id,
+                role=role,
+            )
         return title_id
 
     def update_title(
@@ -347,6 +361,104 @@ class CoreService:
     def hard_delete_link(self, link_id: int, operator_id: str, role: ServiceRole = "admin") -> None:
         self._hard_delete("name_subtitle_links", link_id, operator_id, role)
 
+    def link_name_to_title(
+        self,
+        name_id: int,
+        title_id: int,
+        relation_type: str,
+        operator_id: str,
+        role: ServiceRole = "admin",
+    ) -> int:
+        require_editor_or_admin(role, action="link_name_to_title")
+        self._validate_operator_id(operator_id)
+        if not relation_type.strip():
+            raise ValidationError("relation_type must not be blank")
+
+        self._assert_active("names", name_id)
+        self._assert_active("titles", title_id)
+
+        existing = self._connection.execute(
+            """
+            SELECT id FROM name_title_links
+            WHERE name_id = ? AND title_id = ?
+            """,
+            (name_id, title_id),
+        ).fetchone()
+
+        now = _utc_now()
+        if existing is None:
+            cursor = self._connection.execute(
+                """
+                INSERT INTO name_title_links(
+                    name_id, title_id, relation_type, deleted_at, created_at, updated_at
+                ) VALUES (?, ?, ?, NULL, ?, ?)
+                """,
+                (name_id, title_id, relation_type, now, now),
+            )
+            link_id = _require_lastrowid(cursor)
+            self._insert_change_log(
+                "name_title_links",
+                link_id,
+                "link",
+                operator_id,
+                None,
+                self._get_name_title_link(link_id),
+            )
+            return link_id
+
+        link_id = int(existing["id"])
+        before = self._get_name_title_link(link_id)
+        self._connection.execute(
+            """
+            UPDATE name_title_links
+            SET relation_type = ?, deleted_at = NULL, updated_at = ?
+            WHERE id = ?
+            """,
+            (relation_type, now, link_id),
+        )
+        self._insert_change_log(
+            "name_title_links",
+            link_id,
+            "link",
+            operator_id,
+            before,
+            self._get_name_title_link(link_id),
+        )
+        return link_id
+
+    def unlink_name_from_title(
+        self, link_id: int, operator_id: str, role: ServiceRole = "admin"
+    ) -> None:
+        require_admin(role, action="unlink_name_from_title")
+        self._validate_operator_id(operator_id)
+        before = self._get_name_title_link(link_id)
+        if before["deleted_at"] is not None:
+            raise StateTransitionError("name_title_link already deleted")
+
+        now = _utc_now()
+        self._connection.execute(
+            "UPDATE name_title_links SET deleted_at = ?, updated_at = ? WHERE id = ?",
+            (now, now, link_id),
+        )
+        self._insert_change_log(
+            "name_title_links",
+            link_id,
+            "unlink",
+            operator_id,
+            before,
+            self._get_name_title_link(link_id),
+        )
+
+    def restore_name_title_link(
+        self, link_id: int, operator_id: str, role: ServiceRole = "admin"
+    ) -> None:
+        self._restore("name_title_links", link_id, operator_id, role)
+
+    def hard_delete_name_title_link(
+        self, link_id: int, operator_id: str, role: ServiceRole = "admin"
+    ) -> None:
+        self._hard_delete("name_title_links", link_id, operator_id, role)
+
     def _logical_delete(
         self, table: str, entity_id: int, operator_id: str, role: ServiceRole
     ) -> None:
@@ -421,6 +533,9 @@ class CoreService:
 
     def _get_link(self, link_id: int) -> dict[str, Any]:
         return self._get_entity("name_subtitle_links", link_id)
+
+    def _get_name_title_link(self, link_id: int) -> dict[str, Any]:
+        return self._get_entity("name_title_links", link_id)
 
     def _get_entity(self, table: str, entity_id: int) -> dict[str, Any]:
         row = self._connection.execute(
