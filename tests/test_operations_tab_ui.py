@@ -1010,22 +1010,22 @@ def test_operations_tab_log_viewer_paging_next_prev_and_boundaries() -> None:
         operation_executor=ImmediateOperationExecutor(),
     )
 
-    assert tab.log_page_label.text() == "Page 1/3"
+    assert tab.log_page_label.text() == "ページ 1/3"
     assert not tab.log_prev_button.isEnabled()
     assert tab.log_next_button.isEnabled()
 
     tab.log_next_button.click()
-    assert tab.log_page_label.text() == "Page 2/3"
+    assert tab.log_page_label.text() == "ページ 2/3"
     tab.log_next_button.click()
-    assert tab.log_page_label.text() == "Page 3/3"
+    assert tab.log_page_label.text() == "ページ 3/3"
     assert not tab.log_next_button.isEnabled()
     tab.log_next_button.click()
-    assert tab.log_page_label.text() == "Page 3/3"
+    assert tab.log_page_label.text() == "ページ 3/3"
 
     tab.log_prev_button.click()
-    assert tab.log_page_label.text() == "Page 2/3"
+    assert tab.log_page_label.text() == "ページ 2/3"
     tab.log_prev_button.click()
-    assert tab.log_page_label.text() == "Page 1/3"
+    assert tab.log_page_label.text() == "ページ 1/3"
     assert not tab.log_prev_button.isEnabled()
 
 
@@ -1055,9 +1055,9 @@ def test_operations_tab_log_viewer_paging_resets_after_filter() -> None:
     )
 
     tab.log_next_button.click()
-    assert tab.log_page_label.text() == "Page 2/3"
+    assert tab.log_page_label.text() == "ページ 2/3"
     tab.log_message_search_input.setText("item-0")
-    assert tab.log_page_label.text() == "Page 1/1"
+    assert tab.log_page_label.text() == "ページ 1/1"
     assert not tab.log_next_button.isEnabled()
 
 
@@ -1086,11 +1086,11 @@ def test_operations_tab_log_viewer_limit_selector_affects_paging() -> None:
         operation_executor=ImmediateOperationExecutor(),
     )
 
-    assert tab.log_page_label.text() == "Page 1/3"
+    assert tab.log_page_label.text() == "ページ 1/3"
     tab.log_limit_selector.setCurrentText("50")
-    assert tab.log_page_label.text() == "Page 1/5"
+    assert tab.log_page_label.text() == "ページ 1/5"
     tab.log_next_button.click()
-    assert tab.log_page_label.text() == "Page 2/5"
+    assert tab.log_page_label.text() == "ページ 2/5"
 
 
 def test_operations_tab_log_viewer_source_selector(monkeypatch: pytest.MonkeyPatch) -> None:

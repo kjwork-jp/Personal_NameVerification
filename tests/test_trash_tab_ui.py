@@ -181,7 +181,7 @@ def test_trash_tab_requires_operator_id() -> None:
     tab = TrashTab(core_service=StubCoreService(), query_service=StubQueryService())
     tab.operator_input.setText("")
     tab._restore_selected()
-    assert "operator_id" in tab.message_label.text()
+    assert "操作者ID" in tab.message_label.text()
 
 
 def test_trash_tab_guards_active_rows(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -240,4 +240,4 @@ def test_trash_tab_role_guards() -> None:
     )
     assert admin.restore_button.isEnabled()
     assert admin.hard_delete_button.isEnabled()
-    assert "operator_id" in admin.operator_input.toolTip()
+    assert "操作者ID" in admin.operator_input.toolTip()

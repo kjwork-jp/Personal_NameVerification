@@ -65,7 +65,7 @@ class AuditLogTab(QWidget):
         self.action_input.setPlaceholderText("action (e.g. update)")
 
         self.operator_id_input = QLineEdit()
-        self.operator_id_input.setPlaceholderText("operator_id")
+        self.operator_id_input.setPlaceholderText("操作者ID")
 
         self.created_from_input = QLineEdit()
         self.created_from_input.setPlaceholderText("created_from (ISO8601)")
@@ -83,7 +83,7 @@ class AuditLogTab(QWidget):
 
         self.logs_table = QTableWidget(0, 5)
         self.logs_table.setHorizontalHeaderLabels(
-            ["ID", "entity_type", "entity_id", "action", "created_at"]
+            ["ID", "entity_type", "entity_id", "操作", "created_at"]
         )
         self.logs_table.itemSelectionChanged.connect(self._on_selected)
 
@@ -99,8 +99,8 @@ class AuditLogTab(QWidget):
 
         form = QFormLayout()
         form.addRow("entity_type", self.entity_type_input)
-        form.addRow("action", self.action_input)
-        form.addRow("operator_id", self.operator_id_input)
+        form.addRow("操作", self.action_input)
+        form.addRow("操作者ID", self.operator_id_input)
         form.addRow("created_from", self.created_from_input)
         form.addRow("created_to", self.created_to_input)
         form.addRow("limit", self.limit_input)

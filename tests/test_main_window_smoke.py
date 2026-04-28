@@ -174,7 +174,7 @@ def test_main_window_has_required_tabs() -> None:
     assert tab_widget.tabText(3) == "リンク管理"
     assert tab_widget.tabText(4) == "ゴミ箱"
     assert tab_widget.tabText(5) == "監査ログ"
-    assert tab_widget.tabText(6) == "Operations"
+    assert tab_widget.tabText(6) == "運用操作"
 
 
 def test_main_window_accepts_role_context() -> None:

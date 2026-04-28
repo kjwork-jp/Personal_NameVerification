@@ -37,21 +37,21 @@
 
 ### 2.3 UI
 - [ ] 検索主導線が明確
-- [ ] Operations タブから export / import / backup / restore 導線に到達できる
-- [ ] viewer は Operations 操作ボタンが無効、editor は export/backup create のみ有効、admin は全操作有効
+- [ ] 運用操作 タブから export / import / backup / restore 導線に到達できる
+- [ ] viewer は 運用操作 操作ボタンが無効、editor は export/backup create のみ有効、admin は全操作有効
 - [ ] restore / import 実行前に確認ダイアログが表示される
-- [ ] Operations タブの Browse ボタンで native file/directory dialog が開く
+- [ ] 運用操作 タブの 参照 ボタンで native file/directory dialog が開く
 - [ ] 入力欄ごとに recent path history（最大5件）が復元・候補表示される
-- [ ] Operations 実行結果（success/error/cancel）がローカル JSONL に追記保存される
-- [ ] Operations 実行中は busy 表示と二重起動防止が働き、cancel request 導線が利用できる
-- [ ] Operations ログの rotation / TTL pruning が動作する
+- [ ] 運用操作 実行結果（success/error/cancel）がローカル JSONL に追記保存される
+- [ ] 運用操作 実行中は busy 表示と二重起動防止が働き、cancel request 導線が利用できる
+- [ ] 運用操作 ログの rotation / TTL pruning が動作する
 - [ ] recent path history を一括クリアできる
-- [ ] Operations 実行ログの最新N件をアプリ内で再読込・閲覧できる
+- [ ] 運用操作 実行ログの最新N件をアプリ内で再読込・閲覧できる
 - [ ] log viewer で archive 含有切替 / status-action filter / message 検索ができる
 - [ ] log viewer の message 検索で regex モードを切替できる（無効 regex はエラー表示のみでUI継続）
-- [ ] regex モード時に Ignore case / Multiline / Dotall を切替できる
+- [ ] regex モード時に 大文字小文字を無視 / 複数行 / ドット改行一致 を切替できる
 - [ ] log viewer の表示順を 最新順 / 古い順 で切替できる
-- [ ] log viewer で Prev/Next ページングと現在ページ表示ができる（filter/search/sort 後結果に適用）
+- [ ] log viewer で 前へ/次へ ページングと現在ページ表示ができる（filter/search/sort 後結果に適用）
 - [ ] log viewer の表示件数上限（例: 50/100/200/500）を切替でき、paging と整合する
 - [ ] log viewer で選択中 source（current/all/archive）と archive 補助情報が視認できる
 - [ ] destructive 操作に確認ダイアログがある

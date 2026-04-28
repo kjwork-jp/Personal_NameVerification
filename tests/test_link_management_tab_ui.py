@@ -138,7 +138,7 @@ def test_link_management_tab_requires_operator_and_relation_type() -> None:
     tab.operator_input.setText("")
     tab.relation_type_combo.setCurrentIndex(0)
     tab._create_link()
-    assert "operator_id" in tab.message_label.text()
+    assert "操作者ID" in tab.message_label.text()
 
 
 def test_link_management_cancel_unlink(monkeypatch: pytest.MonkeyPatch) -> None:

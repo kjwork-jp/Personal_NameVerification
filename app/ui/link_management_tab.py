@@ -104,7 +104,7 @@ class LinkManagementTab(QWidget):
         self._selected_link: _Selection | None = None
 
         self.operator_input = QLineEdit()
-        self.operator_input.setPlaceholderText("operator_id")
+        self.operator_input.setPlaceholderText("操作者ID")
         self.operator_input.setToolTip("operator_id が必要です")
 
         self.relation_type_combo = QComboBox()
@@ -149,7 +149,7 @@ class LinkManagementTab(QWidget):
         self.unlink_button.clicked.connect(self._unlink_link)
 
         top_form = QFormLayout()
-        top_form.addRow("operator_id", self.operator_input)
+        top_form.addRow("操作者ID", self.operator_input)
         top_form.addRow("relation_type", self.relation_type_combo)
         top_form.addRow("custom_relation_type", self.custom_relation_type_input)
 
@@ -160,14 +160,14 @@ class LinkManagementTab(QWidget):
 
         left_panel = QWidget()
         left_layout = QVBoxLayout(left_panel)
-        left_layout.addWidget(QLabel("Name"))
+        left_layout.addWidget(QLabel("名前"))
         left_layout.addWidget(self.names_table)
 
         middle_panel = QWidget()
         middle_layout = QVBoxLayout(middle_panel)
-        middle_layout.addWidget(QLabel("Title"))
+        middle_layout.addWidget(QLabel("タイトル"))
         middle_layout.addWidget(self.titles_table)
-        middle_layout.addWidget(QLabel("Subtitle"))
+        middle_layout.addWidget(QLabel("サブタイトル"))
         middle_layout.addWidget(self.subtitles_table)
 
         right_panel = QWidget()

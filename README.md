@@ -26,13 +26,13 @@ Implemented layers:
 
 ## Main window tabs
 
-- Search
-- Name Management
-- Title / Subtitle Management
-- Link Management
-- Trash
-- Audit Log
-- Operations
+- 検索/照合
+- 名前管理
+- タイトル/サブタイトル管理
+- リンク管理
+- ゴミ箱
+- 監査ログ
+- 運用操作
 
 ## Setup
 
@@ -60,7 +60,7 @@ mypy app
 ## Export / backup create foundation (service layer)
 
 The application/infrastructure layers now provide file output helpers for:
-- CSV export (`names`, `titles`, `subtitles`, `name_subtitle_links`, `change_logs`)
+- CSV export (`names`, `titles`, `subtitles`, `name_subtitle_links`, `name_title_links`, `change_logs`)
 - JSON export (same table set)
 - SQL dump export (SQLite `iterdump`)
 - backup file create (SQLite file copy)
@@ -75,8 +75,8 @@ Restore safety note: close active SQLite connections for the target DB before ru
 
 Current RBAC: export/backup create operations are allowed for `editor` / `admin`, and rejected for `viewer`.
 
-Operations tab provides minimal UI entrypoints for export/import/backup/restore using path inputs, Browse buttons, and execution buttons.
-- Browse buttons use native file/directory dialog for path selection.
+運用操作タブは export/import/backup/restore の最小導線を提供します。
+- 参照ボタンでネイティブのファイル/フォルダ選択ダイアログを開けます。
 - Recent path history is persisted per input (max 5, deduplicated, latest-first) and offered via completer.
 - Operation execution results are appended to local JSONL (`operations_events.jsonl`) under AppDataLocation with `timestamp/action/role/status/message/path` fields (best-effort write).
 - Operation execution uses async worker foundation (QThreadPool/QRunnable), with busy-state guard, duplicate-start prevention, and minimum cancel-request UI.

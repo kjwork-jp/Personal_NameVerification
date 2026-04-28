@@ -162,3 +162,20 @@ def test_editor_can_link_but_cannot_unlink() -> None:
 
     with pytest.raises(AuthorizationError):
         service.unlink_name_from_subtitle(link_id=link_id, operator_id="op-2", role="editor")
+
+
+def test_name_title_links_support_many_to_many() -> None:
+    conn, service = _service()
+    name_a = service.create_name(NameInput(raw_name="Alice"), operator_id="op-1")
+    name_b = service.create_name(NameInput(raw_name="Bob"), operator_id="op-1")
+    title_1 = service.create_title(TitleInput(title_name="T1"), operator_id="op-1")
+    title_2 = service.create_title(TitleInput(title_name="T2"), operator_id="op-1")
+
+    service.link_name_to_title(name_a, title_1, "primary", operator_id="op-1")
+    service.link_name_to_title(name_a, title_2, "primary", operator_id="op-1")
+    service.link_name_to_title(name_b, title_1, "primary", operator_id="op-1")
+
+    count = conn.execute(
+        "SELECT COUNT(1) FROM name_title_links WHERE deleted_at IS NULL"
+    ).fetchone()
+    assert int(count[0]) == 3

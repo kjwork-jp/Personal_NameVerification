@@ -90,11 +90,11 @@ class TrashTab(QWidget):
         self._selected: _Selection | None = None
 
         self.entity_selector = QComboBox()
-        self.entity_selector.addItems(["Name", "Title", "Subtitle", "Link"])
+        self.entity_selector.addItems(["名前", "タイトル", "サブタイトル", "リンク"])
         self.entity_selector.currentTextChanged.connect(self._reload)
 
         self.operator_input = QLineEdit()
-        self.operator_input.setPlaceholderText("operator_id")
+        self.operator_input.setPlaceholderText("操作者ID")
         self.operator_input.setToolTip("operator_id が必要です")
 
         self.message_label = QLabel("")
@@ -114,7 +114,7 @@ class TrashTab(QWidget):
 
         form = QFormLayout()
         form.addRow("対象", self.entity_selector)
-        form.addRow("operator_id", self.operator_input)
+        form.addRow("操作者ID", self.operator_input)
 
         actions = QHBoxLayout()
         actions.addWidget(self.reload_button)
@@ -149,18 +149,18 @@ class TrashTab(QWidget):
         self.detail_label.setText("詳細: 未選択")
 
         try:
-            if entity == "Name":
+            if entity == "名前":
                 self._names = self._query_service.list_deleted_names(role=self._role_context.role)
                 self._fill_name_rows(self._names)
-            elif entity == "Title":
+            elif entity == "タイトル":
                 self._titles = self._query_service.list_deleted_titles(role=self._role_context.role)
                 self._fill_title_rows(self._titles)
-            elif entity == "Subtitle":
+            elif entity == "サブタイトル":
                 self._subtitles = self._query_service.list_deleted_subtitles(
                     role=self._role_context.role
                 )
                 self._fill_subtitle_rows(self._subtitles)
-            elif entity == "Link":
+            elif entity == "リンク":
                 self._links = self._query_service.list_deleted_links(role=self._role_context.role)
                 self._fill_link_rows(self._links)
         except Exception as exc:  # noqa: BLE001
@@ -214,19 +214,19 @@ class TrashTab(QWidget):
             return
 
         entity = self.entity_selector.currentText()
-        if entity == "Name" and row < len(self._names):
+        if entity == "名前" and row < len(self._names):
             name = self._names[row]
             self._selected = _Selection(name.id, name.deleted_at)
             self.detail_label.setText(
                 f"詳細: Name id={name.id} raw={name.raw_name} deleted_at={name.deleted_at}"
             )
-        elif entity == "Title" and row < len(self._titles):
+        elif entity == "タイトル" and row < len(self._titles):
             title = self._titles[row]
             self._selected = _Selection(title.id, title.deleted_at)
             self.detail_label.setText(
                 f"詳細: Title id={title.id} name={title.title_name} deleted_at={title.deleted_at}"
             )
-        elif entity == "Subtitle" and row < len(self._subtitles):
+        elif entity == "サブタイトル" and row < len(self._subtitles):
             subtitle = self._subtitles[row]
             self._selected = _Selection(subtitle.id, subtitle.deleted_at)
             detail_text = (
@@ -234,7 +234,7 @@ class TrashTab(QWidget):
                 f"deleted_at={subtitle.deleted_at}"
             )
             self.detail_label.setText(detail_text)
-        elif entity == "Link" and row < len(self._links):
+        elif entity == "リンク" and row < len(self._links):
             link = self._links[row]
             self._selected = _Selection(link.link_id, link.link_deleted_at)
             detail_text = (
@@ -265,19 +265,19 @@ class TrashTab(QWidget):
             return
 
         try:
-            if entity == "Name":
+            if entity == "名前":
                 self._core_service.restore_name(
                     selected.entity_id, operator_id, role=self._role_context.role
                 )
-            elif entity == "Title":
+            elif entity == "タイトル":
                 self._core_service.restore_title(
                     selected.entity_id, operator_id, role=self._role_context.role
                 )
-            elif entity == "Subtitle":
+            elif entity == "サブタイトル":
                 self._core_service.restore_subtitle(
                     selected.entity_id, operator_id, role=self._role_context.role
                 )
-            elif entity == "Link":
+            elif entity == "リンク":
                 self._core_service.restore_link(
                     selected.entity_id, operator_id, role=self._role_context.role
                 )
@@ -310,19 +310,19 @@ class TrashTab(QWidget):
             return
 
         try:
-            if entity == "Name":
+            if entity == "名前":
                 self._core_service.hard_delete_name(
                     selected.entity_id, operator_id, role=self._role_context.role
                 )
-            elif entity == "Title":
+            elif entity == "タイトル":
                 self._core_service.hard_delete_title(
                     selected.entity_id, operator_id, role=self._role_context.role
                 )
-            elif entity == "Subtitle":
+            elif entity == "サブタイトル":
                 self._core_service.hard_delete_subtitle(
                     selected.entity_id, operator_id, role=self._role_context.role
                 )
-            elif entity == "Link":
+            elif entity == "リンク":
                 self._core_service.hard_delete_link(
                     selected.entity_id, operator_id, role=self._role_context.role
                 )

@@ -76,3 +76,14 @@ class ChangeLogRow:
     before_json: str | None
     after_json: str | None
     created_at: str
+
+
+@dataclass(frozen=True)
+class NameTitleLinkRow:
+    link_id: int
+    name_id: int
+    title_id: int
+    relation_type: str
+    raw_name: str
+    title_name: str
+    link_deleted_at: str | None

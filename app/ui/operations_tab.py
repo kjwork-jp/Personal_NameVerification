@@ -122,7 +122,7 @@ class OperationsTab(QWidget):
         root.addWidget(QLabel("運用系操作（export/import/backup/restore）"))
 
         self.csv_export_path_input = QLineEdit()
-        self.csv_export_browse_button = QPushButton("Browse")
+        self.csv_export_browse_button = QPushButton("参照")
         self.csv_export_browse_button.clicked.connect(
             lambda: self._select_directory(
                 self.csv_export_path_input,
@@ -132,7 +132,7 @@ class OperationsTab(QWidget):
         )
 
         self.json_export_path_input = QLineEdit()
-        self.json_export_browse_button = QPushButton("Browse")
+        self.json_export_browse_button = QPushButton("参照")
         self.json_export_browse_button.clicked.connect(
             lambda: self._select_save_file(
                 self.json_export_path_input,
@@ -143,7 +143,7 @@ class OperationsTab(QWidget):
         )
 
         self.sql_dump_path_input = QLineEdit()
-        self.sql_dump_browse_button = QPushButton("Browse")
+        self.sql_dump_browse_button = QPushButton("参照")
         self.sql_dump_browse_button.clicked.connect(
             lambda: self._select_save_file(
                 self.sql_dump_path_input,
@@ -154,7 +154,7 @@ class OperationsTab(QWidget):
         )
 
         self.db_path_input = QLineEdit()
-        self.db_path_browse_button = QPushButton("Browse")
+        self.db_path_browse_button = QPushButton("参照")
         self.db_path_browse_button.clicked.connect(
             lambda: self._select_open_file(
                 self.db_path_input,
@@ -165,7 +165,7 @@ class OperationsTab(QWidget):
         )
 
         self.backup_output_path_input = QLineEdit()
-        self.backup_output_browse_button = QPushButton("Browse")
+        self.backup_output_browse_button = QPushButton("参照")
         self.backup_output_browse_button.clicked.connect(
             lambda: self._select_save_file(
                 self.backup_output_path_input,
@@ -176,7 +176,7 @@ class OperationsTab(QWidget):
         )
 
         self.restore_backup_path_input = QLineEdit()
-        self.restore_backup_browse_button = QPushButton("Browse")
+        self.restore_backup_browse_button = QPushButton("参照")
         self.restore_backup_browse_button.clicked.connect(
             lambda: self._select_open_file(
                 self.restore_backup_path_input,
@@ -187,7 +187,7 @@ class OperationsTab(QWidget):
         )
 
         self.restore_target_db_path_input = QLineEdit()
-        self.restore_target_browse_button = QPushButton("Browse")
+        self.restore_target_browse_button = QPushButton("参照")
         self.restore_target_browse_button.clicked.connect(
             lambda: self._select_save_file(
                 self.restore_target_db_path_input,
@@ -198,7 +198,7 @@ class OperationsTab(QWidget):
         )
 
         self.import_csv_dir_input = QLineEdit()
-        self.import_csv_dir_browse_button = QPushButton("Browse")
+        self.import_csv_dir_browse_button = QPushButton("参照")
         self.import_csv_dir_browse_button.clicked.connect(
             lambda: self._select_directory(
                 self.import_csv_dir_input,
@@ -208,7 +208,7 @@ class OperationsTab(QWidget):
         )
 
         self.import_json_path_input = QLineEdit()
-        self.import_json_browse_button = QPushButton("Browse")
+        self.import_json_browse_button = QPushButton("参照")
         self.import_json_browse_button.clicked.connect(
             lambda: self._select_open_file(
                 self.import_json_path_input,
@@ -218,20 +218,20 @@ class OperationsTab(QWidget):
             )
         )
 
-        self.export_csv_button = QPushButton("CSV Export")
-        self.export_json_button = QPushButton("JSON Export")
-        self.export_sql_dump_button = QPushButton("SQL Dump Export")
-        self.create_backup_button = QPushButton("Backup Create")
-        self.restore_button = QPushButton("Restore")
-        self.import_csv_button = QPushButton("CSV Import")
-        self.import_json_button = QPushButton("JSON Import")
-        self.cancel_operation_button = QPushButton("Cancel")
+        self.export_csv_button = QPushButton("CSV出力")
+        self.export_json_button = QPushButton("JSON出力")
+        self.export_sql_dump_button = QPushButton("SQLダンプ出力")
+        self.create_backup_button = QPushButton("バックアップ作成")
+        self.restore_button = QPushButton("復元")
+        self.import_csv_button = QPushButton("CSV取込")
+        self.import_json_button = QPushButton("JSON取込")
+        self.cancel_operation_button = QPushButton("キャンセル")
         self.clear_recent_paths_button = QPushButton("履歴クリア")
         self.export_logs_button = QPushButton("ログエクスポート")
         self.reload_logs_button = QPushButton("ログ再読込")
-        self.log_prev_button = QPushButton("Prev")
-        self.log_next_button = QPushButton("Next")
-        self.log_page_label = QLabel("Page 0/0")
+        self.log_prev_button = QPushButton("前へ")
+        self.log_next_button = QPushButton("次へ")
+        self.log_page_label = QLabel("ページ 0/0")
         self.log_source_info_label = QLabel("source: current")
         self.log_limit_selector = QComboBox()
         self.log_limit_selector.addItems(["50", "100", "200", "500"])
@@ -245,11 +245,11 @@ class OperationsTab(QWidget):
         self.log_action_filter.addItem("all")
         self.log_message_search_input = QLineEdit()
         self.log_message_search_input.setPlaceholderText("message 検索（部分一致）")
-        self.log_regex_checkbox = QCheckBox("Regex")
-        self.log_regex_ignore_case_checkbox = QCheckBox("Ignore case")
+        self.log_regex_checkbox = QCheckBox("正規表現")
+        self.log_regex_ignore_case_checkbox = QCheckBox("大文字小文字を無視")
         self.log_regex_ignore_case_checkbox.setChecked(True)
-        self.log_regex_multiline_checkbox = QCheckBox("Multiline")
-        self.log_regex_dotall_checkbox = QCheckBox("Dotall")
+        self.log_regex_multiline_checkbox = QCheckBox("複数行")
+        self.log_regex_dotall_checkbox = QCheckBox("ドット改行一致")
         self.log_sort_order = QComboBox()
         self.log_sort_order.addItems(["最新順", "古い順"])
         self.cancel_operation_button.setEnabled(False)
@@ -404,17 +404,17 @@ class OperationsTab(QWidget):
         logs_box.addLayout(logs_header)
         logs_controls = QHBoxLayout()
         logs_controls.addWidget(self.include_archives_checkbox)
-        logs_controls.addWidget(QLabel("source"))
+        logs_controls.addWidget(QLabel("ソース"))
         logs_controls.addWidget(self.log_source_selector)
-        logs_controls.addWidget(QLabel("status"))
+        logs_controls.addWidget(QLabel("状態"))
         logs_controls.addWidget(self.log_status_filter)
-        logs_controls.addWidget(QLabel("action"))
+        logs_controls.addWidget(QLabel("操作"))
         logs_controls.addWidget(self.log_action_filter)
         logs_controls.addWidget(self.log_regex_checkbox)
         logs_controls.addWidget(self.log_regex_ignore_case_checkbox)
         logs_controls.addWidget(self.log_regex_multiline_checkbox)
         logs_controls.addWidget(self.log_regex_dotall_checkbox)
-        logs_controls.addWidget(QLabel("sort"))
+        logs_controls.addWidget(QLabel("並び順"))
         logs_controls.addWidget(self.log_sort_order)
         logs_controls.addWidget(self.log_message_search_input)
         logs_box.addLayout(logs_controls)
@@ -567,7 +567,7 @@ class OperationsTab(QWidget):
         self._apply_busy_state()
 
     def _show_progress(self, action_label: str) -> None:
-        dialog = QProgressDialog(f"{action_label} 実行中...", "Cancel", 0, 0, self)
+        dialog = QProgressDialog(f"{action_label} 実行中...", "キャンセル", 0, 0, self)
         dialog.setWindowModality(Qt.WindowModality.WindowModal)
         dialog.setMinimumDuration(0)
         dialog.canceled.connect(self._request_cancel)
@@ -722,7 +722,7 @@ class OperationsTab(QWidget):
         events, regex_error = self._filter_log_events(events)
         events = self._sort_log_events(events)
         paged_events, page_no, total_pages = self._paginate_log_events(events)
-        self.log_page_label.setText(f"Page {page_no}/{total_pages}")
+        self.log_page_label.setText(f"ページ {page_no}/{total_pages}")
         self.log_prev_button.setEnabled(page_no > 1 and not self._is_busy)
         self.log_next_button.setEnabled(page_no < total_pages and not self._is_busy)
         if not events:
@@ -1172,7 +1172,7 @@ class OperationsTab(QWidget):
                 path2=target_path,
             )
 
-        self._start_async_operation("restore", "Restore", _work, _on_success, _on_error)
+        self._start_async_operation("restore", "復元", _work, _on_success, _on_error)
 
     def _run_import_csv(self) -> None:
         csv_dir = self._require_text(self.import_csv_dir_input, "CSVディレクトリ")
