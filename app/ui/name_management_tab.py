@@ -26,17 +26,41 @@ from app.ui.role_context import RoleContext, UserRole
 
 
 class NameWriteService(Protocol):
-    def create_name(self, payload: NameInput, operator_id: str, role: UserRole = "admin") -> int: ...
+    def create_name(
+        self,
+        payload: NameInput,
+        operator_id: str,
+        role: UserRole = "admin",
+    ) -> int: ...
 
     def update_name(
-        self, name_id: int, payload: NameInput, operator_id: str, role: UserRole = "admin"
+        self,
+        name_id: int,
+        payload: NameInput,
+        operator_id: str,
+        role: UserRole = "admin",
     ) -> None: ...
 
-    def delete_name(self, name_id: int, operator_id: str, role: UserRole = "admin") -> None: ...
+    def delete_name(
+        self,
+        name_id: int,
+        operator_id: str,
+        role: UserRole = "admin",
+    ) -> None: ...
 
-    def restore_name(self, name_id: int, operator_id: str, role: UserRole = "admin") -> None: ...
+    def restore_name(
+        self,
+        name_id: int,
+        operator_id: str,
+        role: UserRole = "admin",
+    ) -> None: ...
 
-    def hard_delete_name(self, name_id: int, operator_id: str, role: UserRole = "admin") -> None: ...
+    def hard_delete_name(
+        self,
+        name_id: int,
+        operator_id: str,
+        role: UserRole = "admin",
+    ) -> None: ...
 
 
 class NameReadService(Protocol):
@@ -51,7 +75,11 @@ class NameReadService(Protocol):
         include_deleted: bool = False,
     ) -> list[NameSearchRow]: ...
 
-    def get_name_detail(self, name_id: int, role: UserRole = "admin") -> NameDetail: ...
+    def get_name_detail(
+        self,
+        name_id: int,
+        role: UserRole = "admin",
+    ) -> NameDetail: ...
 
 
 @dataclass(frozen=True)
@@ -108,6 +136,7 @@ class NameManagementTab(QWidget):
         form.addRow("操作者ID", self.operator_input)
         form.addRow("名前", self.raw_name_input)
         form.addRow("備考", self.note_input)
+
         actions = QHBoxLayout()
         for button in [
             self.refresh_button,
@@ -118,6 +147,7 @@ class NameManagementTab(QWidget):
             self.hard_delete_button,
         ]:
             actions.addWidget(button)
+
         layout = QVBoxLayout(self)
         layout.addLayout(form)
         layout.addLayout(actions)
@@ -139,25 +169,41 @@ class NameManagementTab(QWidget):
         self.restore_button.setEnabled(can_destructive)
         self.hard_delete_button.setEnabled(can_destructive)
         disabled = "このロールでは実行できません"
-        self.create_button.setToolTip(disabled if not can_write else "操作者ID を入力して実行します")
-        self.update_button.setToolTip(disabled if not can_write else "行を選択して実行します")
-        self.delete_button.setToolTip(disabled if not can_destructive else "行を選択して実行します")
-        self.restore_button.setToolTip(disabled if not can_destructive else "削除済み行を選択してください")
-        self.hard_delete_button.setToolTip(disabled if not can_destructive else "削除済み行を選択してください")
+        self.create_button.setToolTip(
+            disabled if not can_write else "操作者ID を入力して実行します"
+        )
+        self.update_button.setToolTip(
+            disabled if not can_write else "行を選択して実行します"
+        )
+        self.delete_button.setToolTip(
+            disabled if not can_destructive else "行を選択して実行します"
+        )
+        self.restore_button.setToolTip(
+            disabled if not can_destructive else "削除済み行を選択してください"
+        )
+        self.hard_delete_button.setToolTip(
+            disabled if not can_destructive else "削除済み行を選択してください"
+        )
 
     def _refresh_list(self) -> None:
         try:
             self._rows = self._query_service.search_names(
-                include_deleted=True, role=self._role_context.role
+                include_deleted=True,
+                role=self._role_context.role,
             )
         except Exception as exc:  # noqa: BLE001
             self._set_message(f"一覧取得に失敗しました: {exc}", is_error=True)
             return
+
         self.names_table.setRowCount(len(self._rows))
         for i, row in enumerate(self._rows):
             self.names_table.setItem(i, 0, QTableWidgetItem(str(row.id)))
             self.names_table.setItem(i, 1, QTableWidgetItem(row.raw_name))
-            self.names_table.setItem(i, 2, QTableWidgetItem("削除済み" if row.deleted_at else "有効"))
+            self.names_table.setItem(
+                i,
+                2,
+                QTableWidgetItem("削除済み" if row.deleted_at else "有効"),
+            )
             self.names_table.setItem(i, 3, QTableWidgetItem(str(row.linked_count)))
         self._selected = None
         self.detail_text.clear()
@@ -175,7 +221,10 @@ class NameManagementTab(QWidget):
         self._selected = _SelectedName(row.id, row.deleted_at is not None)
         self.raw_name_input.setText(row.raw_name)
         try:
-            detail = self._query_service.get_name_detail(row.id, role=self._role_context.role)
+            detail = self._query_service.get_name_detail(
+                row.id,
+                role=self._role_context.role,
+            )
         except Exception as exc:  # noqa: BLE001
             self._set_message(f"詳細取得に失敗しました: {exc}", is_error=True)
             return
@@ -203,7 +252,9 @@ class NameManagementTab(QWidget):
             return
         try:
             self._core_service.create_name(
-                self._current_payload(), operator_id=operator_id, role=self._role_context.role
+                self._current_payload(),
+                operator_id=operator_id,
+                role=self._role_context.role,
             )
             self._set_message("新規作成しました")
             self._refresh_list()
@@ -223,7 +274,10 @@ class NameManagementTab(QWidget):
             return
         try:
             self._core_service.update_name(
-                selected.id, self._current_payload(), operator_id=operator_id, role=self._role_context.role
+                selected.id,
+                self._current_payload(),
+                operator_id=operator_id,
+                role=self._role_context.role,
             )
             self._set_message("更新しました")
             self._refresh_list()
@@ -241,10 +295,18 @@ class NameManagementTab(QWidget):
         if selected.deleted:
             self._set_message("既に削除済みです", is_error=True)
             return
-        if not confirm_destructive_action(self, "論理削除の確認", f"名前ID={selected.id} を論理削除します。よろしいですか？"):
+        if not confirm_destructive_action(
+            self,
+            "論理削除の確認",
+            f"名前ID={selected.id} を論理削除します。よろしいですか？",
+        ):
             self._set_message("論理削除をキャンセルしました")
             return
-        self._core_service.delete_name(selected.id, operator_id=operator_id, role=self._role_context.role)
+        self._core_service.delete_name(
+            selected.id,
+            operator_id=operator_id,
+            role=self._role_context.role,
+        )
         self._set_message("論理削除しました")
         self._refresh_list()
 
@@ -259,10 +321,18 @@ class NameManagementTab(QWidget):
         if not selected.deleted:
             self._set_message("有効行は復元できません", is_error=True)
             return
-        if not confirm_destructive_action(self, "復元の確認", f"名前ID={selected.id} を復元します。よろしいですか？"):
+        if not confirm_destructive_action(
+            self,
+            "復元の確認",
+            f"名前ID={selected.id} を復元します。よろしいですか？",
+        ):
             self._set_message("復元をキャンセルしました")
             return
-        self._core_service.restore_name(selected.id, operator_id=operator_id, role=self._role_context.role)
+        self._core_service.restore_name(
+            selected.id,
+            operator_id=operator_id,
+            role=self._role_context.role,
+        )
         self._set_message("復元しました")
 
     def _hard_delete_name(self) -> None:
@@ -276,10 +346,18 @@ class NameManagementTab(QWidget):
         if not selected.deleted:
             self._set_message("完全削除は削除済み行のみ可能です", is_error=True)
             return
-        if not confirm_destructive_action(self, "完全削除の確認", f"名前ID={selected.id} を完全削除します。この操作は元に戻せません。"):
+        if not confirm_destructive_action(
+            self,
+            "完全削除の確認",
+            f"名前ID={selected.id} を完全削除します。この操作は元に戻せません。",
+        ):
             self._set_message("完全削除をキャンセルしました")
             return
-        self._core_service.hard_delete_name(selected.id, operator_id=operator_id, role=self._role_context.role)
+        self._core_service.hard_delete_name(
+            selected.id,
+            operator_id=operator_id,
+            role=self._role_context.role,
+        )
         self._set_message("完全削除しました")
 
     def _current_payload(self) -> NameInput:
