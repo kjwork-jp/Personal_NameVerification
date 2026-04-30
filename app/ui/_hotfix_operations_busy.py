@@ -8,10 +8,12 @@ from app.ui._hotfix_operator_style import style
 def apply() -> None:
     from app.ui import operations_tab as m
     old_init = m.OperationsTab.__init__
+
     def __init__(self: Any, *args: Any, **kwargs: Any) -> None:
         old_init(self, *args, **kwargs)
         style(self)
         _labels(self)
+
     m.OperationsTab.__init__ = __init__
     for name in [
         "_run_export_csv", "_run_export_json", "_run_export_sql_dump",
@@ -57,14 +59,14 @@ def _labels(self: Any) -> None:
         widget = getattr(self, attr, None)
         if widget is not None:
             widget.setText(label)
-    checks = {
+    check_map = {
         "include_archives_checkbox": "アーカイブを含める",
         "log_regex_checkbox": "正規表現",
         "log_regex_ignore_case_checkbox": "大文字小文字を無視",
         "log_regex_multiline_checkbox": "複数行",
         "log_regex_dotall_checkbox": "ドット改行一致",
     }
-    for attr, label in checks.items():
+    for attr, label in check_map.items():
         widget = getattr(self, attr, None)
         if widget is not None:
             widget.setText(label)

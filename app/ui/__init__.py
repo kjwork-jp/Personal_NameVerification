@@ -15,7 +15,7 @@ from .trash_tab import TrashTab
 
 
 def _apply_release_hotfixes() -> None:
-    """Apply small release hotfixes after UI classes are imported."""
+    """Apply release hotfix modules after UI classes are imported."""
     from . import _hotfix_audit
     from . import _hotfix_operator_style
     from . import _hotfix_selection

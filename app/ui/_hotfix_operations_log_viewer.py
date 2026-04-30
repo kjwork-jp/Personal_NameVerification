@@ -36,8 +36,8 @@ def _filter(self: Any, events: list[object]) -> tuple[list[object], str | None]:
         except re.error as exc:
             return [], str(exc)
         return [e for e in results if pattern.search(_text(e))], None
-    q = query.lower()
-    return [e for e in results if q in _text(e).lower()], None
+    lowered = query.lower()
+    return [e for e in results if lowered in _text(e).lower()], None
 
 
 def _sort(self: Any, events: list[object]) -> list[object]:
