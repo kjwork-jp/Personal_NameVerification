@@ -13,24 +13,6 @@ from .search_tab import SearchTab
 from .title_subtitle_management_tab import TitleSubtitleManagementTab
 from .trash_tab import TrashTab
 
-
-def _apply_release_hotfixes() -> None:
-    """Apply release hotfix modules after UI classes are imported."""
-    from . import _hotfix_audit
-    from . import _hotfix_operator_style
-    from . import _hotfix_selection
-    from . import _hotfix_operations_busy
-    from . import _hotfix_operations_log_viewer
-
-    _hotfix_operator_style.apply()
-    _hotfix_audit.apply()
-    _hotfix_selection.apply()
-    _hotfix_operations_busy.apply()
-    _hotfix_operations_log_viewer.apply()
-
-
-_apply_release_hotfixes()
-
 __all__ = [
     "MainWindow",
     "SearchTab",
