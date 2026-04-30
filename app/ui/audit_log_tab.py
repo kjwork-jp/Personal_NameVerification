@@ -59,22 +59,22 @@ class AuditLogTab(QWidget):
         self._rows: list[ChangeLogRow] = []
 
         self.entity_type_input = QLineEdit()
-        self.entity_type_input.setPlaceholderText("entity_type (e.g. names)")
+        self.entity_type_input.setPlaceholderText("対象種別（例: names）")
 
         self.action_input = QLineEdit()
-        self.action_input.setPlaceholderText("action (e.g. update)")
+        self.action_input.setPlaceholderText("操作（例: update）")
 
         self.operator_id_input = QLineEdit()
         self.operator_id_input.setPlaceholderText("操作者ID")
 
         self.created_from_input = QLineEdit()
-        self.created_from_input.setPlaceholderText("created_from (ISO8601)")
+        self.created_from_input.setPlaceholderText("開始日時（ISO8601）")
 
         self.created_to_input = QLineEdit()
-        self.created_to_input.setPlaceholderText("created_to (ISO8601)")
+        self.created_to_input.setPlaceholderText("終了日時（ISO8601）")
 
         self.limit_input = QLineEdit("200")
-        self.limit_input.setPlaceholderText("limit")
+        self.limit_input.setPlaceholderText("表示上限")
 
         self.message_label = QLabel("")
 
@@ -83,7 +83,7 @@ class AuditLogTab(QWidget):
 
         self.logs_table = QTableWidget(0, 5)
         self.logs_table.setHorizontalHeaderLabels(
-            ["ID", "entity_type", "entity_id", "操作", "created_at"]
+            ["ID", "対象種別", "対象ID", "操作", "作成日時"]
         )
         self.logs_table.itemSelectionChanged.connect(self._on_selected)
 
@@ -91,19 +91,19 @@ class AuditLogTab(QWidget):
 
         self.before_json_view = QTextEdit()
         self.before_json_view.setReadOnly(True)
-        self.before_json_view.setPlaceholderText("before_json")
+        self.before_json_view.setPlaceholderText("変更前JSON")
 
         self.after_json_view = QTextEdit()
         self.after_json_view.setReadOnly(True)
-        self.after_json_view.setPlaceholderText("after_json")
+        self.after_json_view.setPlaceholderText("変更後JSON")
 
         form = QFormLayout()
-        form.addRow("entity_type", self.entity_type_input)
+        form.addRow("対象種別", self.entity_type_input)
         form.addRow("操作", self.action_input)
         form.addRow("操作者ID", self.operator_id_input)
-        form.addRow("created_from", self.created_from_input)
-        form.addRow("created_to", self.created_to_input)
-        form.addRow("limit", self.limit_input)
+        form.addRow("開始日時", self.created_from_input)
+        form.addRow("終了日時", self.created_to_input)
+        form.addRow("表示上限", self.limit_input)
 
         actions = QHBoxLayout()
         actions.addWidget(self.reload_button)
@@ -111,9 +111,9 @@ class AuditLogTab(QWidget):
         detail_panel = QWidget()
         detail_layout = QVBoxLayout(detail_panel)
         detail_layout.addWidget(self.detail_summary_label)
-        detail_layout.addWidget(QLabel("before_json"))
+        detail_layout.addWidget(QLabel("変更前JSON"))
         detail_layout.addWidget(self.before_json_view)
-        detail_layout.addWidget(QLabel("after_json"))
+        detail_layout.addWidget(QLabel("変更後JSON"))
         detail_layout.addWidget(self.after_json_view)
 
         splitter = QSplitter()
@@ -161,6 +161,7 @@ class AuditLogTab(QWidget):
 
         if self._rows:
             self.logs_table.selectRow(0)
+            self._on_selected()
             self._set_message(f"{len(self._rows)} 件を表示")
         else:
             self._set_message("表示対象の監査ログがありません")
@@ -169,7 +170,7 @@ class AuditLogTab(QWidget):
         limit_raw = self.limit_input.text().strip() or "200"
         limit = int(limit_raw)
         if limit <= 0:
-            raise ValueError("limit は 1 以上で入力してください")
+            raise ValueError("表示上限は 1 以上で入力してください")
 
         return _FilterValues(
             entity_type=_optional(self.entity_type_input.text()),
