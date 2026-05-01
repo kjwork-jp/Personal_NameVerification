@@ -13,6 +13,15 @@ from .search_tab import SearchTab
 from .title_subtitle_management_tab import TitleSubtitleManagementTab
 from .trash_tab import TrashTab
 
+
+def _apply_release_qa_fixes() -> None:
+    from ._release_qa_fixes import apply_release_qa_fixes
+
+    apply_release_qa_fixes()
+
+
+_apply_release_qa_fixes()
+
 __all__ = [
     "MainWindow",
     "SearchTab",
