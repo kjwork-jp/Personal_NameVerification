@@ -21,30 +21,127 @@ from PySide6.QtWidgets import (
 )
 
 from app.application.core_services import SubtitleInput, TitleInput
-from app.application.read_models import NameSearchRow, NameTitleLinkRow, SubtitleDetail, TitleDetail
+from app.application.read_models import (
+    NameSearchRow,
+    NameTitleLinkRow,
+    SubtitleDetail,
+    TitleDetail,
+)
 from app.ui.dialogs import confirm_destructive_action
 from app.ui.permissions import can_create_or_update, can_run_destructive_actions
 from app.ui.role_context import RoleContext, UserRole
 
 
 class TitleSubtitleWriteService(Protocol):
-    def create_title(self, payload: TitleInput, operator_id: str, role: UserRole = "admin", *, name_ids: list[int] | None = None) -> int: ...
-    def update_title(self, title_id: int, payload: TitleInput, operator_id: str, role: UserRole = "admin") -> None: ...
-    def delete_title(self, title_id: int, operator_id: str, role: UserRole = "admin") -> None: ...
-    def restore_title(self, title_id: int, operator_id: str, role: UserRole = "admin") -> None: ...
-    def hard_delete_title(self, title_id: int, operator_id: str, role: UserRole = "admin") -> None: ...
-    def create_subtitle(self, payload: SubtitleInput, operator_id: str, role: UserRole = "admin") -> int: ...
-    def update_subtitle(self, subtitle_id: int, payload: SubtitleInput, operator_id: str, role: UserRole = "admin") -> None: ...
-    def delete_subtitle(self, subtitle_id: int, operator_id: str, role: UserRole = "admin") -> None: ...
-    def restore_subtitle(self, subtitle_id: int, operator_id: str, role: UserRole = "admin") -> None: ...
-    def hard_delete_subtitle(self, subtitle_id: int, operator_id: str, role: UserRole = "admin") -> None: ...
+    def create_title(
+        self,
+        payload: TitleInput,
+        operator_id: str,
+        role: UserRole = "admin",
+        *,
+        name_ids: list[int] | None = None,
+    ) -> int: ...
+
+    def update_title(
+        self,
+        title_id: int,
+        payload: TitleInput,
+        operator_id: str,
+        role: UserRole = "admin",
+    ) -> None: ...
+
+    def delete_title(
+        self,
+        title_id: int,
+        operator_id: str,
+        role: UserRole = "admin",
+    ) -> None: ...
+
+    def restore_title(
+        self,
+        title_id: int,
+        operator_id: str,
+        role: UserRole = "admin",
+    ) -> None: ...
+
+    def hard_delete_title(
+        self,
+        title_id: int,
+        operator_id: str,
+        role: UserRole = "admin",
+    ) -> None: ...
+
+    def create_subtitle(
+        self,
+        payload: SubtitleInput,
+        operator_id: str,
+        role: UserRole = "admin",
+    ) -> int: ...
+
+    def update_subtitle(
+        self,
+        subtitle_id: int,
+        payload: SubtitleInput,
+        operator_id: str,
+        role: UserRole = "admin",
+    ) -> None: ...
+
+    def delete_subtitle(
+        self,
+        subtitle_id: int,
+        operator_id: str,
+        role: UserRole = "admin",
+    ) -> None: ...
+
+    def restore_subtitle(
+        self,
+        subtitle_id: int,
+        operator_id: str,
+        role: UserRole = "admin",
+    ) -> None: ...
+
+    def hard_delete_subtitle(
+        self,
+        subtitle_id: int,
+        operator_id: str,
+        role: UserRole = "admin",
+    ) -> None: ...
 
 
 class TitleSubtitleReadService(Protocol):
-    def search_names(self, query: str | None = None, role: UserRole = "admin", *, exact_match: bool = False, title_id: int | None = None, has_links: bool | None = None, include_deleted: bool = False) -> list[NameSearchRow]: ...
-    def list_names_for_title(self, title_id: int, role: UserRole = "admin", *, include_deleted: bool = False) -> list[NameTitleLinkRow]: ...
-    def list_titles(self, role: UserRole = "admin", *, include_deleted: bool = False) -> list[TitleDetail]: ...
-    def list_subtitles(self, title_id: int, role: UserRole = "admin", *, include_deleted: bool = False) -> list[SubtitleDetail]: ...
+    def search_names(
+        self,
+        query: str | None = None,
+        role: UserRole = "admin",
+        *,
+        exact_match: bool = False,
+        title_id: int | None = None,
+        has_links: bool | None = None,
+        include_deleted: bool = False,
+    ) -> list[NameSearchRow]: ...
+
+    def list_names_for_title(
+        self,
+        title_id: int,
+        role: UserRole = "admin",
+        *,
+        include_deleted: bool = False,
+    ) -> list[NameTitleLinkRow]: ...
+
+    def list_titles(
+        self,
+        role: UserRole = "admin",
+        *,
+        include_deleted: bool = False,
+    ) -> list[TitleDetail]: ...
+
+    def list_subtitles(
+        self,
+        title_id: int,
+        role: UserRole = "admin",
+        *,
+        include_deleted: bool = False,
+    ) -> list[SubtitleDetail]: ...
 
 
 @dataclass(frozen=True)
@@ -70,6 +167,8 @@ def _call_with_optional_role(function: Any, *args: Any, **kwargs: Any) -> Any:
 
 
 class TitleSubtitleManagementTab(QWidget):
+    """UI for title/subtitle management flows."""
+
     def __init__(
         self,
         core_service: TitleSubtitleWriteService,
@@ -89,6 +188,7 @@ class TitleSubtitleManagementTab(QWidget):
         self.operator_input = QLineEdit()
         self.operator_input.setPlaceholderText("操作者ID")
         self.operator_input.setToolTip("操作者ID が必要です")
+
         self.title_name_input = QLineEdit()
         self.title_note_input = QLineEdit()
         self.subtitle_code_input = QLineEdit()
@@ -107,6 +207,7 @@ class TitleSubtitleManagementTab(QWidget):
         self.titles_table = QTableWidget(0, 3)
         self.titles_table.setHorizontalHeaderLabels(["ID", "タイトル", "状態"])
         self.titles_table.itemSelectionChanged.connect(self._on_title_selected)
+
         self.subtitles_table = QTableWidget(0, 4)
         self.subtitles_table.setHorizontalHeaderLabels(["ID", "コード", "サブタイトル", "状態"])
         self.subtitles_table.itemSelectionChanged.connect(self._on_subtitle_selected)
@@ -139,9 +240,11 @@ class TitleSubtitleManagementTab(QWidget):
 
         top_form = QFormLayout()
         top_form.addRow("操作者ID", self.operator_input)
+
         title_form = QFormLayout()
         title_form.addRow("タイトル名", self.title_name_input)
         title_form.addRow("備考", self.title_note_input)
+
         subtitle_form = QFormLayout()
         subtitle_form.addRow("コード", self.subtitle_code_input)
         subtitle_form.addRow("サブタイトル名", self.subtitle_name_input)
@@ -149,10 +252,25 @@ class TitleSubtitleManagementTab(QWidget):
         subtitle_form.addRow("備考", self.subtitle_note_input)
 
         title_actions = QHBoxLayout()
-        for button in [self.title_refresh_button, self.title_create_button, self.title_update_button, self.title_delete_button, self.title_restore_button, self.title_hard_delete_button]:
+        for button in [
+            self.title_refresh_button,
+            self.title_create_button,
+            self.title_update_button,
+            self.title_delete_button,
+            self.title_restore_button,
+            self.title_hard_delete_button,
+        ]:
             title_actions.addWidget(button)
+
         subtitle_actions = QHBoxLayout()
-        for button in [self.subtitle_refresh_button, self.subtitle_create_button, self.subtitle_update_button, self.subtitle_delete_button, self.subtitle_restore_button, self.subtitle_hard_delete_button]:
+        for button in [
+            self.subtitle_refresh_button,
+            self.subtitle_create_button,
+            self.subtitle_update_button,
+            self.subtitle_delete_button,
+            self.subtitle_restore_button,
+            self.subtitle_hard_delete_button,
+        ]:
             subtitle_actions.addWidget(button)
 
         title_panel = QWidget()
@@ -189,25 +307,61 @@ class TitleSubtitleManagementTab(QWidget):
     def _apply_role_guards(self) -> None:
         can_write = can_create_or_update(self._role_context.role)
         can_destructive = can_run_destructive_actions(self._role_context.role)
-        for button in [self.title_create_button, self.title_update_button, self.subtitle_create_button, self.subtitle_update_button]:
+
+        for button in [
+            self.title_create_button,
+            self.title_update_button,
+            self.subtitle_create_button,
+            self.subtitle_update_button,
+        ]:
             button.setEnabled(can_write)
-            button.setToolTip("このロールでは実行できません" if not can_write else "対象行が選択されていない場合は実行できません")
-        for button in [self.title_delete_button, self.title_restore_button, self.title_hard_delete_button, self.subtitle_delete_button, self.subtitle_restore_button, self.subtitle_hard_delete_button]:
+            button.setToolTip(
+                "このロールでは実行できません"
+                if not can_write
+                else "対象行が選択されていない場合は実行できません"
+            )
+
+        for button in [
+            self.title_delete_button,
+            self.title_restore_button,
+            self.title_hard_delete_button,
+            self.subtitle_delete_button,
+            self.subtitle_restore_button,
+            self.subtitle_hard_delete_button,
+        ]:
             button.setEnabled(can_destructive)
-            button.setToolTip("このロールでは実行できません" if not can_destructive else "対象行が選択されていない場合は実行できません")
+            button.setToolTip(
+                "このロールでは実行できません"
+                if not can_destructive
+                else "対象行が選択されていない場合は実行できません"
+            )
+
         self._update_action_states()
 
-    def _refresh_titles(self) -> None:
+    def _refresh_titles(self, selected_title_id: int | None = None) -> None:
+        if selected_title_id is None and self._selected_title is not None:
+            selected_title_id = self._selected_title.id
+
         try:
-            self._titles = _call_with_optional_role(self._query_service.list_titles, role=self._role_context.role, include_deleted=True)
+            self._titles = _call_with_optional_role(
+                self._query_service.list_titles,
+                role=self._role_context.role,
+                include_deleted=True,
+            )
         except Exception as exc:
             self._set_message(f"タイトル一覧取得に失敗しました: {exc}", is_error=True)
             return
+
         self.titles_table.setRowCount(len(self._titles))
-        for i, row in enumerate(self._titles):
-            self.titles_table.setItem(i, 0, QTableWidgetItem(str(row.id)))
-            self.titles_table.setItem(i, 1, QTableWidgetItem(row.title_name))
-            self.titles_table.setItem(i, 2, QTableWidgetItem("削除済み" if row.deleted_at else "有効"))
+        for row_index, row in enumerate(self._titles):
+            self.titles_table.setItem(row_index, 0, QTableWidgetItem(str(row.id)))
+            self.titles_table.setItem(row_index, 1, QTableWidgetItem(row.title_name))
+            self.titles_table.setItem(
+                row_index,
+                2,
+                QTableWidgetItem("削除済み" if row.deleted_at else "有効"),
+            )
+
         self._selected_title = None
         self._selected_subtitle = None
         self._subtitles = []
@@ -216,77 +370,116 @@ class TitleSubtitleManagementTab(QWidget):
         self._clear_subtitle_form()
         self._refresh_name_candidates()
         self._update_action_states()
-        if self._titles:
-            self.titles_table.selectRow(0)
-            self._on_title_selected()
 
-    def _refresh_subtitles(self) -> None:
-        selected = self._require_selected_title()
-        if selected is None:
+        if not self._titles:
+            return
+
+        selected_index = 0
+        if selected_title_id is not None:
+            for row_index, row in enumerate(self._titles):
+                if row.id == selected_title_id:
+                    selected_index = row_index
+                    break
+
+        self.titles_table.selectRow(selected_index)
+        self._select_title_by_index(selected_index)
+
+    def _refresh_subtitles(self, selected_subtitle_id: int | None = None) -> None:
+        title = self._selected_title
+        if title is None:
             self._subtitles = []
             self._selected_subtitle = None
             self.subtitles_table.setRowCount(0)
             self._clear_subtitle_form()
             self._update_action_states()
             return
+
         try:
-            self._subtitles = _call_with_optional_role(self._query_service.list_subtitles, selected.id, role=self._role_context.role, include_deleted=True)
+            self._subtitles = _call_with_optional_role(
+                self._query_service.list_subtitles,
+                title.id,
+                role=self._role_context.role,
+                include_deleted=True,
+            )
         except Exception as exc:
             self._set_message(f"サブタイトル一覧取得に失敗しました: {exc}", is_error=True)
             return
+
         self.subtitles_table.setRowCount(len(self._subtitles))
-        for i, row in enumerate(self._subtitles):
-            self.subtitles_table.setItem(i, 0, QTableWidgetItem(str(row.id)))
-            self.subtitles_table.setItem(i, 1, QTableWidgetItem(row.subtitle_code))
-            self.subtitles_table.setItem(i, 2, QTableWidgetItem(row.subtitle_name))
-            self.subtitles_table.setItem(i, 3, QTableWidgetItem("削除済み" if row.deleted_at else "有効"))
+        for row_index, row in enumerate(self._subtitles):
+            self.subtitles_table.setItem(row_index, 0, QTableWidgetItem(str(row.id)))
+            self.subtitles_table.setItem(row_index, 1, QTableWidgetItem(row.subtitle_code))
+            self.subtitles_table.setItem(row_index, 2, QTableWidgetItem(row.subtitle_name))
+            self.subtitles_table.setItem(
+                row_index,
+                3,
+                QTableWidgetItem("削除済み" if row.deleted_at else "有効"),
+            )
+
         self._selected_subtitle = None
         self._clear_subtitle_form()
-        if self._subtitles:
-            self.subtitles_table.selectRow(0)
-            self._on_subtitle_selected()
+
+        if title.deleted:
+            self._update_action_states()
             return
-        self._update_action_states()
+
+        if not self._subtitles:
+            self._update_action_states()
+            return
+
+        selected_index = 0
+        if selected_subtitle_id is not None:
+            for row_index, row in enumerate(self._subtitles):
+                if row.id == selected_subtitle_id:
+                    selected_index = row_index
+                    break
+
+        self.subtitles_table.selectRow(selected_index)
+        self._select_subtitle_by_index(selected_index)
 
     def _on_title_selected(self) -> None:
         if not self.titles_table.selectedIndexes():
             self._selected_title = None
-            self._subtitles = []
             self._selected_subtitle = None
+            self._subtitles = []
             self.subtitles_table.setRowCount(0)
             self._update_selected_title_label()
             self._clear_subtitle_form()
             self._update_action_states()
             return
-        idx = self.titles_table.currentRow()
-        if idx < 0 or idx >= len(self._titles):
+
+        self._select_title_by_index(self.titles_table.currentRow())
+
+    def _select_title_by_index(self, index: int) -> None:
+        if index < 0 or index >= len(self._titles):
             self._selected_title = None
-            self._subtitles = []
             self._selected_subtitle = None
+            self._subtitles = []
             self.subtitles_table.setRowCount(0)
             self._update_selected_title_label()
             self._clear_subtitle_form()
             self._update_action_states()
             return
-        row = self._titles[idx]
+
+        row = self._titles[index]
         self._selected_title = _TitleSelection(row.id, row.deleted_at is not None)
         self.title_name_input.setText(row.title_name)
         self.title_note_input.setText(row.note or "")
         self._update_selected_title_label(row)
-        self._refresh_subtitles()
         self._refresh_linked_names(row.id)
+        self._refresh_subtitles()
 
     def _on_subtitle_selected(self) -> None:
-        if not self.subtitles_table.selectedIndexes():
+        self._select_subtitle_by_index(self.subtitles_table.currentRow())
+
+    def _select_subtitle_by_index(self, index: int) -> None:
+        if index < 0 or index >= len(self._subtitles):
             self._selected_subtitle = None
+            self._clear_subtitle_form()
             self._update_action_states()
             return
-        idx = self.subtitles_table.currentRow()
-        if idx < 0 or idx >= len(self._subtitles):
-            self._selected_subtitle = None
-            self._update_action_states()
-            return
-        row = self._subtitles[idx]
+
+        row = self._subtitles[index]
         self._selected_subtitle = _SubtitleSelection(row.id, row.deleted_at is not None)
         self.subtitle_code_input.setText(row.subtitle_code)
         self.subtitle_name_input.setText(row.subtitle_name)
@@ -298,11 +491,18 @@ class TitleSubtitleManagementTab(QWidget):
         if not can_create_or_update(self._role_context.role):
             self._set_message("このロールではタイトル作成できません", is_error=True)
             return
+
         operator_id = self._require_operator_id()
         if operator_id is None:
             return
+
         try:
-            self._core_service.create_title(self._title_payload(), operator_id=operator_id, role=self._role_context.role, name_ids=self._selected_name_ids_for_create())
+            self._core_service.create_title(
+                self._title_payload(),
+                operator_id=operator_id,
+                role=self._role_context.role,
+                name_ids=self._selected_name_ids_for_create(),
+            )
             self._set_message("タイトル作成しました")
             self._refresh_titles()
         except Exception as exc:
@@ -312,19 +512,27 @@ class TitleSubtitleManagementTab(QWidget):
         if not can_create_or_update(self._role_context.role):
             self._set_message("このロールではタイトル更新できません", is_error=True)
             return
+
         selected = self._require_selected_title()
         if selected is None:
             return
         if selected.deleted:
             self._set_message("削除済みタイトルは更新できません", is_error=True)
             return
+
         operator_id = self._require_operator_id()
         if operator_id is None:
             return
+
         try:
-            self._core_service.update_title(selected.id, self._title_payload(), operator_id=operator_id, role=self._role_context.role)
+            self._core_service.update_title(
+                selected.id,
+                self._title_payload(),
+                operator_id=operator_id,
+                role=self._role_context.role,
+            )
             self._set_message("タイトル更新しました")
-            self._refresh_titles()
+            self._refresh_titles(selected.id)
         except Exception as exc:
             self._set_message(f"タイトル更新に失敗しました: {exc}", is_error=True)
 
@@ -332,59 +540,95 @@ class TitleSubtitleManagementTab(QWidget):
         if not can_run_destructive_actions(self._role_context.role):
             self._set_message("このロールではタイトル論理削除できません", is_error=True)
             return
+
         selected = self._require_selected_title()
         if selected is None:
             return
         if selected.deleted:
             self._set_message("既に削除済みタイトルです", is_error=True)
             return
+
         operator_id = self._require_operator_id()
         if operator_id is None:
             return
-        if not confirm_destructive_action(self, "論理削除の確認", f"タイトルID={selected.id} を論理削除します。よろしいですか？"):
+
+        if not confirm_destructive_action(
+            self,
+            "論理削除の確認",
+            f"タイトルID={selected.id} を論理削除します。よろしいですか？",
+        ):
             self._set_message("タイトル論理削除をキャンセルしました")
             return
-        self._core_service.delete_title(selected.id, operator_id=operator_id, role=self._role_context.role)
+
+        self._core_service.delete_title(
+            selected.id,
+            operator_id=operator_id,
+            role=self._role_context.role,
+        )
         self._set_message("タイトル論理削除しました")
-        self._refresh_titles()
+        self._refresh_titles(selected.id)
 
     def _restore_title(self) -> None:
         if not can_run_destructive_actions(self._role_context.role):
             self._set_message("このロールではタイトル復元できません", is_error=True)
             return
+
         selected = self._require_selected_title()
         if selected is None:
             return
         if not selected.deleted:
             self._set_message("有効タイトルは復元できません", is_error=True)
             return
+
         operator_id = self._require_operator_id()
         if operator_id is None:
             return
-        if not confirm_destructive_action(self, "復元の確認", f"タイトルID={selected.id} を復元します。よろしいですか？"):
+
+        if not confirm_destructive_action(
+            self,
+            "復元の確認",
+            f"タイトルID={selected.id} を復元します。よろしいですか？",
+        ):
             self._set_message("タイトル復元をキャンセルしました")
             return
-        self._core_service.restore_title(selected.id, operator_id=operator_id, role=self._role_context.role)
+
+        self._core_service.restore_title(
+            selected.id,
+            operator_id=operator_id,
+            role=self._role_context.role,
+        )
         self._set_message("タイトル復元しました")
-        self._refresh_titles()
+        self._refresh_titles(selected.id)
 
     def _hard_delete_title(self) -> None:
         if not can_run_destructive_actions(self._role_context.role):
             self._set_message("このロールではタイトル完全削除できません", is_error=True)
             return
+
         selected = self._require_selected_title()
         if selected is None:
             return
         if not selected.deleted:
             self._set_message("完全削除は削除済みタイトルのみ可能です", is_error=True)
             return
+
         operator_id = self._require_operator_id()
         if operator_id is None:
             return
-        if not confirm_destructive_action(self, "完全削除の確認", f"タイトルID={selected.id} を完全削除します。この操作は元に戻せません。"):
+
+        if not confirm_destructive_action(
+            self,
+            "完全削除の確認",
+            f"タイトルID={selected.id} を完全削除します。この操作は元に戻せません。",
+        ):
             self._set_message("タイトル完全削除をキャンセルしました")
             return
-        self._core_service.hard_delete_title(selected.id, operator_id=operator_id, role=self._role_context.role)
+
+        self._core_service.hard_delete_title(
+            selected.id,
+            operator_id=operator_id,
+            role=self._role_context.role,
+        )
         self._set_message("タイトル完全削除しました")
         self._refresh_titles()
 
@@ -392,16 +636,23 @@ class TitleSubtitleManagementTab(QWidget):
         if not can_create_or_update(self._role_context.role):
             self._set_message("このロールではサブタイトル作成できません", is_error=True)
             return
+
         selected = self._require_selected_title()
         if selected is None:
             return
         if selected.deleted:
             self._set_message("削除済みタイトルにはサブタイトル作成できません", is_error=True)
             return
+
         operator_id = self._require_operator_id()
         if operator_id is None:
             return
-        self._core_service.create_subtitle(self._subtitle_payload(selected.id), operator_id=operator_id, role=self._role_context.role)
+
+        self._core_service.create_subtitle(
+            self._subtitle_payload(selected.id),
+            operator_id=operator_id,
+            role=self._role_context.role,
+        )
         self._set_message("サブタイトル作成しました")
         self._refresh_subtitles()
 
@@ -409,6 +660,7 @@ class TitleSubtitleManagementTab(QWidget):
         if not can_create_or_update(self._role_context.role):
             self._set_message("このロールではサブタイトル更新できません", is_error=True)
             return
+
         selected_subtitle = self._require_selected_subtitle()
         selected_title = self._require_selected_title()
         if selected_subtitle is None or selected_title is None:
@@ -419,17 +671,25 @@ class TitleSubtitleManagementTab(QWidget):
         if selected_subtitle.deleted:
             self._set_message("削除済みサブタイトルは更新できません", is_error=True)
             return
+
         operator_id = self._require_operator_id()
         if operator_id is None:
             return
-        self._core_service.update_subtitle(selected_subtitle.id, self._subtitle_payload(selected_title.id), operator_id=operator_id, role=self._role_context.role)
+
+        self._core_service.update_subtitle(
+            selected_subtitle.id,
+            self._subtitle_payload(selected_title.id),
+            operator_id=operator_id,
+            role=self._role_context.role,
+        )
         self._set_message("サブタイトル更新しました")
-        self._refresh_subtitles()
+        self._refresh_subtitles(selected_subtitle.id)
 
     def _delete_subtitle(self) -> None:
         if not can_run_destructive_actions(self._role_context.role):
             self._set_message("このロールではサブタイトル論理削除できません", is_error=True)
             return
+
         selected_title = self._require_selected_title()
         selected_subtitle = self._require_selected_subtitle()
         if selected_title is None or selected_subtitle is None:
@@ -440,20 +700,32 @@ class TitleSubtitleManagementTab(QWidget):
         if selected_subtitle.deleted:
             self._set_message("既に削除済みサブタイトルです", is_error=True)
             return
+
         operator_id = self._require_operator_id()
         if operator_id is None:
             return
-        if not confirm_destructive_action(self, "論理削除の確認", f"サブタイトルID={selected_subtitle.id} を論理削除します。よろしいですか？"):
+
+        if not confirm_destructive_action(
+            self,
+            "論理削除の確認",
+            f"サブタイトルID={selected_subtitle.id} を論理削除します。よろしいですか？",
+        ):
             self._set_message("サブタイトル論理削除をキャンセルしました")
             return
-        self._core_service.delete_subtitle(selected_subtitle.id, operator_id=operator_id, role=self._role_context.role)
+
+        self._core_service.delete_subtitle(
+            selected_subtitle.id,
+            operator_id=operator_id,
+            role=self._role_context.role,
+        )
         self._set_message("サブタイトル論理削除しました")
-        self._refresh_subtitles()
+        self._refresh_subtitles(selected_subtitle.id)
 
     def _restore_subtitle(self) -> None:
         if not can_run_destructive_actions(self._role_context.role):
             self._set_message("このロールではサブタイトル復元できません", is_error=True)
             return
+
         selected_title = self._require_selected_title()
         selected_subtitle = self._require_selected_subtitle()
         if selected_title is None or selected_subtitle is None:
@@ -464,20 +736,32 @@ class TitleSubtitleManagementTab(QWidget):
         if not selected_subtitle.deleted:
             self._set_message("有効サブタイトルは復元できません", is_error=True)
             return
+
         operator_id = self._require_operator_id()
         if operator_id is None:
             return
-        if not confirm_destructive_action(self, "復元の確認", f"サブタイトルID={selected_subtitle.id} を復元します。よろしいですか？"):
+
+        if not confirm_destructive_action(
+            self,
+            "復元の確認",
+            f"サブタイトルID={selected_subtitle.id} を復元します。よろしいですか？",
+        ):
             self._set_message("サブタイトル復元をキャンセルしました")
             return
-        self._core_service.restore_subtitle(selected_subtitle.id, operator_id=operator_id, role=self._role_context.role)
+
+        self._core_service.restore_subtitle(
+            selected_subtitle.id,
+            operator_id=operator_id,
+            role=self._role_context.role,
+        )
         self._set_message("サブタイトル復元しました")
-        self._refresh_subtitles()
+        self._refresh_subtitles(selected_subtitle.id)
 
     def _hard_delete_subtitle(self) -> None:
         if not can_run_destructive_actions(self._role_context.role):
             self._set_message("このロールではサブタイトル完全削除できません", is_error=True)
             return
+
         selected_title = self._require_selected_title()
         selected_subtitle = self._require_selected_subtitle()
         if selected_title is None or selected_subtitle is None:
@@ -488,27 +772,53 @@ class TitleSubtitleManagementTab(QWidget):
         if not selected_subtitle.deleted:
             self._set_message("完全削除は削除済みサブタイトルのみ可能です", is_error=True)
             return
+
         operator_id = self._require_operator_id()
         if operator_id is None:
             return
-        if not confirm_destructive_action(self, "完全削除の確認", f"サブタイトルID={selected_subtitle.id} を完全削除します。この操作は元に戻せません。"):
+
+        if not confirm_destructive_action(
+            self,
+            "完全削除の確認",
+            f"サブタイトルID={selected_subtitle.id} を完全削除します。この操作は元に戻せません。",
+        ):
             self._set_message("サブタイトル完全削除をキャンセルしました")
             return
-        self._core_service.hard_delete_subtitle(selected_subtitle.id, operator_id=operator_id, role=self._role_context.role)
+
+        self._core_service.hard_delete_subtitle(
+            selected_subtitle.id,
+            operator_id=operator_id,
+            role=self._role_context.role,
+        )
         self._set_message("サブタイトル完全削除しました")
         self._refresh_subtitles()
 
     def _title_payload(self) -> TitleInput:
-        return TitleInput(title_name=self.title_name_input.text(), note=self.title_note_input.text() or None)
+        return TitleInput(
+            title_name=self.title_name_input.text(),
+            note=self.title_note_input.text() or None,
+        )
 
     def _subtitle_payload(self, title_id: int) -> SubtitleInput:
-        return SubtitleInput(title_id=title_id, subtitle_code=self.subtitle_code_input.text(), subtitle_name=self.subtitle_name_input.text(), sort_order=int(self.subtitle_sort_order_input.text().strip() or "0"), note=self.subtitle_note_input.text() or None)
+        sort_order_text = self.subtitle_sort_order_input.text().strip() or "0"
+        return SubtitleInput(
+            title_id=title_id,
+            subtitle_code=self.subtitle_code_input.text(),
+            subtitle_name=self.subtitle_name_input.text(),
+            sort_order=int(sort_order_text),
+            note=self.subtitle_note_input.text() or None,
+        )
 
     def _refresh_name_candidates(self) -> None:
         try:
-            self._name_rows = _call_with_optional_role(self._query_service.search_names, include_deleted=False, role=self._role_context.role)
+            self._name_rows = _call_with_optional_role(
+                self._query_service.search_names,
+                include_deleted=False,
+                role=self._role_context.role,
+            )
         except Exception:
             self._name_rows = []
+
         self.title_link_names_list.clear()
         for row in self._name_rows:
             item = QListWidgetItem(f"{row.raw_name} (ID={row.id})")
@@ -516,15 +826,30 @@ class TitleSubtitleManagementTab(QWidget):
             self.title_link_names_list.addItem(item)
 
     def _selected_name_ids_for_create(self) -> list[int]:
-        return [int(item.data(0x0100)) for item in self.title_link_names_list.selectedItems()]
+        return [
+            int(item.data(0x0100))
+            for item in self.title_link_names_list.selectedItems()
+        ]
 
     def _refresh_linked_names(self, title_id: int) -> None:
         try:
-            rows = _call_with_optional_role(self._query_service.list_names_for_title, title_id, role=self._role_context.role, include_deleted=False)
+            rows = _call_with_optional_role(
+                self._query_service.list_names_for_title,
+                title_id,
+                role=self._role_context.role,
+                include_deleted=False,
+            )
         except Exception:
             self.linked_names_label.setText("紐づき名前: 取得失敗")
             return
-        self.linked_names_label.setText("紐づき名前: なし" if not rows else f"紐づき名前: {', '.join(r.raw_name for r in rows)}")
+
+        if not rows:
+            self.linked_names_label.setText("紐づき名前: なし")
+            return
+
+        self.linked_names_label.setText(
+            f"紐づき名前: {', '.join(row.raw_name for row in rows)}"
+        )
 
     def _require_operator_id(self) -> str | None:
         operator_id = self.operator_input.text().strip()
@@ -546,7 +871,8 @@ class TitleSubtitleManagementTab(QWidget):
         return self._selected_subtitle
 
     def _set_message(self, message: str, *, is_error: bool = False) -> None:
-        self.message_label.setStyleSheet(f"color: {'#b00020' if is_error else '#0b6b0b'};")
+        color = "#b00020" if is_error else "#0b6b0b"
+        self.message_label.setStyleSheet(f"color: {color};")
         self.message_label.setText(message)
 
     def _clear_subtitle_form(self) -> None:
@@ -560,11 +886,14 @@ class TitleSubtitleManagementTab(QWidget):
             self.selected_title_label.setText("選択中タイトル: 未選択")
             return
         status = "削除済み" if title.deleted_at else "有効"
-        self.selected_title_label.setText(f"選択中タイトル: ID={title.id} / {title.title_name} ({status})")
+        self.selected_title_label.setText(
+            f"選択中タイトル: ID={title.id} / {title.title_name} ({status})"
+        )
 
     def _update_action_states(self) -> None:
         can_write = can_create_or_update(self._role_context.role)
         can_destructive = can_run_destructive_actions(self._role_context.role)
+
         has_title = self._selected_title is not None
         title_deleted = bool(self._selected_title and self._selected_title.deleted)
         has_subtitle = self._selected_subtitle is not None
@@ -578,7 +907,7 @@ class TitleSubtitleManagementTab(QWidget):
 
         self.subtitle_refresh_button.setEnabled(has_title)
         self.subtitle_create_button.setEnabled(can_write and has_title and not title_deleted)
-        self.subtitle_update_button.setEnabled(can_write and has_title and has_subtitle and not title_deleted and not subtitle_deleted)
+        self.subtitle_update_button.setEnabled(can_write and has_title and has_subtitle and not title_deleted)
         self.subtitle_delete_button.setEnabled(can_destructive and has_title and has_subtitle and not title_deleted and not subtitle_deleted)
         self.subtitle_restore_button.setEnabled(can_destructive and has_title and has_subtitle and not title_deleted and subtitle_deleted)
         self.subtitle_hard_delete_button.setEnabled(can_destructive and has_title and has_subtitle and not title_deleted and subtitle_deleted)
@@ -586,6 +915,10 @@ class TitleSubtitleManagementTab(QWidget):
         if not has_title:
             self.subtitle_hint_label.setText("タイトルを選択してください")
         elif title_deleted:
-            self.subtitle_hint_label.setText("削除済みタイトルが選択されています（サブタイトル操作は無効）")
+            self.subtitle_hint_label.setText(
+                "削除済みタイトルが選択されています（サブタイトル操作は無効）"
+            )
         else:
-            self.subtitle_hint_label.setText("選択中タイトル配下のサブタイトルを操作できます")
+            self.subtitle_hint_label.setText(
+                "選択中タイトル配下のサブタイトルを操作できます"
+            )
