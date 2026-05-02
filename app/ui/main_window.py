@@ -17,10 +17,11 @@ from app.ui.role_context import RoleContext
 from app.ui.search_tab import SearchTab
 from app.ui.title_subtitle_management_tab import TitleSubtitleManagementTab
 from app.ui.trash_tab import TrashTab
+from app.ui.ui_style import apply_friendly_theme
 
 
 class MainWindow(QMainWindow):
-    """Top-level main window with minimal tab layout."""
+    """Top-level main window with user-facing tab layout."""
 
     def __init__(
         self,
@@ -33,18 +34,19 @@ class MainWindow(QMainWindow):
     ) -> None:
         super().__init__()
         self.setWindowTitle("NameVerification v3")
-        self.resize(1080, 720)
+        self.resize(1180, 760)
+        apply_friendly_theme(self)
 
         tabs = QTabWidget(self)
         active_role = role_context or RoleContext.admin()
-        tabs.addTab(SearchTab(query_service=query_service, role_context=active_role), "検索/照合")
+        tabs.addTab(SearchTab(query_service=query_service, role_context=active_role), "検索")
         tabs.addTab(
             NameManagementTab(
                 core_service=core_service,
                 query_service=query_service,
                 role_context=active_role,
             ),
-            "名前管理",
+            "名前を管理",
         )
         tabs.addTab(
             TitleSubtitleManagementTab(
@@ -52,7 +54,7 @@ class MainWindow(QMainWindow):
                 query_service=query_service,
                 role_context=active_role,
             ),
-            "タイトル/サブタイトル管理",
+            "タイトルを管理",
         )
         tabs.addTab(
             LinkManagementTab(
@@ -60,7 +62,7 @@ class MainWindow(QMainWindow):
                 query_service=query_service,
                 role_context=active_role,
             ),
-            "リンク管理",
+            "関連付け",
         )
         tabs.addTab(
             TrashTab(
@@ -68,11 +70,11 @@ class MainWindow(QMainWindow):
                 query_service=query_service,
                 role_context=active_role,
             ),
-            "ゴミ箱",
+            "削除データ",
         )
         tabs.addTab(
             AuditLogTab(query_service=query_service, role_context=active_role),
-            "監査ログ",
+            "操作履歴",
         )
         if (
             export_backup_service is not None
@@ -86,6 +88,6 @@ class MainWindow(QMainWindow):
                     import_service=import_service,
                     role_context=active_role,
                 ),
-                "運用操作",
+                "データ入出力",
             )
         self.setCentralWidget(tabs)

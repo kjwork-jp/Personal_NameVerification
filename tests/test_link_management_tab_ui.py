@@ -117,7 +117,11 @@ def _app() -> QApplication:
 
 def test_link_management_tab_link_and_unlink(monkeypatch: pytest.MonkeyPatch) -> None:
     _app()
-    monkeypatch.setattr(link_tab_module, "confirm_destructive_action", lambda *args, **kwargs: True)
+    monkeypatch.setattr(
+        link_tab_module,
+        "confirm_destructive_action",
+        lambda *args, **kwargs: True,
+    )
     core = StubCoreService()
     query = StubQueryService()
     tab = LinkManagementTab(core_service=core, query_service=query)
@@ -138,13 +142,15 @@ def test_link_management_tab_requires_operator_and_relation_type() -> None:
     tab.operator_input.setText("")
     tab.relation_type_combo.setCurrentIndex(0)
     tab._create_link()
-    assert "操作者ID" in tab.message_label.text()
+    assert "操作者" in tab.message_label.text()
 
 
 def test_link_management_cancel_unlink(monkeypatch: pytest.MonkeyPatch) -> None:
     _app()
     monkeypatch.setattr(
-        link_tab_module, "confirm_destructive_action", lambda *args, **kwargs: False
+        link_tab_module,
+        "confirm_destructive_action",
+        lambda *args, **kwargs: False,
     )
     core = StubCoreService()
     tab = LinkManagementTab(core_service=core, query_service=StubQueryService())
@@ -181,7 +187,7 @@ def test_link_management_role_guards() -> None:
     )
     assert admin.link_button.isEnabled()
     assert admin.unlink_button.isEnabled()
-    assert "relation_type" in admin.relation_type_combo.toolTip()
+    assert "関係" in admin.relation_type_combo.toolTip()
 
 
 def test_link_management_tab_requires_relation_type_selection() -> None:
@@ -192,12 +198,16 @@ def test_link_management_tab_requires_relation_type_selection() -> None:
     tab.relation_type_combo.setCurrentIndex(0)
     tab._create_link()
 
-    assert "relation_type" in tab.message_label.text()
+    assert "関連の種類" in tab.message_label.text()
 
 
 def test_link_management_tab_accepts_custom_relation_type(monkeypatch: pytest.MonkeyPatch) -> None:
     _app()
-    monkeypatch.setattr(link_tab_module, "confirm_destructive_action", lambda *args, **kwargs: True)
+    monkeypatch.setattr(
+        link_tab_module,
+        "confirm_destructive_action",
+        lambda *args, **kwargs: True,
+    )
     core = StubCoreService()
     tab = LinkManagementTab(core_service=core, query_service=StubQueryService())
 
@@ -218,8 +228,8 @@ def test_link_management_custom_relation_type_requires_text() -> None:
     tab.custom_relation_type_input.setText("")
     tab._create_link()
 
-    assert "custom relation_type" in tab.message_label.text()
-    assert "custom relation_type" in tab.custom_relation_type_input.toolTip()
+    assert "補足説明" in tab.message_label.text()
+    assert "その他" in tab.custom_relation_type_input.toolTip()
 
 
 def test_link_management_propagates_editor_role_to_service() -> None:

@@ -1,4 +1,4 @@
-"""Name ↔ Subtitle link management tab UI."""
+"""Name ↔ Subtitle relationship management tab UI."""
 
 from __future__ import annotations
 
@@ -21,10 +21,11 @@ from app.ui.dialogs import confirm_destructive_action
 from app.ui.permissions import can_link, can_unlink
 from app.ui.relation_types import RELATION_TYPE_OPTIONS
 from app.ui.role_context import RoleContext
+from app.ui.ui_style import PageHeader
 
 
 class LinkManagementTab(QWidget):
-    """UI for managing links between names and subtitles."""
+    """UI for managing relationships between names and subtitles."""
 
     def __init__(
         self,
@@ -42,61 +43,74 @@ class LinkManagementTab(QWidget):
         self._links: list[Any] = []
 
         self.operator_input = QLineEdit()
-        self.operator_input.setPlaceholderText("操作者ID")
-        self.operator_input.setToolTip("操作者ID が必要です")
+        self.operator_input.setPlaceholderText("操作者名または運用担当者ID")
+        self.operator_input.setToolTip("変更履歴に記録する操作者を入力します")
         self.relation_type_combo = QComboBox()
-        self.relation_type_combo.addItem("-- relation_type を選択 --", "")
+        self.relation_type_combo.addItem("-- 関連の種類を選択 --", "")
         for option in RELATION_TYPE_OPTIONS:
-            self.relation_type_combo.addItem(option.label, option.value)
-        self.relation_type_combo.setToolTip("relation_type を選択してください")
+            self.relation_type_combo.addItem(_relation_label(option.label), option.value)
+        self.relation_type_combo.setToolTip("名前とサブタイトルの関係を選択してください")
         self.relation_type_combo.currentIndexChanged.connect(self._on_relation_type_changed)
         self.custom_relation_type_input = QLineEdit()
-        self.custom_relation_type_input.setPlaceholderText("カスタム relation_type")
+        self.custom_relation_type_input.setPlaceholderText("補足説明（任意）")
         self.custom_relation_type_input.setEnabled(False)
         self.custom_relation_type_input.setToolTip(
-            "other 選択時に custom relation_type を入力してください"
+            "その他を選択した場合だけ、関係の説明を入力します"
         )
         self.message_label = QLabel("")
 
         self.names_table = QTableWidget(0, 2)
-        self.names_table.setHorizontalHeaderLabels(["ID", "名前"])
+        self.names_table.setHorizontalHeaderLabels(["内部ID", "名前"])
+        self.names_table.setColumnHidden(0, True)
         self.titles_table = QTableWidget(0, 2)
-        self.titles_table.setHorizontalHeaderLabels(["ID", "タイトル"])
+        self.titles_table.setHorizontalHeaderLabels(["内部ID", "タイトル"])
+        self.titles_table.setColumnHidden(0, True)
         self.subtitles_table = QTableWidget(0, 3)
-        self.subtitles_table.setHorizontalHeaderLabels(["ID", "コード", "サブタイトル"])
+        self.subtitles_table.setHorizontalHeaderLabels(["内部ID", "管理番号", "サブタイトル"])
+        self.subtitles_table.setColumnHidden(0, True)
+        self.subtitles_table.setColumnHidden(1, True)
         self.links_table = QTableWidget(0, 4)
         self.links_table.setHorizontalHeaderLabels(
-            ["リンクID", "タイトル", "コード", "relation_type"]
+            ["内部リンクID", "タイトル", "管理番号", "関連の種類"]
         )
+        self.links_table.setColumnHidden(0, True)
+        self.links_table.setColumnHidden(2, True)
 
         self.names_table.itemSelectionChanged.connect(self._refresh_links)
         self.titles_table.itemSelectionChanged.connect(self._refresh_subtitles)
-        self.refresh_button = QPushButton("再読込")
-        self.link_button = QPushButton("リンク作成")
-        self.unlink_button = QPushButton("リンク解除")
+        self.refresh_button = QPushButton("一覧を更新")
+        self.link_button = QPushButton("関連付ける")
+        self.unlink_button = QPushButton("関連を外す")
         self.refresh_button.clicked.connect(self._refresh_all)
         self.link_button.clicked.connect(self._create_link)
         self.unlink_button.clicked.connect(self._unlink_link)
 
         form = QFormLayout()
-        form.addRow("操作者ID", self.operator_input)
-        form.addRow("relation_type", self.relation_type_combo)
-        form.addRow("custom_relation_type", self.custom_relation_type_input)
+        form.addRow("操作者", self.operator_input)
+        form.addRow("関連の種類", self.relation_type_combo)
+        form.addRow("補足説明", self.custom_relation_type_input)
         actions = QHBoxLayout()
         actions.addWidget(self.refresh_button)
         actions.addWidget(self.link_button)
         actions.addWidget(self.unlink_button)
         layout = QVBoxLayout(self)
+        layout.addWidget(
+            PageHeader(
+                "関連付け",
+                "名前・タイトル・サブタイトルの関連を手動で調整する画面です。"
+                "通常はタイトル管理やサブタイトル管理から登録し、例外的な修正だけここで行います。",
+            )
+        )
         layout.addLayout(form)
         layout.addLayout(actions)
         layout.addWidget(self.message_label)
-        layout.addWidget(QLabel("名前"))
+        layout.addWidget(QLabel("1. 名前を選択"))
         layout.addWidget(self.names_table)
-        layout.addWidget(QLabel("タイトル"))
+        layout.addWidget(QLabel("2. タイトルを選択"))
         layout.addWidget(self.titles_table)
-        layout.addWidget(QLabel("サブタイトル"))
+        layout.addWidget(QLabel("3. サブタイトルを選択"))
         layout.addWidget(self.subtitles_table)
-        layout.addWidget(QLabel("既存リンク"))
+        layout.addWidget(QLabel("現在の関連一覧"))
         layout.addWidget(self.links_table)
 
         self._apply_role_guards()
@@ -109,12 +123,12 @@ class LinkManagementTab(QWidget):
         self.link_button.setToolTip(
             "このロールでは実行できません"
             if not can_link(role)
-            else "operator_id・relation_type・Name/Subtitle選択が必要です"
+            else "操作者・関連の種類・名前・サブタイトルの選択が必要です"
         )
         self.unlink_button.setToolTip(
             "このロールでは実行できません"
             if not can_unlink(role)
-            else "解除対象リンクを選択してください"
+            else "解除対象の関連を選択してください"
         )
 
     def _refresh_all(self) -> None:
@@ -202,7 +216,7 @@ class LinkManagementTab(QWidget):
             self.links_table.setItem(row_index, 0, QTableWidgetItem(str(row.link_id)))
             self.links_table.setItem(row_index, 1, QTableWidgetItem(row.title_name))
             self.links_table.setItem(row_index, 2, QTableWidgetItem(row.subtitle_code))
-            self.links_table.setItem(row_index, 3, QTableWidgetItem(row.relation_type))
+            self.links_table.setItem(row_index, 3, QTableWidgetItem(_relation_label(row.relation_type)))
         if self._links:
             self.links_table.selectRow(0)
 
@@ -210,9 +224,7 @@ class LinkManagementTab(QWidget):
         is_custom = str(self.relation_type_combo.currentData()) == "other"
         self.custom_relation_type_input.setEnabled(is_custom)
         self.custom_relation_type_input.setToolTip(
-            "custom relation_type を入力してください"
-            if is_custom
-            else "other 選択時のみ入力できます"
+            "その他の関係を説明してください" if is_custom else "その他を選択した場合だけ入力できます"
         )
         if not is_custom:
             self.custom_relation_type_input.clear()
@@ -227,7 +239,7 @@ class LinkManagementTab(QWidget):
         name_id = self._selected_name_id()
         subtitle_id = self._selected_subtitle_id()
         if name_id is None or subtitle_id is None:
-            self._set_message("Name と Subtitle を選択してください", is_error=True)
+            self._set_message("名前とサブタイトルを選択してください", is_error=True)
             return
         self._core_service.link_name_to_subtitle(
             name_id,
@@ -236,7 +248,7 @@ class LinkManagementTab(QWidget):
             operator_id=operator_id,
             role=self._role_context.role,
         )
-        self._set_message("リンク作成しました")
+        self._set_message("関連付けを作成しました")
         self._refresh_links()
 
     def _unlink_link(self) -> None:
@@ -245,32 +257,32 @@ class LinkManagementTab(QWidget):
             return
         link_id = self._selected_link_id()
         if link_id is None:
-            self._set_message("解除するリンクを選択してください", is_error=True)
+            self._set_message("外す関連を選択してください", is_error=True)
             return
         if not confirm_destructive_action(
             self,
-            "リンク解除の確認",
-            f"リンクID={link_id} を解除します。よろしいですか？",
+            "関連解除の確認",
+            "選択した関連を外します。よろしいですか？",
         ):
-            self._set_message("リンク解除をキャンセルしました")
+            self._set_message("関連解除をキャンセルしました")
             return
         self._core_service.unlink_name_from_subtitle(
             link_id,
             operator_id=operator_id,
             role=self._role_context.role,
         )
-        self._set_message("リンク解除しました")
+        self._set_message("関連を外しました")
         self._refresh_links()
 
     def _selected_relation_type(self) -> str | None:
         selected_value = str(self.relation_type_combo.currentData())
         if not selected_value:
-            self._set_message("relation_type を選択してください", is_error=True)
+            self._set_message("関連の種類を選択してください", is_error=True)
             return None
         if selected_value == "other":
             custom_value = self.custom_relation_type_input.text().strip()
             if not custom_value:
-                self._set_message("custom relation_type を入力してください", is_error=True)
+                self._set_message("補足説明を入力してください", is_error=True)
                 return None
             return custom_value
         return selected_value
@@ -278,14 +290,25 @@ class LinkManagementTab(QWidget):
     def _require_operator_id(self) -> str | None:
         operator_id = self.operator_input.text().strip()
         if not operator_id:
-            self._set_message("操作者ID を入力してください", is_error=True)
+            self._set_message("操作者を入力してください", is_error=True)
             return None
         return operator_id
 
     def _set_message(self, message: str, *, is_error: bool = False) -> None:
-        color = "#b00020" if is_error else "#0b6b0b"
+        color = "#ff8a8a" if is_error else "#7ee787"
         self.message_label.setStyleSheet(f"color: {color};")
         self.message_label.setText(message)
+
+
+def _relation_label(value: str) -> str:
+    mapping = {
+        "primary": "主要",
+        "secondary": "補助",
+        "alias": "別名",
+        "other": "その他",
+        "primary（主関連）": "主要",
+    }
+    return mapping.get(value, value)
 
 
 def _call_optional_role(function: Any, *args: Any, **kwargs: Any) -> Any:
