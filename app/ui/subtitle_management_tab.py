@@ -32,7 +32,9 @@ class SubtitleManagementTab(QWidget):
             role_context=role_context,
         )
         self._hide_title_creation_controls()
+        self._hide_internal_columns()
         self._rename_labels()
+        self._add_guidance_tooltips()
 
         layout = QVBoxLayout(self)
         layout.addWidget(
@@ -58,16 +60,39 @@ class SubtitleManagementTab(QWidget):
         ]:
             widget.hide()
 
+    def _hide_internal_columns(self) -> None:
+        self.editor.titles_table.setColumnHidden(0, True)
+        self.editor.subtitles_table.setColumnHidden(0, True)
+        self.editor.subtitles_table.setColumnHidden(1, True)
+
     def _rename_labels(self) -> None:
         replacements = {
+            "タイトル": "タイトルを選択",
             "サブタイトル": "サブタイトル情報",
             "コード": "管理番号（自動化予定）",
             "sort_order": "表示順",
             "選択中タイトル: 未選択": "選択中のタイトル: 未選択",
-            "タイトルを選択するとサブタイトル操作が有効になります": "上の一覧からタイトルを選ぶと、サブタイトルを管理できます",
             "操作者ID": "操作者",
         }
+        long_hint = "タイトルを選択するとサブタイトル操作が有効になります"
         for label in self.editor.findChildren(QLabel):
             text = label.text()
             if text in replacements:
                 label.setText(replacements[text])
+            elif text == long_hint:
+                label.setText("上の一覧からタイトルを選ぶと、サブタイトルを管理できます")
+            elif text == "タイトル作成時に紐づける名前":
+                label.hide()
+            elif text.startswith("紐づき名前:"):
+                label.hide()
+
+    def _add_guidance_tooltips(self) -> None:
+        self.editor.operator_input.setToolTip(
+            "現在は変更履歴用に入力します。将来的には設定またはログイン情報から自動入力します。"
+        )
+        self.editor.subtitle_code_input.setToolTip(
+            "現在は互換性のため残しています。将来的には自動生成に変更します。"
+        )
+        self.editor.subtitle_sort_order_input.setToolTip(
+            "一覧での表示順です。未入力時は 0 として扱います。"
+        )
