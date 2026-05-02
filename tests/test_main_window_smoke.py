@@ -168,13 +168,13 @@ def test_main_window_has_required_tabs() -> None:
     tab_widget = window.centralWidget()
     assert tab_widget is not None
     assert tab_widget.count() == 7
-    assert tab_widget.tabText(0) == "検索/照合"
-    assert tab_widget.tabText(1) == "名前管理"
-    assert tab_widget.tabText(2) == "タイトル/サブタイトル管理"
-    assert tab_widget.tabText(3) == "リンク管理"
-    assert tab_widget.tabText(4) == "ゴミ箱"
-    assert tab_widget.tabText(5) == "監査ログ"
-    assert tab_widget.tabText(6) == "運用操作"
+    assert tab_widget.tabText(0) == "検索"
+    assert tab_widget.tabText(1) == "名前を管理"
+    assert tab_widget.tabText(2) == "タイトルを管理"
+    assert tab_widget.tabText(3) == "関連付け"
+    assert tab_widget.tabText(4) == "削除データ"
+    assert tab_widget.tabText(5) == "操作履歴"
+    assert tab_widget.tabText(6) == "データ入出力"
 
 
 def test_main_window_accepts_role_context() -> None:
