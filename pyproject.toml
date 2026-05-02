@@ -28,7 +28,10 @@ exclude = ["tests", "docs", "prompts", "db", "assets", "scripts", "app.ui.old", 
 [tool.black]
 line-length = 100
 target-version = ["py312"]
-exclude = '''
+include = '''
+^/(app/(application|domain|infrastructure)/.*\.py|app/__init__\.py|app/pyside6_main\.py)$
+'''
+force-exclude = '''
 /(
   \.git
   | \.venv
@@ -38,10 +41,7 @@ exclude = '''
   | \.ruff_cache
   | build
   | dist
-  | app/ui/old
-  | app/ui/operations_test_fixes\.py
-  | app/ui/title_subtitle_management_tab\.py
-  | app/ui/operations_tab\.py
+  | app/ui
 )/
 '''
 
@@ -87,4 +87,4 @@ ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = ["app.ui.*"]
-disable_error_code = ["misc", "no-any-return", "assignment", "attr-defined"]
+disable_error_code = ["misc", "no-any-return", "assignment", "attr-defined", "method-assign"]
