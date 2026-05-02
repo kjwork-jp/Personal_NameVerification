@@ -15,7 +15,8 @@ from app.ui.name_management_tab import NameManagementTab
 from app.ui.operations_tab import OperationsTab
 from app.ui.role_context import RoleContext
 from app.ui.search_tab import SearchTab
-from app.ui.title_subtitle_management_tab import TitleSubtitleManagementTab
+from app.ui.subtitle_management_tab import SubtitleManagementTab
+from app.ui.title_management_tab import TitleManagementTab
 from app.ui.trash_tab import TrashTab
 from app.ui.ui_style import apply_friendly_theme
 
@@ -49,12 +50,20 @@ class MainWindow(QMainWindow):
             "名前を管理",
         )
         tabs.addTab(
-            TitleSubtitleManagementTab(
+            TitleManagementTab(
                 core_service=core_service,
                 query_service=query_service,
                 role_context=active_role,
             ),
             "タイトルを管理",
+        )
+        tabs.addTab(
+            SubtitleManagementTab(
+                core_service=core_service,
+                query_service=query_service,
+                role_context=active_role,
+            ),
+            "サブタイトルを管理",
         )
         tabs.addTab(
             LinkManagementTab(
