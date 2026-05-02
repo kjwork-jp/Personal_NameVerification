@@ -117,7 +117,11 @@ def _app() -> QApplication:
 
 def test_link_management_tab_link_and_unlink(monkeypatch: pytest.MonkeyPatch) -> None:
     _app()
-    monkeypatch.setattr(link_tab_module, "confirm_destructive_action", lambda *args, **kwargs: True)
+    monkeypatch.setattr(
+        link_tab_module,
+        "confirm_destructive_action",
+        lambda *args, **kwargs: True,
+    )
     core = StubCoreService()
     query = StubQueryService()
     tab = LinkManagementTab(core_service=core, query_service=query)
@@ -143,7 +147,11 @@ def test_link_management_tab_requires_operator_and_relation_type() -> None:
 
 def test_link_management_cancel_unlink(monkeypatch: pytest.MonkeyPatch) -> None:
     _app()
-    monkeypatch.setattr(link_tab_module, "confirm_destructive_action", lambda *args, **kwargs: False)
+    monkeypatch.setattr(
+        link_tab_module,
+        "confirm_destructive_action",
+        lambda *args, **kwargs: False,
+    )
     core = StubCoreService()
     tab = LinkManagementTab(core_service=core, query_service=StubQueryService())
 
@@ -195,7 +203,11 @@ def test_link_management_tab_requires_relation_type_selection() -> None:
 
 def test_link_management_tab_accepts_custom_relation_type(monkeypatch: pytest.MonkeyPatch) -> None:
     _app()
-    monkeypatch.setattr(link_tab_module, "confirm_destructive_action", lambda *args, **kwargs: True)
+    monkeypatch.setattr(
+        link_tab_module,
+        "confirm_destructive_action",
+        lambda *args, **kwargs: True,
+    )
     core = StubCoreService()
     tab = LinkManagementTab(core_service=core, query_service=StubQueryService())
 
