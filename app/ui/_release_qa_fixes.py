@@ -8,7 +8,7 @@ PySide6 tab classes.
 from __future__ import annotations
 
 from collections.abc import Callable
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
 
 from app.ui.role_context import UserRole
@@ -20,19 +20,23 @@ def apply_release_qa_fixes() -> None:
     from app.ui.operations_tab import OperationsTab
     from app.ui.title_subtitle_management_tab import TitleSubtitleManagementTab
 
-    OperationsTab._run_export_csv = _run_export_csv  # type: ignore[method-assign]
-    OperationsTab._run_restore = _run_restore  # type: ignore[method-assign]
-    OperationsTab._run_import_json = _run_import_json  # type: ignore[method-assign]
+    OperationsTab._run_export_csv = _run_export_csv
+    OperationsTab._run_restore = _run_restore
+    OperationsTab._run_import_json = _run_import_json
 
-    TitleSubtitleManagementTab._update_action_states = (  # type: ignore[method-assign]
-        _title_subtitle_update_action_states
-    )
-    TitleSubtitleManagementTab._update_subtitle = _update_subtitle  # type: ignore[method-assign]
-    TitleSubtitleManagementTab._delete_subtitle = _delete_subtitle  # type: ignore[method-assign]
-    TitleSubtitleManagementTab._restore_subtitle = _restore_subtitle  # type: ignore[method-assign]
-    TitleSubtitleManagementTab._hard_delete_subtitle = (  # type: ignore[method-assign]
-        _hard_delete_subtitle
-    )
+    TitleSubtitleManagementTab._update_action_states = _title_subtitle_update_action_states
+    TitleSubtitleManagementTab._update_subtitle = _update_subtitle
+    TitleSubtitleManagementTab._delete_subtitle = _delete_subtitle
+    TitleSubtitleManagementTab._restore_subtitle = _restore_subtitle
+    TitleSubtitleManagementTab._hard_delete_subtitle = _hard_delete_subtitle
+
+
+def _ui_path(value: str) -> Path | PurePosixPath:
+    """Return a path object while preserving POSIX-like test paths on Windows."""
+
+    if value.startswith("/"):
+        return PurePosixPath(value)
+    return Path(value)
 
 
 def _start_operation(
@@ -88,7 +92,7 @@ def _run_export_csv(self: Any) -> None:
         return
 
     def _work() -> object:
-        return self._export_backup_service.export_csv(Path(output_dir), role=self._role)
+        return self._export_backup_service.export_csv(_ui_path(output_dir), role=self._role)
 
     _start_operation(
         self,
@@ -121,8 +125,8 @@ def _run_restore(self: Any) -> None:
 
     def _work() -> object:
         return self._backup_restore_service.restore_database(
-            Path(backup_path),
-            Path(target_path),
+            _ui_path(backup_path),
+            _ui_path(target_path),
             role=self._role,
         )
 
@@ -159,7 +163,7 @@ def _run_import_json(self: Any) -> None:
         return
 
     def _work() -> object:
-        return self._import_service.import_json(Path(json_path), role=self._role)
+        return self._import_service.import_json(_ui_path(json_path), role=self._role)
 
     _start_operation(
         self,
