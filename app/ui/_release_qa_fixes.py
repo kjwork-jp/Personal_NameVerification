@@ -11,12 +11,18 @@ from collections.abc import Callable
 from pathlib import Path, PurePosixPath
 from typing import Any
 
+from app.ui.input_defaults import (
+    default_operator_id,
+    friendly_error_message,
+    generate_subtitle_code,
+)
 from app.ui.role_context import UserRole
 
 
 def apply_release_qa_fixes() -> None:
     """Patch the active UI classes for the final QA gate."""
 
+    from app.ui.name_management_tab import NameManagementTab
     from app.ui.operations_tab import OperationsTab
     from app.ui.title_subtitle_management_tab import TitleSubtitleManagementTab
 
@@ -24,11 +30,54 @@ def apply_release_qa_fixes() -> None:
     OperationsTab._run_restore = _run_restore
     OperationsTab._run_import_json = _run_import_json
 
+    NameManagementTab.__init__ = _patched_name_management_init(NameManagementTab.__init__)
+    NameManagementTab._create_name = _name_create_name
+    NameManagementTab._update_name = _name_update_name
+
+    TitleSubtitleManagementTab.__init__ = _patched_title_subtitle_init(
+        TitleSubtitleManagementTab.__init__
+    )
+    TitleSubtitleManagementTab._create_title = _create_title
+    TitleSubtitleManagementTab._update_title = _update_title
+    TitleSubtitleManagementTab._subtitle_payload = _subtitle_payload
     TitleSubtitleManagementTab._update_action_states = _title_subtitle_update_action_states
     TitleSubtitleManagementTab._update_subtitle = _update_subtitle
     TitleSubtitleManagementTab._delete_subtitle = _delete_subtitle
     TitleSubtitleManagementTab._restore_subtitle = _restore_subtitle
     TitleSubtitleManagementTab._hard_delete_subtitle = _hard_delete_subtitle
+
+
+def _patched_name_management_init(original_init: Callable[..., None]) -> Callable[..., None]:
+    def _wrapped(self: Any, *args: Any, **kwargs: Any) -> None:
+        original_init(self, *args, **kwargs)
+        _set_default_operator(self)
+        self.operator_input.setToolTip(
+            "初期値は自動入力されます。必要な場合だけ変更してください。"
+        )
+        self.operator_input.setPlaceholderText("操作者（自動入力）")
+        self.names_table.setColumnHidden(0, True)
+
+    return _wrapped
+
+
+def _patched_title_subtitle_init(original_init: Callable[..., None]) -> Callable[..., None]:
+    def _wrapped(self: Any, *args: Any, **kwargs: Any) -> None:
+        original_init(self, *args, **kwargs)
+        _set_default_operator(self)
+        self.operator_input.setToolTip(
+            "初期値は自動入力されます。必要な場合だけ変更してください。"
+        )
+        self.operator_input.setPlaceholderText("操作者（自動入力）")
+        self.subtitle_code_input.setPlaceholderText("未入力なら自動生成")
+        self.titles_table.setColumnHidden(0, True)
+        self.subtitles_table.setColumnHidden(0, True)
+
+    return _wrapped
+
+
+def _set_default_operator(self: Any) -> None:
+    if not self.operator_input.text().strip():
+        self.operator_input.setText(default_operator_id())
 
 
 def _ui_path(value: str) -> Path | PurePosixPath:
@@ -179,6 +228,123 @@ def _role(self: Any) -> UserRole:
     return self._role_context.role
 
 
+def _name_create_name(self: Any) -> None:
+    from app.ui.permissions import can_create_or_update
+
+    if not can_create_or_update(self._role_context.role):
+        self._set_message("このロールでは新規作成できません", is_error=True)
+        return
+    operator_id = self._require_operator_id()
+    if operator_id is None:
+        return
+    try:
+        self._core_service.create_name(
+            self._current_payload(),
+            operator_id=operator_id,
+            role=self._role_context.role,
+        )
+        self._set_message("新規作成しました")
+        self._refresh_list()
+    except Exception as exc:  # noqa: BLE001
+        self._set_message(friendly_error_message("名前の新規作成", exc), is_error=True)
+
+
+def _name_update_name(self: Any) -> None:
+    from app.ui.permissions import can_create_or_update
+
+    if not can_create_or_update(self._role_context.role):
+        self._set_message("このロールでは更新できません", is_error=True)
+        return
+    selected = self._require_selected()
+    operator_id = self._require_operator_id()
+    if selected is None or operator_id is None:
+        return
+    if selected.deleted:
+        self._set_message("削除済みは更新できません", is_error=True)
+        return
+    try:
+        self._core_service.update_name(
+            selected.id,
+            self._current_payload(),
+            operator_id=operator_id,
+            role=self._role_context.role,
+        )
+        self._set_message("更新しました")
+        self._refresh_list()
+    except Exception as exc:  # noqa: BLE001
+        self._set_message(friendly_error_message("名前の更新", exc), is_error=True)
+
+
+def _create_title(self: Any) -> None:
+    from app.ui.permissions import can_create_or_update
+
+    if not can_create_or_update(self._role_context.role):
+        self._set_message("このロールではタイトル作成できません", is_error=True)
+        return
+
+    operator_id = self._require_operator_id()
+    if operator_id is None:
+        return
+
+    try:
+        self._core_service.create_title(
+            self._title_payload(),
+            operator_id=operator_id,
+            role=self._role_context.role,
+            name_ids=self._selected_name_ids_for_create(),
+        )
+        self._set_message("タイトル作成しました")
+        self._refresh_titles()
+    except Exception as exc:  # noqa: BLE001
+        self._set_message(friendly_error_message("タイトル作成", exc), is_error=True)
+
+
+def _update_title(self: Any) -> None:
+    from app.ui.permissions import can_create_or_update
+
+    if not can_create_or_update(self._role_context.role):
+        self._set_message("このロールではタイトル更新できません", is_error=True)
+        return
+
+    selected = self._require_selected_title()
+    if selected is None:
+        return
+    if selected.deleted:
+        self._set_message("削除済みタイトルは更新できません", is_error=True)
+        return
+
+    operator_id = self._require_operator_id()
+    if operator_id is None:
+        return
+
+    try:
+        self._core_service.update_title(
+            selected.id,
+            self._title_payload(),
+            operator_id=operator_id,
+            role=self._role_context.role,
+        )
+        self._set_message("タイトル更新しました")
+        self._refresh_titles(selected.id)
+    except Exception as exc:  # noqa: BLE001
+        self._set_message(friendly_error_message("タイトル更新", exc), is_error=True)
+
+
+def _subtitle_payload(self: Any, title_id: int) -> Any:
+    from app.application.core_services import SubtitleInput
+
+    sort_order_text = self.subtitle_sort_order_input.text().strip() or "0"
+    subtitle_code = self.subtitle_code_input.text().strip() or generate_subtitle_code()
+    self.subtitle_code_input.setText(subtitle_code)
+    return SubtitleInput(
+        title_id=title_id,
+        subtitle_code=subtitle_code,
+        subtitle_name=self.subtitle_name_input.text(),
+        sort_order=int(sort_order_text),
+        note=self.subtitle_note_input.text() or None,
+    )
+
+
 def _title_subtitle_update_action_states(self: Any) -> None:
     from app.ui.permissions import can_create_or_update, can_run_destructive_actions
 
@@ -250,14 +416,17 @@ def _update_subtitle(self: Any) -> None:
     if operator_id is None:
         return
 
-    self._core_service.update_subtitle(
-        selected_subtitle.id,
-        self._subtitle_payload(selected_title.id),
-        operator_id=operator_id,
-        role=_role(self),
-    )
-    self._set_message("サブタイトル更新しました")
-    self._refresh_subtitles(selected_subtitle.id)
+    try:
+        self._core_service.update_subtitle(
+            selected_subtitle.id,
+            self._subtitle_payload(selected_title.id),
+            operator_id=operator_id,
+            role=_role(self),
+        )
+        self._set_message("サブタイトル更新しました")
+        self._refresh_subtitles(selected_subtitle.id)
+    except Exception as exc:  # noqa: BLE001
+        self._set_message(friendly_error_message("サブタイトル更新", exc), is_error=True)
 
 
 def _delete_subtitle(self: Any) -> None:
