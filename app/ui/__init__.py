@@ -2,6 +2,7 @@
 
 from .audit_log_tab import AuditLogTab
 from .dialogs import confirm_destructive_action
+from .help_settings_tab import HelpSettingsTab
 from .link_management_tab import LinkManagementTab
 from .main_window import MainWindow
 from .name_management_tab import NameManagementTab
@@ -29,6 +30,7 @@ __all__ = [
     "SearchTab",
     "NameManagementTab",
     "OperationsTab",
+    "HelpSettingsTab",
     "TitleManagementTab",
     "SubtitleManagementTab",
     "TitleSubtitleManagementTab",
