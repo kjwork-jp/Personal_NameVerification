@@ -39,6 +39,7 @@ def apply_release_qa_fixes() -> None:
     )
     TitleSubtitleManagementTab._create_title = _create_title
     TitleSubtitleManagementTab._update_title = _update_title
+    TitleSubtitleManagementTab._create_subtitle = _create_subtitle
     TitleSubtitleManagementTab._subtitle_payload = _subtitle_payload
     TitleSubtitleManagementTab._update_action_states = _title_subtitle_update_action_states
     TitleSubtitleManagementTab._update_subtitle = _update_subtitle
@@ -328,6 +329,36 @@ def _update_title(self: Any) -> None:
         self._refresh_titles(selected.id)
     except Exception as exc:  # noqa: BLE001
         self._set_message(friendly_error_message("タイトル更新", exc), is_error=True)
+
+
+def _create_subtitle(self: Any) -> None:
+    from app.ui.permissions import can_create_or_update
+
+    if not can_create_or_update(self._role_context.role):
+        self._set_message("このロールではサブタイトル作成できません", is_error=True)
+        return
+
+    selected = self._require_selected_title()
+    if selected is None:
+        return
+    if selected.deleted:
+        self._set_message("削除済みタイトルにはサブタイトル作成できません", is_error=True)
+        return
+
+    operator_id = self._require_operator_id()
+    if operator_id is None:
+        return
+
+    try:
+        self._core_service.create_subtitle(
+            self._subtitle_payload(selected.id),
+            operator_id=operator_id,
+            role=self._role_context.role,
+        )
+        self._set_message("サブタイトル作成しました")
+        self._refresh_subtitles()
+    except Exception as exc:  # noqa: BLE001
+        self._set_message(friendly_error_message("サブタイトル作成", exc), is_error=True)
 
 
 def _subtitle_payload(self: Any, title_id: int) -> Any:
