@@ -18,7 +18,8 @@ def main() -> int:
     from app.infrastructure.db import initialize_database
     from app.ui.main_window import MainWindow
 
-    connection = initialize_database(Path("nameverification.db"))
+    database_path = Path("nameverification.db")
+    connection = initialize_database(database_path)
     query_service = QueryService(connection)
     core_service = CoreService(connection)
 
@@ -29,6 +30,7 @@ def main() -> int:
         export_backup_service=ExportBackupService(connection),
         backup_restore_service=BackupRestoreService(),
         import_service=ImportService(connection),
+        database_path=database_path,
     )
     window.show()
 

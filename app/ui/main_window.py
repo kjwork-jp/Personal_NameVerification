@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from PySide6.QtWidgets import QMainWindow, QTabWidget
 
 from app.application.backup_restore_services import BackupRestoreService
@@ -10,6 +12,7 @@ from app.application.export_backup_services import ExportBackupService
 from app.application.import_services import ImportService
 from app.application.query_services import QueryService
 from app.ui.audit_log_tab import AuditLogTab
+from app.ui.help_settings_tab import HelpSettingsTab
 from app.ui.link_management_tab import LinkManagementTab
 from app.ui.name_management_tab import NameManagementTab
 from app.ui.operations_tab import OperationsTab
@@ -32,6 +35,7 @@ class MainWindow(QMainWindow):
         export_backup_service: ExportBackupService | None = None,
         backup_restore_service: BackupRestoreService | None = None,
         import_service: ImportService | None = None,
+        database_path: Path | None = None,
     ) -> None:
         super().__init__()
         self.setWindowTitle("NameVerification v3")
@@ -99,4 +103,5 @@ class MainWindow(QMainWindow):
                 ),
                 "データ入出力",
             )
+        tabs.addTab(HelpSettingsTab(database_path=database_path), "ヘルプ / 設定")
         self.setCentralWidget(tabs)
