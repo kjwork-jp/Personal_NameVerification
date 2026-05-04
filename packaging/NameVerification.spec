@@ -2,16 +2,19 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 block_cipher = None
+PROJECT_ROOT = Path.cwd()
 
 
 a = Analysis(
-    ["app/pyside6_main.py"],
-    pathex=[],
+    [str(PROJECT_ROOT / "app" / "pyside6_main.py")],
+    pathex=[str(PROJECT_ROOT)],
     binaries=[],
     datas=[
-        ("db/schema.sql", "db"),
-        ("db/migrations", "db/migrations"),
+        (str(PROJECT_ROOT / "db" / "schema.sql"), "db"),
+        (str(PROJECT_ROOT / "db" / "migrations"), "db/migrations"),
     ],
     hiddenimports=[
         "PySide6.QtCore",
