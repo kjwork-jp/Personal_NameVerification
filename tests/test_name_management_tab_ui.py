@@ -179,7 +179,7 @@ def test_name_management_role_guards() -> None:
     assert tab_admin.delete_button.isEnabled()
     assert tab_admin.restore_button.isEnabled()
     assert tab_admin.hard_delete_button.isEnabled()
-    assert "操作者ID" in tab_admin.operator_input.toolTip()
+    assert "自動入力" in tab_admin.operator_input.toolTip()
 
 
 def test_name_management_propagates_editor_role_to_service() -> None:
