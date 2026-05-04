@@ -226,7 +226,7 @@ def test_title_subtitle_role_guards() -> None:
     assert not admin.title_restore_button.isEnabled()
     assert admin.subtitle_delete_button.isEnabled()
     assert not admin.subtitle_hard_delete_button.isEnabled()
-    assert "操作者ID" in admin.operator_input.toolTip()
+    assert "自動入力" in admin.operator_input.toolTip()
 
 
 def test_selected_title_label_and_subtitle_form_clear_on_title_change() -> None:
