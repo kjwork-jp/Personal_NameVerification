@@ -18,6 +18,12 @@ from .trash_tab import TrashTab
 
 
 def _apply_release_qa_fixes() -> None:
+    """Apply transitional UI compatibility fixes.
+
+    These fixes remain temporarily until the behavior has been moved back into
+    the owning UI modules. See `docs/22_ui_ux_redesign_plan.md` Phase 5.
+    """
+
     from ._release_qa_fixes import apply_release_qa_fixes
 
     apply_release_qa_fixes()
