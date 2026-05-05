@@ -6,33 +6,28 @@ from PySide6.QtWidgets import QLabel, QVBoxLayout, QWidget
 
 
 def apply_friendly_theme(widget: QWidget) -> None:
-    """Apply a softer application-wide theme.
-
-    The current application still uses the platform dark palette, but this style
-    adds clearer sections, larger spacing, and warmer accent colors so the UI
-    feels less like a raw database administration tool.
-    """
+    """Apply a compact, softer application-wide theme."""
 
     widget.setStyleSheet(
         """
         QMainWindow, QWidget {
             background: #20242b;
             color: #f3f6fb;
-            font-size: 13px;
+            font-size: 12px;
         }
         QTabWidget::pane {
             border: 1px solid #3d4654;
-            border-radius: 10px;
+            border-radius: 8px;
             top: -1px;
             background: #242a33;
         }
         QTabBar::tab {
             background: #2d3440;
             color: #f3f6fb;
-            padding: 8px 16px;
-            margin-right: 4px;
-            border-top-left-radius: 10px;
-            border-top-right-radius: 10px;
+            padding: 6px 12px;
+            margin-right: 3px;
+            border-top-left-radius: 8px;
+            border-top-right-radius: 8px;
         }
         QTabBar::tab:selected {
             background: #4f8cff;
@@ -42,8 +37,8 @@ def apply_friendly_theme(widget: QWidget) -> None:
         QLineEdit, QComboBox, QTextEdit, QTableWidget {
             background: #2f3642;
             border: 1px solid #566173;
-            border-radius: 8px;
-            padding: 6px;
+            border-radius: 7px;
+            padding: 4px;
             selection-background-color: #4f8cff;
         }
         QLineEdit:focus, QComboBox:focus, QTextEdit:focus {
@@ -53,8 +48,8 @@ def apply_friendly_theme(widget: QWidget) -> None:
             background: #3f7dff;
             color: #ffffff;
             border: none;
-            border-radius: 10px;
-            padding: 7px 14px;
+            border-radius: 8px;
+            padding: 5px 10px;
             font-weight: 600;
         }
         QPushButton:hover {
@@ -66,22 +61,22 @@ def apply_friendly_theme(widget: QWidget) -> None:
         }
         QGroupBox {
             border: 1px solid #4b5565;
-            border-radius: 12px;
-            margin-top: 14px;
-            padding: 12px;
+            border-radius: 9px;
+            margin-top: 10px;
+            padding: 8px;
             background: #252c36;
         }
         QGroupBox::title {
             subcontrol-origin: margin;
-            left: 12px;
-            padding: 0 6px;
+            left: 10px;
+            padding: 0 5px;
             color: #72d6c9;
             font-weight: 700;
         }
         QHeaderView::section {
             background: #36404d;
             color: #ffffff;
-            padding: 6px;
+            padding: 4px;
             border: none;
             font-weight: 700;
         }
@@ -89,27 +84,41 @@ def apply_friendly_theme(widget: QWidget) -> None:
             gridline-color: #3d4654;
             alternate-background-color: #2a313b;
         }
+        QWidget#PageHeader {
+            background: #2b3442;
+            border: 1px solid #4f8cff;
+            border-radius: 9px;
+        }
+        QLabel#PageHeaderTitle {
+            font-size: 15px;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 1px;
+        }
+        QLabel#PageHeaderDescription {
+            color: #c8d3e0;
+            line-height: 125%;
+        }
         """
     )
 
 
 class PageHeader(QWidget):
-    """Small explanatory header shown at the top of each page."""
+    """Compact explanatory header shown at the top of each page."""
 
     def __init__(self, title: str, description: str) -> None:
         super().__init__()
+        self.setObjectName("PageHeader")
+
         title_label = QLabel(title)
-        title_label.setStyleSheet(
-            "font-size: 18px; font-weight: 700; color: #ffffff; margin-bottom: 2px;"
-        )
+        title_label.setObjectName("PageHeaderTitle")
+
         description_label = QLabel(description)
+        description_label.setObjectName("PageHeaderDescription")
         description_label.setWordWrap(True)
-        description_label.setStyleSheet("color: #c8d3e0; line-height: 140%;")
 
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(12, 10, 12, 10)
+        layout.setContentsMargins(8, 6, 8, 6)
+        layout.setSpacing(2)
         layout.addWidget(title_label)
         layout.addWidget(description_label)
-        self.setStyleSheet(
-            "background: #2b3442; border: 1px solid #4f8cff; border-radius: 12px;"
-        )
