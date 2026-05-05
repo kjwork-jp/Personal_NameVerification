@@ -14,7 +14,7 @@ from app.application.query_services import QueryService
 from app.ui.audit_log_tab import AuditLogTab
 from app.ui.help_settings_tab import HelpSettingsTab
 from app.ui.link_management_tab import LinkManagementTab
-from app.ui.name_management_tab import NameManagementTab
+from app.ui.name_management_tab_absorbed import NameManagementTab
 from app.ui.operations_tab import OperationsTab
 from app.ui.role_context import RoleContext
 from app.ui.search_tab import SearchTab
