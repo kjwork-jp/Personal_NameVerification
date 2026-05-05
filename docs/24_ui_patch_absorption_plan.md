@@ -4,19 +4,10 @@
 
 `app/ui/_release_qa_fixes.py` に残っている monkey patch を、各UIクラスの本体実装へ段階的に吸収する。
 
-## 背景
+## 現在の判断
 
-`_release_qa_fixes.py` は最終QAゲートを通すために追加された一時的な補正ファイルだったが、その後のUI改善により、以下の本番挙動も担っている。
-
-- OperationsTab の一部実行経路補正
-- NameManagementTab の操作者既定値
-- NameManagementTab の重複エラー文言変換
-- TitleSubtitleManagementTab の操作者既定値
-- TitleSubtitleManagementTab のタイトル/サブタイトル作成・更新時の重複エラー文言変換
-- TitleSubtitleManagementTab のサブタイトル管理番号自動生成
-- TitleSubtitleManagementTab の削除済みデータに対するボタン状態制御
-
-そのため、単純削除ではなく、責務ごとに本体へ移す。
+`_release_qa_fixes.py` は一時的なQA補正ファイルだったが、現状では本番挙動も担っている。
+そのため、単純削除ではなく、画面単位の小さいPRに分けて吸収する。
 
 ## 現在のパッチ責務
 
@@ -34,17 +25,7 @@
 | POSIX風path補正 | _ui_path | operations_tab.py or helper | 中 |
 | async operation共通処理 | _start_operation | operations_tab.py | 中 |
 
-## 移行方針
-
-### 原則
-
-- 1PRで全削除しない。
-- 画面単位で移す。
-- 各PRで `pytest -q`, `ruff check .`, `black --check .`, `mypy app` を通す。
-- 本体へ移した関数は `_release_qa_fixes.py` から削除する。
-- 最終PRで `_release_qa_fixes.py` と `app/ui/__init__.py` の自動適用を削除する。
-
-## 推奨PR分割
+## 更新後の推奨PR分割
 
 ### PR-A: NameManagementTab吸収
 
@@ -59,6 +40,7 @@
 
 - `NameManagementTab.__init__` patch を削除できる。
 - `_name_create_name` / `_name_update_name` patch を削除できる。
+- `_release_qa_fixes.py` はまだ削除しない。
 
 ### PR-B: TitleSubtitleManagementTab吸収
 
@@ -73,6 +55,7 @@
 
 - `TitleSubtitleManagementTab.__init__` patch を削除できる。
 - `_create_title`, `_update_title`, `_create_subtitle`, `_update_subtitle`, `_subtitle_payload`, `_update_action_states` patch を削除できる。
+- `_release_qa_fixes.py` はまだ削除しない。
 
 ### PR-C: OperationsTab吸収
 
@@ -85,8 +68,9 @@
 完了条件:
 
 - `OperationsTab._run_export_csv`, `_run_restore`, `_run_import_json` patch を削除できる。
+- Operations系のUIテストが通る。
 
-### PR-D: パッチ機構削除
+### PR-D: patch機構削除
 
 対象:
 
@@ -98,26 +82,13 @@
 
 - monkey patch なしで全品質ゲートが通る。
 
-## リスク
+## 実装時の注意
 
-| リスク | 対策 |
-|---|---|
-| UI本体の大規模編集で回帰 | 画面単位PRに分割する |
-| 既存テストがpatch前提 | PRごとに該当テストを確認する |
-| OperationsTabのasync処理が壊れる | Operationsは最後に移す |
-| black対象外UIの整形差分が大きい | 吸収PRではblack対象設定を変えない |
-
-## このPRでやること
-
-- 現在のpatch責務を明文化する。
-- 本体移行順を固定する。
-- 後続PRの単位を明確化する。
-
-## このPRでやらないこと
-
-- `_release_qa_fixes.py` の削除。
-- 大規模なUI本体書き換え。
-- black対象範囲の拡大。
+- 1PRで全削除しない。
+- 画面単位で移す。
+- 各PRで `pytest -q`, `ruff check .`, `black --check .`, `mypy app` を通す。
+- 本体へ移した関数だけを `_release_qa_fixes.py` から削除する。
+- OperationsTab は非同期実行・ログ記録・path補正が絡むため最後に移す。
 
 ## 次のアクション
 
