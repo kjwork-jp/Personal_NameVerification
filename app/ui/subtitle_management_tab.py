@@ -7,7 +7,7 @@ from typing import Any
 from PySide6.QtWidgets import QLabel, QVBoxLayout, QWidget
 
 from app.ui.role_context import RoleContext
-from app.ui.title_subtitle_management_tab import TitleSubtitleManagementTab
+from app.ui.title_subtitle_management_tab_absorbed import TitleSubtitleManagementTab
 from app.ui.ui_style import PageHeader
 
 
