@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 
@@ -18,7 +19,7 @@ def main() -> int:
     from app.infrastructure.db import initialize_database
     from app.ui.main_window import MainWindow
 
-    database_path = Path("nameverification.db")
+    database_path = Path(os.environ.get("NAMEVERIFICATION_DB_PATH", "nameverification.db"))
     connection = initialize_database(database_path)
     query_service = QueryService(connection)
     core_service = CoreService(connection)
