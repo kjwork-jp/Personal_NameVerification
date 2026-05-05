@@ -5,7 +5,7 @@ from .dialogs import confirm_destructive_action
 from .help_settings_tab import HelpSettingsTab
 from .link_management_tab import LinkManagementTab
 from .main_window import MainWindow
-from .name_management_tab import NameManagementTab
+from .name_management_tab_absorbed import NameManagementTab
 from .operations_tab import OperationsTab
 from .permissions import can_create_or_update, can_link, can_run_destructive_actions, can_unlink
 from .relation_types import RELATION_TYPE_OPTIONS, RelationTypeOption
@@ -16,6 +16,16 @@ from .title_management_tab import TitleManagementTab
 from .title_subtitle_management_tab import TitleSubtitleManagementTab
 from .trash_tab import TrashTab
 
+
+def _apply_release_qa_fixes() -> None:
+    """Apply remaining transitional UI compatibility fixes."""
+
+    from ._release_qa_fixes import apply_release_qa_fixes
+
+    apply_release_qa_fixes()
+
+
+_apply_release_qa_fixes()
 
 __all__ = [
     "MainWindow",

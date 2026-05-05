@@ -28,7 +28,6 @@ from app.application.read_models import (
     TitleDetail,
 )
 from app.ui.dialogs import confirm_destructive_action
-from app.ui.input_defaults import default_operator_id, friendly_error_message, generate_subtitle_code
 from app.ui.permissions import can_create_or_update, can_run_destructive_actions
 from app.ui.role_context import RoleContext, UserRole
 
@@ -187,16 +186,12 @@ class TitleSubtitleManagementTab(QWidget):
         self._selected_subtitle: _SubtitleSelection | None = None
 
         self.operator_input = QLineEdit()
-        self.operator_input.setText(default_operator_id())
-        self.operator_input.setPlaceholderText("操作者（自動入力）")
-        self.operator_input.setToolTip(
-            "初期値は自動入力されます。必要な場合だけ変更してください。"
-        )
+        self.operator_input.setPlaceholderText("操作者ID")
+        self.operator_input.setToolTip("操作者ID が必要です")
 
         self.title_name_input = QLineEdit()
         self.title_note_input = QLineEdit()
         self.subtitle_code_input = QLineEdit()
-        self.subtitle_code_input.setPlaceholderText("未入力なら自動生成")
         self.subtitle_name_input = QLineEdit()
         self.subtitle_sort_order_input = QLineEdit()
         self.subtitle_sort_order_input.setPlaceholderText("0")
@@ -211,12 +206,10 @@ class TitleSubtitleManagementTab(QWidget):
 
         self.titles_table = QTableWidget(0, 3)
         self.titles_table.setHorizontalHeaderLabels(["ID", "タイトル", "状態"])
-        self.titles_table.setColumnHidden(0, True)
         self.titles_table.itemSelectionChanged.connect(self._on_title_selected)
 
         self.subtitles_table = QTableWidget(0, 4)
         self.subtitles_table.setHorizontalHeaderLabels(["ID", "コード", "サブタイトル", "状態"])
-        self.subtitles_table.setColumnHidden(0, True)
         self.subtitles_table.itemSelectionChanged.connect(self._on_subtitle_selected)
 
         self.title_refresh_button = QPushButton("タイトル再読込")
@@ -513,7 +506,7 @@ class TitleSubtitleManagementTab(QWidget):
             self._set_message("タイトル作成しました")
             self._refresh_titles()
         except Exception as exc:
-            self._set_message(friendly_error_message("タイトル作成", exc), is_error=True)
+            self._set_message(f"タイトル作成に失敗しました: {exc}", is_error=True)
 
     def _update_title(self) -> None:
         if not can_create_or_update(self._role_context.role):
@@ -541,7 +534,7 @@ class TitleSubtitleManagementTab(QWidget):
             self._set_message("タイトル更新しました")
             self._refresh_titles(selected.id)
         except Exception as exc:
-            self._set_message(friendly_error_message("タイトル更新", exc), is_error=True)
+            self._set_message(f"タイトル更新に失敗しました: {exc}", is_error=True)
 
     def _delete_title(self) -> None:
         if not can_run_destructive_actions(self._role_context.role):
@@ -655,16 +648,13 @@ class TitleSubtitleManagementTab(QWidget):
         if operator_id is None:
             return
 
-        try:
-            self._core_service.create_subtitle(
-                self._subtitle_payload(selected.id),
-                operator_id=operator_id,
-                role=self._role_context.role,
-            )
-            self._set_message("サブタイトル作成しました")
-            self._refresh_subtitles()
-        except Exception as exc:  # noqa: BLE001
-            self._set_message(friendly_error_message("サブタイトル作成", exc), is_error=True)
+        self._core_service.create_subtitle(
+            self._subtitle_payload(selected.id),
+            operator_id=operator_id,
+            role=self._role_context.role,
+        )
+        self._set_message("サブタイトル作成しました")
+        self._refresh_subtitles()
 
     def _update_subtitle(self) -> None:
         if not can_create_or_update(self._role_context.role):
@@ -686,17 +676,14 @@ class TitleSubtitleManagementTab(QWidget):
         if operator_id is None:
             return
 
-        try:
-            self._core_service.update_subtitle(
-                selected_subtitle.id,
-                self._subtitle_payload(selected_title.id),
-                operator_id=operator_id,
-                role=self._role_context.role,
-            )
-            self._set_message("サブタイトル更新しました")
-            self._refresh_subtitles(selected_subtitle.id)
-        except Exception as exc:  # noqa: BLE001
-            self._set_message(friendly_error_message("サブタイトル更新", exc), is_error=True)
+        self._core_service.update_subtitle(
+            selected_subtitle.id,
+            self._subtitle_payload(selected_title.id),
+            operator_id=operator_id,
+            role=self._role_context.role,
+        )
+        self._set_message("サブタイトル更新しました")
+        self._refresh_subtitles(selected_subtitle.id)
 
     def _delete_subtitle(self) -> None:
         if not can_run_destructive_actions(self._role_context.role):
@@ -731,9 +718,8 @@ class TitleSubtitleManagementTab(QWidget):
             operator_id=operator_id,
             role=self._role_context.role,
         )
-        self._selected_subtitle = type(selected_subtitle)(selected_subtitle.id, True)
         self._set_message("サブタイトル論理削除しました")
-        self._update_action_states()
+        self._refresh_subtitles(selected_subtitle.id)
 
     def _restore_subtitle(self) -> None:
         if not can_run_destructive_actions(self._role_context.role):
@@ -768,9 +754,8 @@ class TitleSubtitleManagementTab(QWidget):
             operator_id=operator_id,
             role=self._role_context.role,
         )
-        self._selected_subtitle = type(selected_subtitle)(selected_subtitle.id, True)
         self._set_message("サブタイトル復元しました")
-        self._update_action_states()
+        self._refresh_subtitles(selected_subtitle.id)
 
     def _hard_delete_subtitle(self) -> None:
         if not can_run_destructive_actions(self._role_context.role):
@@ -816,11 +801,9 @@ class TitleSubtitleManagementTab(QWidget):
 
     def _subtitle_payload(self, title_id: int) -> SubtitleInput:
         sort_order_text = self.subtitle_sort_order_input.text().strip() or "0"
-        subtitle_code = self.subtitle_code_input.text().strip() or generate_subtitle_code()
-        self.subtitle_code_input.setText(subtitle_code)
         return SubtitleInput(
             title_id=title_id,
-            subtitle_code=subtitle_code,
+            subtitle_code=self.subtitle_code_input.text(),
             subtitle_name=self.subtitle_name_input.text(),
             sort_order=int(sort_order_text),
             note=self.subtitle_note_input.text() or None,
@@ -924,9 +907,7 @@ class TitleSubtitleManagementTab(QWidget):
 
         self.subtitle_refresh_button.setEnabled(has_title)
         self.subtitle_create_button.setEnabled(can_write and has_title and not title_deleted)
-        self.subtitle_update_button.setEnabled(
-            can_write and has_title and has_subtitle and not title_deleted and not subtitle_deleted
-        )
+        self.subtitle_update_button.setEnabled(can_write and has_title and has_subtitle and not title_deleted)
         self.subtitle_delete_button.setEnabled(can_destructive and has_title and has_subtitle and not title_deleted and not subtitle_deleted)
         self.subtitle_restore_button.setEnabled(can_destructive and has_title and has_subtitle and not title_deleted and subtitle_deleted)
         self.subtitle_hard_delete_button.setEnabled(can_destructive and has_title and has_subtitle and not title_deleted and subtitle_deleted)

@@ -21,7 +21,6 @@ from PySide6.QtWidgets import (
 from app.application.core_services import NameInput
 from app.application.read_models import NameDetail, NameSearchRow
 from app.ui.dialogs import confirm_destructive_action
-from app.ui.input_defaults import default_operator_id, friendly_error_message
 from app.ui.permissions import can_create_or_update, can_run_destructive_actions
 from app.ui.role_context import RoleContext, UserRole
 
@@ -106,11 +105,8 @@ class NameManagementTab(QWidget):
         self._selected: _SelectedName | None = None
 
         self.operator_input = QLineEdit()
-        self.operator_input.setText(default_operator_id())
-        self.operator_input.setPlaceholderText("操作者（自動入力）")
-        self.operator_input.setToolTip(
-            "初期値は自動入力されます。必要な場合だけ変更してください。"
-        )
+        self.operator_input.setPlaceholderText("操作者ID")
+        self.operator_input.setToolTip("操作者ID が必要です")
         self.raw_name_input = QLineEdit()
         self.raw_name_input.setPlaceholderText("表示名")
         self.note_input = QLineEdit()
@@ -119,7 +115,6 @@ class NameManagementTab(QWidget):
 
         self.names_table = QTableWidget(0, 4)
         self.names_table.setHorizontalHeaderLabels(["ID", "名前", "状態", "紐づき数"])
-        self.names_table.setColumnHidden(0, True)
         self.names_table.itemSelectionChanged.connect(self._on_row_selected)
         self.detail_text = QTextEdit()
         self.detail_text.setReadOnly(True)
@@ -264,7 +259,7 @@ class NameManagementTab(QWidget):
             self._set_message("新規作成しました")
             self._refresh_list()
         except Exception as exc:  # noqa: BLE001
-            self._set_message(friendly_error_message("名前の新規作成", exc), is_error=True)
+            self._set_message(f"新規作成に失敗しました: {exc}", is_error=True)
 
     def _update_name(self) -> None:
         if not can_create_or_update(self._role_context.role):
@@ -287,7 +282,7 @@ class NameManagementTab(QWidget):
             self._set_message("更新しました")
             self._refresh_list()
         except Exception as exc:  # noqa: BLE001
-            self._set_message(friendly_error_message("名前の更新", exc), is_error=True)
+            self._set_message(f"更新に失敗しました: {exc}", is_error=True)
 
     def _delete_name(self) -> None:
         selected = self._require_selected()

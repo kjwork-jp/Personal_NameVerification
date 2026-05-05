@@ -7,7 +7,7 @@ from typing import Any
 from PySide6.QtWidgets import QLabel, QVBoxLayout, QWidget
 
 from app.ui.role_context import RoleContext
-from app.ui.title_subtitle_management_tab import TitleSubtitleManagementTab
+from app.ui.title_subtitle_management_tab_absorbed import TitleSubtitleManagementTab
 from app.ui.ui_style import PageHeader
 
 
@@ -37,17 +37,14 @@ class SubtitleManagementTab(QWidget):
         self._add_guidance_tooltips()
 
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(8, 8, 8, 8)
-        layout.setSpacing(6)
         layout.addWidget(
             PageHeader(
                 "サブタイトルを管理",
                 "最初にタイトルを選び、そのタイトルに属するサブタイトルを登録・更新します。"
                 "管理番号や表示順は将来的に自動化する予定です。",
-            ),
-            0,
+            )
         )
-        layout.addWidget(self.editor, 1)
+        layout.addWidget(self.editor)
 
     def _hide_title_creation_controls(self) -> None:
         for widget in [

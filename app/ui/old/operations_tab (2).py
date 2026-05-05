@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import re
 from collections.abc import Callable
-from pathlib import Path, PurePosixPath
-from typing import Any, Protocol
+from pathlib import Path
+from typing import Protocol
 
 from PySide6.QtCore import QSettings, QStringListModel, Qt
 from PySide6.QtWidgets import (
@@ -715,18 +715,6 @@ class OperationsTab(QWidget):
             return None
         return text
 
-    def _ui_path(self, value: str) -> Any:
-        """Convert UI-entered text to a path while preserving POSIX-like test paths.
-
-        On Windows, ``Path('/tmp/x')`` stringifies as ``\\tmp\\x``. Some tests and
-        user-entered tool-style paths intentionally use leading-slash POSIX text,
-        so preserve that exact representation with ``PurePosixPath``.
-        """
-
-        if value.startswith("/"):
-            return PurePosixPath(value)
-        return Path(value)
-
     def _run_export_csv(self) -> None:
         if not self._ensure_not_busy():
             return
@@ -735,7 +723,7 @@ class OperationsTab(QWidget):
             return
 
         def _work() -> object:
-            return self._export_backup_service.export_csv(self._ui_path(path), role=self._role)
+            return len(self._export_backup_service.export_csv(Path(path), role=self._role))
 
         def _success(result: object) -> None:
             self._push_recent_path("csv_export_dir", path)
@@ -743,7 +731,7 @@ class OperationsTab(QWidget):
             message = (
                 "CSV export 完了（cancel requested 後に完了）"
                 if self._cancel_requested
-                else f"CSV export 成功: {result}"
+                else f"CSV export 成功: {result} tables"
             )
             self._set_message(message)
             self._record_operation("export_csv", status, message, path=path)
@@ -888,8 +876,8 @@ class OperationsTab(QWidget):
 
         def _work() -> object:
             return self._backup_restore_service.restore_database(
-                self._ui_path(backup_path),
-                self._ui_path(target_path),
+                Path(backup_path),
+                Path(target_path),
                 role=self._role,
             )
 
@@ -978,7 +966,7 @@ class OperationsTab(QWidget):
             return
 
         def _work() -> object:
-            return self._import_service.import_json(self._ui_path(json_path), role=self._role)
+            return self._import_service.import_json(Path(json_path), role=self._role)
 
         def _success(result: object) -> None:
             self._push_recent_path("import_json_file", json_path)
