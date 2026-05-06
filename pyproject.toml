@@ -24,7 +24,7 @@ dev = [
 
 [tool.setuptools.packages.find]
 include = ["app", "app.*"]
-exclude = ["tests", "docs", "prompts", "db", "assets", "scripts", "app.ui.old", "app.ui.old.*"]
+exclude = ["tests", "docs", "prompts", "db", "assets", "scripts"]
 
 [tool.black]
 line-length = 100
