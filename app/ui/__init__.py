@@ -21,7 +21,6 @@ from .title_management_tab import TitleManagementTab
 from .title_subtitle_management_tab import TitleSubtitleManagementTab
 from .trash_tab import TrashTab
 
-
 __all__ = [
     "MainWindow",
     "SearchTab",
