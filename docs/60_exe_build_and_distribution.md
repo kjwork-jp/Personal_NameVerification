@@ -99,6 +99,27 @@ EXEビルド後、PowerShellで以下を実行する。
 5. smoke test用DBが作成されること
 6. 確認後にEXEプロセスを停止できること
 
+## 配布用zip作成
+
+EXEビルド後、PowerShellで以下を実行する。
+
+```powershell
+.\scripts\package_release_windows.ps1
+```
+
+このスクリプトは以下を実行する。
+
+1. `dist\NameVerification.exe` が存在することを確認する。
+2. `release\NameVerification-windows` を作成し、EXEをコピーする。
+3. `README_起動前に読む.txt` を同梱する。
+4. `release\NameVerification-windows.zip` を作成する。
+
+生成物:
+
+```text
+release/NameVerification-windows.zip
+```
+
 ## PyInstaller同梱ファイル
 
 `packaging/NameVerification.spec` では、以下をEXEにdataとして同梱する。
@@ -138,6 +159,7 @@ $env:NAMEVERIFICATION_DB_PATH = "C:\\path\\to\\nameverification.db"
 ## 配布時の注意
 
 - `dist/NameVerification.exe` を配布する。
+- zip配布する場合は `release/NameVerification-windows.zip` を使う。
 - 初回起動時にDBが作成される。
 - 重要データ投入前に `データ入出力` タブでバックアップ運用を確認する。
 - 既存DBを使う場合は、EXEと同じディレクトリに `nameverification.db` を配置するか、`NAMEVERIFICATION_DB_PATH` を指定する。
