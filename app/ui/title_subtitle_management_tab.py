@@ -7,10 +7,11 @@ being absorbed into the owning UI module.
 from __future__ import annotations
 
 import importlib.util
+import sys
 from pathlib import Path
 from typing import Any
 
-from app.application.core_services import SubtitleInput, TitleInput
+from app.application.core_services import SubtitleInput
 from app.ui.dialogs import confirm_destructive_action
 from app.ui.input_defaults import (
     default_operator_id,
@@ -20,13 +21,15 @@ from app.ui.input_defaults import (
 from app.ui.permissions import can_create_or_update, can_run_destructive_actions
 
 _LEGACY_PATH = Path(__file__).with_name("old") / "title_subtitle_management_tab.py"
+_LEGACY_MODULE_NAME = "_nameverification_legacy_title_subtitle_management_tab"
 _SPEC = importlib.util.spec_from_file_location(
-    "_nameverification_legacy_title_subtitle_management_tab",
+    _LEGACY_MODULE_NAME,
     _LEGACY_PATH,
 )
 if _SPEC is None or _SPEC.loader is None:
     raise ImportError(f"Cannot load legacy title/subtitle editor: {_LEGACY_PATH}")
 _LEGACY_MODULE = importlib.util.module_from_spec(_SPEC)
+sys.modules[_LEGACY_MODULE_NAME] = _LEGACY_MODULE
 _SPEC.loader.exec_module(_LEGACY_MODULE)
 
 TitleSubtitleWriteService = _LEGACY_MODULE.TitleSubtitleWriteService
@@ -37,7 +40,7 @@ _call_with_optional_role = _LEGACY_MODULE._call_with_optional_role
 _BaseTitleSubtitleManagementTab: Any = _LEGACY_MODULE.TitleSubtitleManagementTab
 
 
-class TitleSubtitleManagementTab(_BaseTitleSubtitleManagementTab):  # type: ignore[misc, valid-type]
+class TitleSubtitleManagementTab(_BaseTitleSubtitleManagementTab):
     """Title/subtitle editor with release QA behavior absorbed locally."""
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
