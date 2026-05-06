@@ -101,13 +101,12 @@ EXEビルド後、PowerShellで以下を実行する。
 
 ## PyInstaller同梱ファイル
 
-`packaging/NameVerification.spec` では、以下をEXEに同梱する。
+`packaging/NameVerification.spec` では、以下をEXEにdataとして同梱する。
 
 - `db/schema.sql`
 - `db/migrations`
-- `app/ui/old/title_subtitle_management_tab.py`
 
-`app/ui/old/title_subtitle_management_tab.py` は、タイトル/サブタイトル管理画面の段階吸収中に使う互換ファイルである。通常のPython実行ではファイルシステムから読めるが、onefile EXEでは `_MEI...` 展開先に明示同梱しないと起動時に `FileNotFoundError` になる。
+タイトル/サブタイトル管理画面の互換モジュール `app.ui.old.title_subtitle_management_tab` は、通常のPython import対象としてパッケージに含める。ファイルパスを直接読む方式ではないため、個別data同梱は不要である。
 
 ## 起動後確認
 
