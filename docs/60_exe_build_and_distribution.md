@@ -82,6 +82,24 @@ PowerShellで以下を実行する。
 4. 既存build/dist削除
 5. PyInstallerでEXE作成
 
+## GitHub Actionsでのビルド
+
+`.github/workflows/windows-exe.yml` は、Windows runner上で以下を実行する。
+
+1. リポジトリをcheckoutする。
+2. Python 3.12をセットアップする。
+3. `scripts/build_exe_windows.ps1` で品質ゲートとEXEビルドを実行する。
+4. `scripts/package_release_windows.ps1` で配布用zipを作成する。
+5. `dist/NameVerification.exe` をartifactとしてアップロードする。
+6. `release/NameVerification-windows.zip` をartifactとしてアップロードする。
+
+artifact名:
+
+```text
+NameVerification-windows-exe
+NameVerification-windows-release-zip
+```
+
 ## EXE smoke test
 
 EXEビルド後、PowerShellで以下を実行する。
@@ -173,7 +191,6 @@ $env:NAMEVERIFICATION_DB_PATH = "C:\\path\\to\\nameverification.db"
 
 ## 次PR候補
 
-- GitHub ActionsでWindows EXEを自動ビルドする。
 - Inno Setup等でインストーラを作成する。
 - DB保存先をユーザーデータディレクトリに変更する。
 - ヘルプ画面にバージョン表示を追加する。
