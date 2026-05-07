@@ -238,7 +238,8 @@ class NameManagementTab(QWidget):
         self.detail_text.setPlainText(
             "\n".join(
                 [
-                    f"ID: {detail.id}",
+                    f"公開ID: {detail.public_id or '未採番'}",
+                    f"内部ID: {detail.id}",
                     f"名前: {detail.raw_name}",
                     f"正規化名: {detail.normalized_name}",
                     f"状態: {status}",
