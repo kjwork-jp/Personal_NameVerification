@@ -36,9 +36,24 @@
 既存UI互換を優先し、整数 `id` は引き続き保持する。
 `public_id` は外部連携・export/import・将来的なUI表示用として段階的に使う。
 
+## public_id参照
+
+`PublicIdQueryService` を追加し、外部向け `public_id` から現在DB内の整数IDへ解決できるようにする。
+
+対象テーブル:
+
+- `names`
+- `titles`
+- `subtitles`
+- `name_subtitle_links`
+- `name_title_links`
+- `change_logs`
+
+このserviceは外部連携や将来のimport差分解決で使うための土台であり、既存UI操作はまだ整数IDベースのままとする。
+
 ## 注意
 
-今回の段階では、UI表示やexport/importでの `public_id` 利用はまだ完了していない。
+今回の段階では、UI表示の `public_id` 置換はまだ完了していない。
 
 ## 次段階
 
