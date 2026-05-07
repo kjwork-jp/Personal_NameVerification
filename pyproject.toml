@@ -76,7 +76,7 @@ select = ["E", "F", "I", "B", "UP"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-q"
+addopts = "-q --basetemp=tmp/pytest"
 
 [tool.mypy]
 python_version = "3.12"
