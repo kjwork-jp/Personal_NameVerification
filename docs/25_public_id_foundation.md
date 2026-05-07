@@ -36,19 +36,24 @@
 既存UI互換を優先し、整数 `id` は引き続き保持する。
 `public_id` は外部連携・export/import・将来的なUI表示用として段階的に使う。
 
-## export/import反映
+## public_id参照
 
-CSV/JSON exportは `SELECT *` ベースのため、`public_id` 列を含むDBでは自動的に出力される。
-CSV/JSON importでは、`public_id` を任意列として扱う。
+`PublicIdQueryService` を追加し、外部向け `public_id` から現在DB内の整数IDへ解決できるようにする。
 
-- `public_id` がある場合: 値を保持してimportする。
-- `public_id` がない場合: `NULL` としてimportし、SQLite triggerで補完する。
+対象テーブル:
 
-これにより、旧exportファイルとの互換性を維持しながら、新形式では `public_id` を保持できる。
+- `names`
+- `titles`
+- `subtitles`
+- `name_subtitle_links`
+- `name_title_links`
+- `change_logs`
+
+このserviceは外部連携や将来のimport差分解決で使うための土台であり、既存UI操作はまだ整数IDベースのままとする。
 
 ## 注意
 
-今回の段階では、UI上の内部ID表示置換はまだ完了していない。
+今回の段階では、UI表示の `public_id` 置換はまだ完了していない。
 
 ## 次段階
 
