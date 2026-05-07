@@ -14,6 +14,7 @@ class NameSearchRow:
     deleted_at: str | None
     linked_count: int
     title_ids: tuple[int, ...]
+    public_id: str | None = None
 
 
 @dataclass(frozen=True)
@@ -26,6 +27,7 @@ class NameDetail:
     deleted_at: str | None
     created_at: str
     updated_at: str
+    public_id: str | None = None
 
 
 @dataclass(frozen=True)
@@ -37,6 +39,7 @@ class TitleDetail:
     deleted_at: str | None
     created_at: str
     updated_at: str
+    public_id: str | None = None
 
 
 @dataclass(frozen=True)
@@ -51,6 +54,7 @@ class SubtitleDetail:
     deleted_at: str | None
     created_at: str
     updated_at: str
+    public_id: str | None = None
 
 
 @dataclass(frozen=True)
@@ -64,6 +68,10 @@ class RelatedRow:
     subtitle_name: str
     title_name: str
     link_deleted_at: str | None
+    link_public_id: str | None = None
+    name_public_id: str | None = None
+    subtitle_public_id: str | None = None
+    title_public_id: str | None = None
 
 
 @dataclass(frozen=True)
@@ -76,6 +84,7 @@ class ChangeLogRow:
     before_json: str | None
     after_json: str | None
     created_at: str
+    public_id: str | None = None
 
 
 @dataclass(frozen=True)
@@ -87,3 +96,6 @@ class NameTitleLinkRow:
     raw_name: str
     title_name: str
     link_deleted_at: str | None
+    link_public_id: str | None = None
+    name_public_id: str | None = None
+    title_public_id: str | None = None

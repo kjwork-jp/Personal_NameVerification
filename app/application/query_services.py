@@ -76,6 +76,7 @@ class QueryService:
             f"""
             SELECT
                 n.id,
+                n.public_id,
                 n.raw_name,
                 n.normalized_name,
                 n.note,
@@ -103,6 +104,7 @@ class QueryService:
                 deleted_at=row["deleted_at"],
                 linked_count=int(row["linked_count"]),
                 title_ids=_parse_int_tuple(row["title_ids"]),
+                public_id=row["public_id"],
             )
             for row in rows
         ]
@@ -119,15 +121,20 @@ class QueryService:
             f"""
             SELECT
                 l.id AS link_id,
+                l.public_id AS link_public_id,
                 l.name_id,
+                n.public_id AS name_public_id,
                 l.subtitle_id,
+                s.public_id AS subtitle_public_id,
                 s.title_id,
+                t.public_id AS title_public_id,
                 l.relation_type,
                 s.subtitle_code,
                 s.subtitle_name,
                 t.title_name,
                 l.deleted_at AS link_deleted_at
             FROM name_subtitle_links l
+            JOIN names n ON n.id = l.name_id
             JOIN subtitles s ON s.id = l.subtitle_id
             JOIN titles t ON t.id = s.title_id
             WHERE l.name_id = ?
@@ -148,6 +155,10 @@ class QueryService:
                 subtitle_name=row["subtitle_name"],
                 title_name=row["title_name"],
                 link_deleted_at=row["link_deleted_at"],
+                link_public_id=row["link_public_id"],
+                name_public_id=row["name_public_id"],
+                subtitle_public_id=row["subtitle_public_id"],
+                title_public_id=row["title_public_id"],
             )
             for row in rows
         ]
@@ -199,8 +210,11 @@ class QueryService:
             f"""
             SELECT
                 nt.id AS link_id,
+                nt.public_id AS link_public_id,
                 nt.name_id,
+                n.public_id AS name_public_id,
                 nt.title_id,
+                t.public_id AS title_public_id,
                 nt.relation_type,
                 n.raw_name,
                 t.title_name,
@@ -223,6 +237,9 @@ class QueryService:
                 raw_name=row["raw_name"],
                 title_name=row["title_name"],
                 link_deleted_at=row["link_deleted_at"],
+                link_public_id=row["link_public_id"],
+                name_public_id=row["name_public_id"],
+                title_public_id=row["title_public_id"],
             )
             for row in rows
         ]
@@ -262,15 +279,20 @@ class QueryService:
             """
             SELECT
                 l.id AS link_id,
+                l.public_id AS link_public_id,
                 l.name_id,
+                n.public_id AS name_public_id,
                 l.subtitle_id,
+                s.public_id AS subtitle_public_id,
                 s.title_id,
+                t.public_id AS title_public_id,
                 l.relation_type,
                 s.subtitle_code,
                 s.subtitle_name,
                 t.title_name,
                 l.deleted_at AS link_deleted_at
             FROM name_subtitle_links l
+            JOIN names n ON n.id = l.name_id
             JOIN subtitles s ON s.id = l.subtitle_id
             JOIN titles t ON t.id = s.title_id
             WHERE l.deleted_at IS NOT NULL
@@ -288,6 +310,10 @@ class QueryService:
                 subtitle_name=row["subtitle_name"],
                 title_name=row["title_name"],
                 link_deleted_at=row["link_deleted_at"],
+                link_public_id=row["link_public_id"],
+                name_public_id=row["name_public_id"],
+                subtitle_public_id=row["subtitle_public_id"],
+                title_public_id=row["title_public_id"],
             )
             for row in rows
         ]
@@ -328,7 +354,8 @@ class QueryService:
         rows = self._connection.execute(
             f"""
             SELECT
-                id, entity_type, entity_id, action, operator_id, before_json, after_json, created_at
+                id, public_id, entity_type, entity_id, action, operator_id,
+                before_json, after_json, created_at
             FROM change_logs
             {where_clause}
             ORDER BY created_at DESC, id DESC
@@ -347,6 +374,7 @@ class QueryService:
                 before_json=row["before_json"],
                 after_json=row["after_json"],
                 created_at=row["created_at"],
+                public_id=row["public_id"],
             )
             for row in rows
         ]
