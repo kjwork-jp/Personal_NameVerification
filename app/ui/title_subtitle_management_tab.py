@@ -8,7 +8,10 @@ from __future__ import annotations
 
 from typing import Any
 
+from PySide6.QtWidgets import QListWidgetItem
+
 from app.application.core_services import SubtitleInput
+from app.application.read_models import TitleDetail
 from app.ui.dialogs import confirm_destructive_action
 from app.ui.input_defaults import (
     default_operator_id,
@@ -26,6 +29,7 @@ from app.ui.old.title_subtitle_management_tab import (
     _call_with_optional_role,
 )
 from app.ui.permissions import can_create_or_update, can_run_destructive_actions
+from app.ui.public_id_display import short_public_id
 
 
 class TitleSubtitleManagementTab(_BaseTitleSubtitleManagementTab):
@@ -312,6 +316,35 @@ class TitleSubtitleManagementTab(_BaseTitleSubtitleManagementTab):
         )
         self._set_message("サブタイトル完全削除しました")
         self._refresh_subtitles()
+
+    def _refresh_name_candidates(self) -> None:
+        try:
+            self._name_rows = _call_with_optional_role(
+                self._query_service.search_names,
+                include_deleted=False,
+                role=self._role_context.role,
+            )
+        except Exception:  # noqa: BLE001
+            self._name_rows = []
+
+        self.title_link_names_list.clear()
+        for row in self._name_rows:
+            label = f"{row.raw_name} (公開ID={short_public_id(row.public_id)})"
+            item = QListWidgetItem(label)
+            item.setData(0x0100, row.id)
+            item.setToolTip(f"内部ID={row.id} / 公開ID={row.public_id or '未採番'}")
+            self.title_link_names_list.addItem(item)
+
+    def _update_selected_title_label(self, title: TitleDetail | None = None) -> None:
+        if title is None:
+            self.selected_title_label.setText("選択中タイトル: 未選択")
+            return
+        status = "削除済み" if title.deleted_at else "有効"
+        self.selected_title_label.setText(
+            "選択中タイトル: "
+            f"公開ID={short_public_id(title.public_id)} / "
+            f"内部ID={title.id} / {title.title_name} ({status})"
+        )
 
     def _subtitle_payload(self, title_id: int) -> SubtitleInput:
         sort_order_text = self.subtitle_sort_order_input.text().strip() or "0"
