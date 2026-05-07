@@ -57,6 +57,6 @@
 
 ## 次段階
 
-1. export/importで `public_id` を保持する。
-2. UI上の内部ID表示を `public_id` に寄せる。
+1. UI上の内部ID表示を `public_id` に寄せる。
+2. `public_id` で参照・検索できるqueryを追加する。
 3. 最終的に必要なら `public_id` の `NOT NULL` 化を検討する。
