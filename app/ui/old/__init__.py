@@ -1,51 +1,8 @@
-"""Presentation layer package (PySide6 UI components)."""
+"""Compatibility package for legacy UI modules.
 
-from .audit_log_tab import AuditLogTab
-from .dialogs import confirm_destructive_action
-from .help_settings_tab import HelpSettingsTab
-from .link_management_tab import LinkManagementTab
-from .main_window import MainWindow
-from .name_management_tab_absorbed import NameManagementTab
-from .operations_tab import OperationsTab
-from .permissions import can_create_or_update, can_link, can_run_destructive_actions, can_unlink
-from .relation_types import RELATION_TYPE_OPTIONS, RelationTypeOption
-from .role_context import RoleContext, UserRole
-from .search_tab import SearchTab
-from .subtitle_management_tab import SubtitleManagementTab
-from .title_management_tab import TitleManagementTab
-from .title_subtitle_management_tab import TitleSubtitleManagementTab
-from .trash_tab import TrashTab
+Only modules that still exist should be imported explicitly by their consumers.
+This package initializer must stay side-effect free so importing
+`app.ui.old.title_subtitle_management_tab` does not try to load removed legacy UI files.
+"""
 
-
-def _apply_release_qa_fixes() -> None:
-    """Apply remaining transitional UI compatibility fixes."""
-
-    from ._release_qa_fixes import apply_release_qa_fixes
-
-    apply_release_qa_fixes()
-
-
-_apply_release_qa_fixes()
-
-__all__ = [
-    "MainWindow",
-    "SearchTab",
-    "NameManagementTab",
-    "OperationsTab",
-    "HelpSettingsTab",
-    "TitleManagementTab",
-    "SubtitleManagementTab",
-    "TitleSubtitleManagementTab",
-    "LinkManagementTab",
-    "TrashTab",
-    "AuditLogTab",
-    "confirm_destructive_action",
-    "RoleContext",
-    "UserRole",
-    "can_create_or_update",
-    "can_run_destructive_actions",
-    "can_link",
-    "can_unlink",
-    "RelationTypeOption",
-    "RELATION_TYPE_OPTIONS",
-]
+__all__: list[str] = []

@@ -21,13 +21,7 @@ from app.ui.input_defaults import (
 from app.ui.old.title_subtitle_management_tab import (
     TitleSubtitleManagementTab as _BaseTitleSubtitleManagementTab,
 )
-from app.ui.old.title_subtitle_management_tab import (
-    TitleSubtitleReadService,
-    TitleSubtitleWriteService,
-    _SubtitleSelection,
-    _TitleSelection,
-    _call_with_optional_role,
-)
+from app.ui.old.title_subtitle_management_tab import _call_with_optional_role
 from app.ui.permissions import can_create_or_update, can_run_destructive_actions
 from app.ui.public_id_display import short_public_id
 
