@@ -20,6 +20,7 @@ from PySide6.QtWidgets import (
 )
 
 from app.application.read_models import ChangeLogRow
+from app.ui.public_id_display import short_public_id
 from app.ui.role_context import RoleContext, UserRole
 from app.ui.ui_style import PageHeader
 
@@ -82,12 +83,12 @@ class AuditLogTab(QWidget):
         self.reload_button = QPushButton("一覧を更新")
         self.reload_button.clicked.connect(self._reload)
 
-        self.logs_table = QTableWidget(0, 5)
+        self.logs_table = QTableWidget(0, 6)
         self.logs_table.setHorizontalHeaderLabels(
-            ["内部ID", "データ種類", "内部対象ID", "実行した操作", "実行日時"]
+            ["内部ID", "公開ID", "データ種類", "内部対象ID", "実行した操作", "実行日時"]
         )
         self.logs_table.setColumnHidden(0, True)
-        self.logs_table.setColumnHidden(2, True)
+        self.logs_table.setColumnHidden(3, True)
         self.logs_table.itemSelectionChanged.connect(self._on_selected)
 
         self.detail_summary_label = QLabel("選択中の操作: 未選択")
@@ -160,10 +161,13 @@ class AuditLogTab(QWidget):
         self.logs_table.setRowCount(len(self._rows))
         for i, row in enumerate(self._rows):
             self.logs_table.setItem(i, 0, QTableWidgetItem(str(row.id)))
-            self.logs_table.setItem(i, 1, QTableWidgetItem(row.entity_type))
-            self.logs_table.setItem(i, 2, QTableWidgetItem(str(row.entity_id)))
-            self.logs_table.setItem(i, 3, QTableWidgetItem(row.action))
-            self.logs_table.setItem(i, 4, QTableWidgetItem(row.created_at))
+            public_id_item = QTableWidgetItem(short_public_id(row.public_id))
+            public_id_item.setToolTip(f"操作履歴公開ID={row.public_id or '未採番'}")
+            self.logs_table.setItem(i, 1, public_id_item)
+            self.logs_table.setItem(i, 2, QTableWidgetItem(row.entity_type))
+            self.logs_table.setItem(i, 3, QTableWidgetItem(str(row.entity_id)))
+            self.logs_table.setItem(i, 4, QTableWidgetItem(row.action))
+            self.logs_table.setItem(i, 5, QTableWidgetItem(row.created_at))
 
         self.detail_summary_label.setText("選択中の操作: 未選択")
         self.before_json_view.clear()
@@ -202,6 +206,7 @@ class AuditLogTab(QWidget):
         row = self._rows[idx]
         self.detail_summary_label.setText(
             f"操作: {row.action} / データ種類: {row.entity_type} / "
+            f"公開ID: {row.public_id or '未採番'} / 内部対象ID: {row.entity_id} / "
             f"操作者: {row.operator_id} / 実行日時: {row.created_at}"
         )
         self.before_json_view.setPlainText(row.before_json or "")

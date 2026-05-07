@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
 
 from app.ui.dialogs import confirm_destructive_action
 from app.ui.permissions import can_link, can_unlink
+from app.ui.public_id_display import short_public_id
 from app.ui.relation_types import RELATION_TYPE_OPTIONS
 from app.ui.role_context import RoleContext
 from app.ui.ui_style import PageHeader
@@ -60,18 +61,18 @@ class LinkManagementTab(QWidget):
         self.message_label = QLabel("")
 
         self.names_table = QTableWidget(0, 2)
-        self.names_table.setHorizontalHeaderLabels(["内部ID", "名前"])
+        self.names_table.setHorizontalHeaderLabels(["内部ID", "名前 / 公開ID"])
         self.names_table.setColumnHidden(0, True)
         self.titles_table = QTableWidget(0, 2)
-        self.titles_table.setHorizontalHeaderLabels(["内部ID", "タイトル"])
+        self.titles_table.setHorizontalHeaderLabels(["内部ID", "タイトル / 公開ID"])
         self.titles_table.setColumnHidden(0, True)
         self.subtitles_table = QTableWidget(0, 3)
-        self.subtitles_table.setHorizontalHeaderLabels(["内部ID", "管理番号", "サブタイトル"])
+        self.subtitles_table.setHorizontalHeaderLabels(["内部ID", "管理番号", "サブタイトル / 公開ID"])
         self.subtitles_table.setColumnHidden(0, True)
         self.subtitles_table.setColumnHidden(1, True)
         self.links_table = QTableWidget(0, 4)
         self.links_table.setHorizontalHeaderLabels(
-            ["内部リンクID", "タイトル", "管理番号", "関連の種類"]
+            ["内部リンクID", "タイトル / 公開ID", "管理番号", "関連の種類"]
         )
         self.links_table.setColumnHidden(0, True)
         self.links_table.setColumnHidden(2, True)
@@ -145,11 +146,15 @@ class LinkManagementTab(QWidget):
         self.names_table.setRowCount(len(self._names))
         for row_index, row in enumerate(self._names):
             self.names_table.setItem(row_index, 0, QTableWidgetItem(str(row.id)))
-            self.names_table.setItem(row_index, 1, QTableWidgetItem(row.raw_name))
+            item = QTableWidgetItem(_name_label(row))
+            item.setToolTip(_entity_tooltip("名前", row.id, getattr(row, "public_id", None)))
+            self.names_table.setItem(row_index, 1, item)
         self.titles_table.setRowCount(len(self._titles))
         for row_index, row in enumerate(self._titles):
             self.titles_table.setItem(row_index, 0, QTableWidgetItem(str(row.id)))
-            self.titles_table.setItem(row_index, 1, QTableWidgetItem(row.title_name))
+            item = QTableWidgetItem(_title_label(row))
+            item.setToolTip(_entity_tooltip("タイトル", row.id, getattr(row, "public_id", None)))
+            self.titles_table.setItem(row_index, 1, item)
         if self._names:
             self.names_table.selectRow(0)
         if self._titles:
@@ -196,7 +201,9 @@ class LinkManagementTab(QWidget):
         for row_index, row in enumerate(self._subtitles):
             self.subtitles_table.setItem(row_index, 0, QTableWidgetItem(str(row.id)))
             self.subtitles_table.setItem(row_index, 1, QTableWidgetItem(row.subtitle_code))
-            self.subtitles_table.setItem(row_index, 2, QTableWidgetItem(row.subtitle_name))
+            item = QTableWidgetItem(_subtitle_label(row))
+            item.setToolTip(_entity_tooltip("サブタイトル", row.id, getattr(row, "public_id", None)))
+            self.subtitles_table.setItem(row_index, 2, item)
         if self._subtitles:
             self.subtitles_table.selectRow(0)
 
@@ -214,9 +221,22 @@ class LinkManagementTab(QWidget):
         self.links_table.setRowCount(len(self._links))
         for row_index, row in enumerate(self._links):
             self.links_table.setItem(row_index, 0, QTableWidgetItem(str(row.link_id)))
-            self.links_table.setItem(row_index, 1, QTableWidgetItem(row.title_name))
+            title_item = QTableWidgetItem(_related_title_label(row))
+            title_item.setToolTip(
+                " / ".join(
+                    [
+                        f"リンク内部ID={row.link_id}",
+                        f"リンク公開ID={getattr(row, 'link_public_id', None) or '未採番'}",
+                        f"タイトル公開ID={getattr(row, 'title_public_id', None) or '未採番'}",
+                        f"サブタイトル公開ID={getattr(row, 'subtitle_public_id', None) or '未採番'}",
+                    ]
+                )
+            )
+            self.links_table.setItem(row_index, 1, title_item)
             self.links_table.setItem(row_index, 2, QTableWidgetItem(row.subtitle_code))
-            self.links_table.setItem(row_index, 3, QTableWidgetItem(_relation_label(row.relation_type)))
+            relation_item = QTableWidgetItem(_relation_label(row.relation_type))
+            relation_item.setToolTip(f"リンク公開ID={getattr(row, 'link_public_id', None) or '未採番'}")
+            self.links_table.setItem(row_index, 3, relation_item)
         if self._links:
             self.links_table.selectRow(0)
 
@@ -298,6 +318,26 @@ class LinkManagementTab(QWidget):
         color = "#ff8a8a" if is_error else "#7ee787"
         self.message_label.setStyleSheet(f"color: {color};")
         self.message_label.setText(message)
+
+
+def _name_label(row: Any) -> str:
+    return f"{row.raw_name} / 公開ID={short_public_id(getattr(row, 'public_id', None))}"
+
+
+def _title_label(row: Any) -> str:
+    return f"{row.title_name} / 公開ID={short_public_id(getattr(row, 'public_id', None))}"
+
+
+def _subtitle_label(row: Any) -> str:
+    return f"{row.subtitle_name} / 公開ID={short_public_id(getattr(row, 'public_id', None))}"
+
+
+def _related_title_label(row: Any) -> str:
+    return f"{row.title_name} / リンク公開ID={short_public_id(getattr(row, 'link_public_id', None))}"
+
+
+def _entity_tooltip(label: str, internal_id: int, public_id: str | None) -> str:
+    return f"{label}内部ID={internal_id} / {label}公開ID={public_id or '未採番'}"
 
 
 def _relation_label(value: str) -> str:
