@@ -23,9 +23,20 @@ jobs:
         shell: pwsh
         run: .\scripts\build_exe_windows.ps1
 
+      - name: Package release zip
+        shell: pwsh
+        run: .\scripts\package_release_windows.ps1
+
       - name: Upload EXE artifact
         uses: actions/upload-artifact@v4
         with:
           name: NameVerification-windows-exe
           path: dist/NameVerification.exe
+          if-no-files-found: error
+
+      - name: Upload release zip artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: NameVerification-windows-release-zip
+          path: release/NameVerification-windows.zip
           if-no-files-found: error
