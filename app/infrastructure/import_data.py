@@ -28,6 +28,8 @@ _IMPORT_ORDER: tuple[str, ...] = (
     "change_logs",
 )
 
+_OPTIONAL_IMPORT_COLUMNS: frozenset[str] = frozenset({"public_id"})
+
 
 def import_from_csv_directory(
     connection: sqlite3.Connection,
@@ -138,7 +140,9 @@ def _table_columns(connection: sqlite3.Connection, table_name: str) -> tuple[lis
 
 
 def _validate_required_columns(table_name: str, provided: list[str], expected: list[str]) -> None:
-    missing = [col for col in expected if col not in provided]
+    missing = [
+        col for col in expected if col not in provided and col not in _OPTIONAL_IMPORT_COLUMNS
+    ]
     if missing:
         raise ValidationError(f"{table_name} is missing required columns: {missing}")
 
