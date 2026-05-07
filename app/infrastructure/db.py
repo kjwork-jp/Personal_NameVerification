@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import sqlite3
 from pathlib import Path
+from typing import Any
 
 from app.domain.public_id import new_public_id
 
@@ -51,15 +52,22 @@ def ensure_public_ids(connection: sqlite3.Connection) -> None:
         for row in rows:
             connection.execute(
                 f"UPDATE {table} SET public_id = ? WHERE id = ?",
-                (new_public_id(), int(row["id"])),
+                (new_public_id(), _row_value(row, "id", 0)),
             )
     connection.commit()
 
 
 def _ensure_public_id_column(connection: sqlite3.Connection, table: str) -> None:
     columns = {
-        str(row["name"])
+        str(_row_value(row, "name", 1))
         for row in connection.execute(f"PRAGMA table_info({table})").fetchall()
     }
     if "public_id" not in columns:
         connection.execute(f"ALTER TABLE {table} ADD COLUMN public_id TEXT")
+
+
+def _row_value(row: Any, key: str, index: int) -> Any:
+    try:
+        return row[key]
+    except (TypeError, IndexError):
+        return row[index]
