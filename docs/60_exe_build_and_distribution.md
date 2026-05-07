@@ -172,7 +172,9 @@ $env:NAMEVERIFICATION_DB_PATH = "C:\\path\\to\\nameverification.db"
 .\dist\NameVerification.exe
 ```
 
-将来的には、ユーザーデータディレクトリ配下への保存も検討する。
+`ヘルプ / 設定` タブでは、現在のDB保存先、`NAMEVERIFICATION_DB_PATH` の設定状態、DB保存先コピー、PowerShell用の環境変数コマンドコピーを確認できる。
+
+将来的には、アプリ起動中にDBへ再接続する保存先変更UIも検討する。現時点では安全性を優先し、DB保存先変更は起動前の環境変数指定で行う。
 
 ## 配布時の注意
 
@@ -186,7 +188,7 @@ $env:NAMEVERIFICATION_DB_PATH = "C:\\path\\to\\nameverification.db"
 
 - 署名付きインストーラは未対応。
 - 自動アップデートは未対応。
-- DB保存先変更UIは未対応。
+- 起動中のDB保存先変更UIは未対応。
 - 完全なUUID移行は未対応。
 
 ## 次PR候補
