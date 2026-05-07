@@ -82,7 +82,11 @@ addopts = "-q"
 python_version = "3.12"
 strict = true
 files = ["app"]
-exclude = "^app/ui/old/|^app/ui/operations_test_fixes\\.py$|^tests/"
+exclude = '''(?x)(
+    ^app[/\\]ui[/\\]old[/\\]
+    | ^app[/\\]ui[/\\]operations_test_fixes\.py$
+    | ^tests[/\\]
+)'''
 warn_unused_configs = true
 
 
