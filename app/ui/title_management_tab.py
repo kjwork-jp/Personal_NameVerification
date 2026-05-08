@@ -33,7 +33,10 @@ class TitleManagementTab(QWidget):
 
         layout = QVBoxLayout(self)
         compact_layout(layout, margins=5, spacing=4)
-        layout.addWidget(PageHeader("タイトルを管理", "名前を選び、関連するタイトルを登録・更新します。"), 0)
+        layout.addWidget(
+            PageHeader("タイトルを管理", "名前を選び、関連するタイトルを登録・更新します。"),
+            0,
+        )
         layout.addWidget(self.editor, 1)
 
     def _hide_subtitle_controls(self) -> None:
@@ -76,4 +79,6 @@ class TitleManagementTab(QWidget):
 
     def _add_guidance_tooltips(self) -> None:
         self.editor.operator_input.setToolTip("変更履歴に記録する操作者です。")
-        self.editor.title_link_names_list.setToolTip("タイトルに関連付ける名前を選択します。複数選択できます。")
+        self.editor.title_link_names_list.setToolTip(
+            "タイトルに関連付ける名前を選択します。複数選択できます。"
+        )
