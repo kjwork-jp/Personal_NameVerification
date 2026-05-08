@@ -58,7 +58,7 @@ exclude = [
   ".ruff_cache",
   "build",
   "dist",
-  "app/ui/old",
+  "old",
   "app/ui/operations_test_fixes.py",
 ]
 
@@ -76,14 +76,14 @@ select = ["E", "F", "I", "B", "UP"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-q --basetemp=tmp/pytest"
+addopts = "-q"
 
 [tool.mypy]
 python_version = "3.12"
 strict = true
 files = ["app"]
 exclude = '''(?x)(
-    ^app[/\\]ui[/\\]old[/\\]
+    ^old[/\\]
     | ^app[/\\]ui[/\\]operations_test_fixes\.py$
     | ^tests[/\\]
 )'''
