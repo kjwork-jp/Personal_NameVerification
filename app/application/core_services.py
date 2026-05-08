@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import Any, Callable, TypeVar
+from typing import Any, TypeVar
 
 from app.application.authorization import ServiceRole, require_admin, require_editor_or_admin
 from app.domain.errors import ConflictError, NotFoundError, StateTransitionError, ValidationError
@@ -103,7 +104,14 @@ class CoreService:
                     SET raw_name = ?, normalized_name = ?, note = ?, icon_path = ?, updated_at = ?
                     WHERE id = ?
                     """,
-                    (payload.raw_name, normalized_name, payload.note, payload.icon_path, now, name_id),
+                    (
+                        payload.raw_name,
+                        normalized_name,
+                        payload.note,
+                        payload.icon_path,
+                        now,
+                        name_id,
+                    ),
                 )
             except sqlite3.IntegrityError as exc:
                 raise ConflictError("name already exists") from exc
@@ -232,7 +240,12 @@ class CoreService:
 
             subtitle_id = _require_lastrowid(cursor)
             self._insert_change_log(
-                "subtitles", subtitle_id, "create", operator_id, None, self._get_subtitle(subtitle_id)
+                "subtitles",
+                subtitle_id,
+                "create",
+                operator_id,
+                None,
+                self._get_subtitle(subtitle_id),
             )
             return subtitle_id
 
@@ -277,7 +290,12 @@ class CoreService:
                 raise ConflictError("subtitle already exists for title") from exc
 
             self._insert_change_log(
-                "subtitles", subtitle_id, "update", operator_id, before, self._get_subtitle(subtitle_id)
+                "subtitles",
+                subtitle_id,
+                "update",
+                operator_id,
+                before,
+                self._get_subtitle(subtitle_id),
             )
 
         self._write(operation)
@@ -331,7 +349,12 @@ class CoreService:
                 (now, now, link_id),
             )
             self._insert_change_log(
-                "name_subtitle_links", link_id, "unlink", operator_id, before, self._get_link(link_id)
+                "name_subtitle_links",
+                link_id,
+                "unlink",
+                operator_id,
+                before,
+                self._get_link(link_id),
             )
 
         self._write(operation)
