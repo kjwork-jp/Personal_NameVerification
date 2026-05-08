@@ -85,5 +85,5 @@ def test_search_tab_instantiation_and_render() -> None:
     tab._on_search_clicked()
 
     assert tab.results_table.rowCount() == 1
-    assert "Alice" in tab.detail_text.toPlainText()
+    assert tab.results_table.item(0, 1).text() == "Alice"
     assert tab.related_table.rowCount() == 1

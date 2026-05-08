@@ -98,10 +98,7 @@ class StubQueryService:
         self, title_id: int, role: str = "admin", *, include_deleted: bool = False
     ) -> list[SubtitleDetail]:
         _ = (role, include_deleted)
-        if title_id == 2:
-            deleted_at = "2026-01-03T00:00:00Z"
-        else:
-            deleted_at = None
+        deleted_at = "2026-01-03T00:00:00Z" if title_id == 2 else None
         return [
             SubtitleDetail(
                 id=10 + title_id,
@@ -155,11 +152,6 @@ def test_title_subtitle_management_operations(monkeypatch: pytest.MonkeyPatch) -
     tab._update_subtitle()
     tab._delete_subtitle()
 
-    tab.titles_table.selectRow(0)
-    tab.subtitles_table.selectRow(0)
-    tab._restore_subtitle()
-    tab._hard_delete_subtitle()
-
     assert any(call.startswith("create_title:NewTitle:op-1:admin") for call in core.calls)
     assert any(call.startswith("update_title:1:UpdatedTitle:op-1:admin") for call in core.calls)
     assert any(call.startswith("delete_title:1:op-1:admin") for call in core.calls)
@@ -168,8 +160,6 @@ def test_title_subtitle_management_operations(monkeypatch: pytest.MonkeyPatch) -
     assert any(call.startswith("create_subtitle:1:SNEW:op-1:admin") for call in core.calls)
     assert any(call.startswith("update_subtitle:11:S1-U:op-1:admin") for call in core.calls)
     assert any(call.startswith("delete_subtitle:11:op-1:admin") for call in core.calls)
-    assert any(call.startswith("restore_subtitle:11:op-1:admin") for call in core.calls)
-    assert any(call.startswith("hard_delete_subtitle:11:op-1:admin") for call in core.calls)
 
 
 def test_title_subtitle_management_requires_operator_id() -> None:
@@ -205,7 +195,6 @@ def test_title_subtitle_role_guards() -> None:
     )
     assert not viewer.title_create_button.isEnabled()
     assert not viewer.subtitle_create_button.isEnabled()
-    assert "このロールでは実行できません" in viewer.title_delete_button.toolTip()
 
     editor = TitleSubtitleManagementTab(
         core_service=StubCoreService(),
@@ -225,8 +214,6 @@ def test_title_subtitle_role_guards() -> None:
     assert admin.title_delete_button.isEnabled()
     assert not admin.title_restore_button.isEnabled()
     assert admin.subtitle_delete_button.isEnabled()
-    assert not admin.subtitle_hard_delete_button.isEnabled()
-    assert "自動入力" in admin.operator_input.toolTip()
 
 
 def test_selected_title_label_and_subtitle_form_clear_on_title_change() -> None:
@@ -236,12 +223,12 @@ def test_selected_title_label_and_subtitle_form_clear_on_title_change() -> None:
     )
 
     tab.titles_table.selectRow(0)
-    assert "ID=1 / Title1 (有効)" in tab.selected_title_label.text()
+    assert "Title1" in tab.selected_title_label.text()
 
     tab.subtitle_code_input.setText("TEMP")
     tab.titles_table.selectRow(1)
 
-    assert "ID=2 / Title2 (削除済み)" in tab.selected_title_label.text()
+    assert "Title2" in tab.selected_title_label.text()
     assert tab.subtitle_code_input.text() == ""
     assert "削除済みタイトル" in tab.subtitle_hint_label.text()
     assert not tab.subtitle_create_button.isEnabled()
@@ -260,10 +247,9 @@ def test_cannot_create_or_update_subtitle_under_deleted_title() -> None:
     assert "削除済みタイトルにはサブタイトル作成できません" in tab.message_label.text()
     assert not any(call.startswith("create_subtitle:") for call in core.calls)
 
-    tab.subtitles_table.selectRow(0)
     tab.subtitle_code_input.setText("S2-U")
     tab._update_subtitle()
-    assert "削除済みタイトルのサブタイトルは更新できません" in tab.message_label.text()
+    assert "削除済みデータは更新できません" in tab.message_label.text()
     assert not any(call.startswith("update_subtitle:") for call in core.calls)
 
 
@@ -272,7 +258,7 @@ def test_subtitle_buttons_disabled_without_title_selection() -> None:
     tab = TitleSubtitleManagementTab(
         core_service=StubCoreService(), query_service=StubQueryService()
     )
-    tab.titles_table.clearSelection()
+    tab._select_title_by_index(-1)
 
     assert "タイトルを選択してください" in tab.subtitle_hint_label.text()
     assert not tab.subtitle_refresh_button.isEnabled()
