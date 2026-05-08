@@ -1,0 +1,68 @@
+name: Windows validation
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  validate-windows:
+    name: Validate on Windows
+    runs-on: windows-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: "pip"
+
+      - name: Show Python version
+        shell: pwsh
+        run: python --version
+
+      - name: Install package with dev dependencies
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+
+      - name: Run pytest
+        shell: pwsh
+        run: pytest -q --basetemp tmp/pytest-actions-${{ github.run_id }}
+
+      - name: Run ruff
+        shell: pwsh
+        run: ruff check .
+
+      - name: Run black check
+        shell: pwsh
+        run: black --check .
+
+      - name: Run mypy
+        shell: pwsh
+        run: mypy app
+
+      - name: Build EXE
+        shell: pwsh
+        run: .\scripts\build_exe_windows.ps1
+
+      - name: Smoke test EXE
+        shell: pwsh
+        run: .\scripts\smoke_test_exe_windows.ps1
+
+      - name: Upload EXE artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: NameVerification-windows-exe
+          path: dist/NameVerification.exe
+          if-no-files-found: ignore
