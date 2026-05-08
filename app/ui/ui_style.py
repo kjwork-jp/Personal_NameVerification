@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from PySide6.QtWidgets import QLabel, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QLabel, QLayout, QVBoxLayout, QWidget
 
 
 def apply_friendly_theme(widget: QWidget) -> None:
@@ -17,17 +17,17 @@ def apply_friendly_theme(widget: QWidget) -> None:
         }
         QTabWidget::pane {
             border: 1px solid #3d4654;
-            border-radius: 8px;
+            border-radius: 6px;
             top: -1px;
             background: #242a33;
         }
         QTabBar::tab {
             background: #2d3440;
             color: #f3f6fb;
-            padding: 6px 12px;
-            margin-right: 3px;
-            border-top-left-radius: 8px;
-            border-top-right-radius: 8px;
+            padding: 5px 10px;
+            margin-right: 2px;
+            border-top-left-radius: 6px;
+            border-top-right-radius: 6px;
         }
         QTabBar::tab:selected {
             background: #4f8cff;
@@ -37,8 +37,8 @@ def apply_friendly_theme(widget: QWidget) -> None:
         QLineEdit, QComboBox, QTextEdit, QTableWidget {
             background: #2f3642;
             border: 1px solid #566173;
-            border-radius: 7px;
-            padding: 4px;
+            border-radius: 6px;
+            padding: 3px;
             selection-background-color: #4f8cff;
         }
         QLineEdit:focus, QComboBox:focus, QTextEdit:focus {
@@ -48,8 +48,8 @@ def apply_friendly_theme(widget: QWidget) -> None:
             background: #3f7dff;
             color: #ffffff;
             border: none;
-            border-radius: 8px;
-            padding: 5px 10px;
+            border-radius: 7px;
+            padding: 4px 9px;
             font-weight: 600;
         }
         QPushButton:hover {
@@ -61,22 +61,22 @@ def apply_friendly_theme(widget: QWidget) -> None:
         }
         QGroupBox {
             border: 1px solid #4b5565;
-            border-radius: 9px;
-            margin-top: 10px;
-            padding: 8px;
+            border-radius: 7px;
+            margin-top: 6px;
+            padding: 5px;
             background: #252c36;
         }
         QGroupBox::title {
             subcontrol-origin: margin;
-            left: 10px;
-            padding: 0 5px;
+            left: 8px;
+            padding: 0 4px;
             color: #72d6c9;
             font-weight: 700;
         }
         QHeaderView::section {
             background: #36404d;
             color: #ffffff;
-            padding: 4px;
+            padding: 3px;
             border: none;
             font-weight: 700;
         }
@@ -87,20 +87,27 @@ def apply_friendly_theme(widget: QWidget) -> None:
         QWidget#PageHeader {
             background: #2b3442;
             border: 1px solid #4f8cff;
-            border-radius: 9px;
+            border-radius: 7px;
         }
         QLabel#PageHeaderTitle {
-            font-size: 15px;
+            font-size: 14px;
             font-weight: 700;
             color: #ffffff;
-            margin-bottom: 1px;
+            margin-bottom: 0px;
         }
         QLabel#PageHeaderDescription {
             color: #c8d3e0;
-            line-height: 125%;
+            line-height: 115%;
         }
         """
     )
+
+
+def compact_layout(layout: QLayout, *, margins: int = 4, spacing: int = 4) -> None:
+    """Apply compact margins and spacing to a layout."""
+
+    layout.setContentsMargins(margins, margins, margins, margins)
+    layout.setSpacing(spacing)
 
 
 class PageHeader(QWidget):
@@ -118,7 +125,6 @@ class PageHeader(QWidget):
         description_label.setWordWrap(True)
 
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(8, 6, 8, 6)
-        layout.setSpacing(2)
+        compact_layout(layout, margins=5, spacing=1)
         layout.addWidget(title_label)
         layout.addWidget(description_label)
