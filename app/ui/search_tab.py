@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from typing import Protocol
 
-from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -13,17 +12,15 @@ from PySide6.QtWidgets import (
     QLabel,
     QLineEdit,
     QPushButton,
-    QSplitter,
     QTableWidget,
     QTableWidgetItem,
-    QTextEdit,
     QVBoxLayout,
     QWidget,
 )
 
 from app.application.read_models import NameDetail, NameSearchRow, RelatedRow
 from app.ui.role_context import RoleContext, UserRole
-from app.ui.ui_style import PageHeader
+from app.ui.ui_style import PageHeader, compact_layout
 
 
 class SearchQueryService(Protocol):
@@ -59,20 +56,16 @@ class SearchTab(QWidget):
         self._query_service = query_service
         self._role_context = role_context or RoleContext.admin()
         self._search_rows: list[NameSearchRow] = []
+        self._details_by_id: dict[int, NameDetail] = {}
 
         self.query_input = QLineEdit()
-        self.query_input.setPlaceholderText("名前で検索します（例: 山田、Alice など）")
+        self.query_input.setPlaceholderText("名前で検索（例: 山田、Alice）")
+        self.query_input.returnPressed.connect(self._on_search_clicked)
         self.match_mode = QComboBox()
         self.match_mode.addItems(["部分一致", "完全一致"])
-
-        # Kept for service compatibility, but intentionally not shown to users.
-        self.title_filter_input = QLineEdit()
-        self.title_filter_input.setPlaceholderText("内部用: タイトルID")
-
         self.has_links_filter = QComboBox()
         self.has_links_filter.addItems(["すべて", "関連あり", "関連なし"])
-
-        self.include_deleted_checkbox = QCheckBox("削除済みデータも含める")
+        self.include_deleted_checkbox = QCheckBox("削除済みも含める")
 
         self.search_button = QPushButton("検索")
         self.search_button.clicked.connect(self._on_search_clicked)
@@ -80,15 +73,14 @@ class SearchTab(QWidget):
         self.error_label = QLabel("")
         self.error_label.setStyleSheet("color: #ff8a8a;")
 
-        self.results_table = QTableWidget(0, 4)
-        self.results_table.setHorizontalHeaderLabels(["内部ID", "名前", "関連数", "状態"])
+        self.results_table = QTableWidget(0, 7)
+        self.results_table.setHorizontalHeaderLabels(
+            ["内部ID", "名前", "検索用表記", "関連数", "状態", "更新日時", "備考"]
+        )
         self.results_table.setColumnHidden(0, True)
         self.results_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.results_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.results_table.itemSelectionChanged.connect(self._on_selection_changed)
-
-        self.detail_text = QTextEdit()
-        self.detail_text.setReadOnly(True)
 
         self.related_table = QTableWidget(0, 4)
         self.related_table.setHorizontalHeaderLabels(
@@ -99,45 +91,27 @@ class SearchTab(QWidget):
         self.related_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
 
         filter_form = QFormLayout()
+        compact_layout(filter_form, margins=2, spacing=3)
         filter_form.addRow("検索語", self.query_input)
         filter_form.addRow("一致条件", self.match_mode)
-        filter_form.addRow("関連データ", self.has_links_filter)
+        filter_form.addRow("関連", self.has_links_filter)
 
         top_controls = QHBoxLayout()
+        compact_layout(top_controls, margins=0, spacing=4)
         top_controls.addWidget(self.include_deleted_checkbox)
         top_controls.addStretch(1)
         top_controls.addWidget(self.search_button)
 
-        left_panel = QWidget()
-        left_layout = QVBoxLayout(left_panel)
-        left_layout.addLayout(filter_form)
-        left_layout.addLayout(top_controls)
-        left_layout.addWidget(self.error_label)
-        left_layout.addWidget(QLabel("検索結果"))
-        left_layout.addWidget(self.results_table)
-
-        right_panel = QWidget()
-        right_layout = QVBoxLayout(right_panel)
-        right_layout.addWidget(QLabel("選択中データの詳細"))
-        right_layout.addWidget(self.detail_text)
-        right_layout.addWidget(QLabel("関連するタイトル・サブタイトル"))
-        right_layout.addWidget(self.related_table)
-
-        splitter = QSplitter(Qt.Orientation.Horizontal)
-        splitter.addWidget(left_panel)
-        splitter.addWidget(right_panel)
-        splitter.setStretchFactor(0, 3)
-        splitter.setStretchFactor(1, 2)
-
         root_layout = QVBoxLayout(self)
-        root_layout.addWidget(
-            PageHeader(
-                "検索",
-                "登録済みの名前を検索し、関連するタイトルやサブタイトルを確認します。"
-                "内部IDは通常操作では使わないため、画面上では非表示にしています。",
-            )
-        )
-        root_layout.addWidget(splitter)
+        compact_layout(root_layout, margins=5, spacing=4)
+        root_layout.addWidget(PageHeader("検索", "名前・検索用表記・状態・備考を一覧で確認します。"))
+        root_layout.addLayout(filter_form)
+        root_layout.addLayout(top_controls)
+        root_layout.addWidget(self.error_label)
+        root_layout.addWidget(QLabel("検索結果（詳細統合）"))
+        root_layout.addWidget(self.results_table, 3)
+        root_layout.addWidget(QLabel("関連タイトル・サブタイトル"))
+        root_layout.addWidget(self.related_table, 2)
 
         self._on_search_clicked()
 
@@ -155,65 +129,63 @@ class SearchTab(QWidget):
             )
         except Exception as exc:  # noqa: BLE001
             self._search_rows = []
+            self._details_by_id = {}
             self.results_table.setRowCount(0)
-            self.detail_text.clear()
             self.related_table.setRowCount(0)
             self.error_label.setText(f"検索に失敗しました: {exc}")
             return
 
         self._search_rows = rows
+        self._details_by_id = {}
         self._render_results(rows)
 
     def _on_selection_changed(self) -> None:
         index = self.results_table.currentRow()
         if index < 0 or index >= len(self._search_rows):
-            self.detail_text.clear()
             self.related_table.setRowCount(0)
             return
 
         selected = self._search_rows[index]
         try:
-            detail = self._query_service.get_name_detail(selected.id, role=self._role_context.role)
             related_rows = self._query_service.list_related_rows(
                 selected.id,
                 role=self._role_context.role,
                 include_deleted=self.include_deleted_checkbox.isChecked(),
             )
         except Exception as exc:  # noqa: BLE001
-            self.error_label.setText(f"詳細取得に失敗しました: {exc}")
+            self.error_label.setText(f"関連取得に失敗しました: {exc}")
             return
 
-        self._render_detail(detail)
         self._render_related(related_rows)
 
     def _render_results(self, rows: list[NameSearchRow]) -> None:
         self.results_table.setRowCount(len(rows))
         for i, row in enumerate(rows):
+            detail = self._get_detail(row.id)
             self.results_table.setItem(i, 0, QTableWidgetItem(str(row.id)))
             self.results_table.setItem(i, 1, QTableWidgetItem(row.raw_name))
-            self.results_table.setItem(i, 2, QTableWidgetItem(str(row.linked_count)))
+            self.results_table.setItem(i, 2, QTableWidgetItem(row.normalized_name))
+            self.results_table.setItem(i, 3, QTableWidgetItem(str(row.linked_count)))
             status = "削除済み" if row.deleted_at else "使用中"
-            self.results_table.setItem(i, 3, QTableWidgetItem(status))
+            self.results_table.setItem(i, 4, QTableWidgetItem(status))
+            self.results_table.setItem(i, 5, QTableWidgetItem(detail.updated_at if detail else ""))
+            self.results_table.setItem(i, 6, QTableWidgetItem(detail.note if detail and detail.note else ""))
 
         if rows:
             self.results_table.selectRow(0)
         else:
-            self.detail_text.clear()
             self.related_table.setRowCount(0)
 
-    def _render_detail(self, detail: NameDetail) -> None:
-        status = "削除済み" if detail.deleted_at else "使用中"
-        self.detail_text.setPlainText(
-            "\n".join(
-                [
-                    f"名前: {detail.raw_name}",
-                    f"検索用表記: {detail.normalized_name}",
-                    f"状態: {status}",
-                    f"更新日時: {detail.updated_at}",
-                    f"備考: {detail.note or ''}",
-                ]
-            )
-        )
+    def _get_detail(self, name_id: int) -> NameDetail | None:
+        if name_id in self._details_by_id:
+            return self._details_by_id[name_id]
+        try:
+            detail = self._query_service.get_name_detail(name_id, role=self._role_context.role)
+        except Exception as exc:  # noqa: BLE001
+            self.error_label.setText(f"詳細取得に失敗しました: {exc}")
+            return None
+        self._details_by_id[name_id] = detail
+        return detail
 
     def _render_related(self, rows: list[RelatedRow]) -> None:
         self.related_table.setRowCount(len(rows))
