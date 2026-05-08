@@ -8,16 +8,11 @@ from PySide6.QtWidgets import QLabel, QVBoxLayout, QWidget
 
 from app.ui.role_context import RoleContext
 from app.ui.title_subtitle_management_tab import TitleSubtitleManagementTab
-from app.ui.ui_style import PageHeader
+from app.ui.ui_style import PageHeader, compact_layout
 
 
 class TitleManagementTab(QWidget):
-    """Title-focused wrapper around the existing title/subtitle editor.
-
-    This is an incremental UI split. The underlying editor is still shared for
-    compatibility, but the subtitle-specific controls are hidden so users can
-    focus on selecting names and registering titles.
-    """
+    """Title-focused wrapper around the existing title/subtitle editor."""
 
     def __init__(
         self,
@@ -37,16 +32,8 @@ class TitleManagementTab(QWidget):
         self._add_guidance_tooltips()
 
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(8, 8, 8, 8)
-        layout.setSpacing(6)
-        layout.addWidget(
-            PageHeader(
-                "タイトルを管理",
-                "最初に名前を選び、その名前に関連するタイトルを登録・更新します。"
-                "内部IDやコードは通常操作では使いません。",
-            ),
-            0,
-        )
+        compact_layout(layout, margins=5, spacing=4)
+        layout.addWidget(PageHeader("タイトルを管理", "名前を選び、関連するタイトルを登録・更新します。"), 0)
         layout.addWidget(self.editor, 1)
 
     def _hide_subtitle_controls(self) -> None:
@@ -72,7 +59,7 @@ class TitleManagementTab(QWidget):
 
     def _rename_labels(self) -> None:
         replacements = {
-            "タイトル作成時に紐づける名前": "このタイトルを関連付ける名前",
+            "タイトル作成時に紐づける名前": "関連付ける名前",
             "紐づき名前: なし": "関連する名前: なし",
             "タイトル": "タイトル情報",
             "サブタイトル": "",
@@ -88,9 +75,5 @@ class TitleManagementTab(QWidget):
                 label.setText(text.replace("紐づき名前", "関連する名前"))
 
     def _add_guidance_tooltips(self) -> None:
-        self.editor.operator_input.setToolTip(
-            "現在は変更履歴用に入力します。将来的には設定またはログイン情報から自動入力します。"
-        )
-        self.editor.title_link_names_list.setToolTip(
-            "タイトルに関連付ける名前を選択します。複数選択できます。"
-        )
+        self.editor.operator_input.setToolTip("変更履歴に記録する操作者です。")
+        self.editor.title_link_names_list.setToolTip("タイトルに関連付ける名前を選択します。複数選択できます。")

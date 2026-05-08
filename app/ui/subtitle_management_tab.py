@@ -8,16 +8,11 @@ from PySide6.QtWidgets import QLabel, QVBoxLayout, QWidget
 
 from app.ui.role_context import RoleContext
 from app.ui.title_subtitle_management_tab import TitleSubtitleManagementTab
-from app.ui.ui_style import PageHeader
+from app.ui.ui_style import PageHeader, compact_layout
 
 
 class SubtitleManagementTab(QWidget):
-    """Subtitle-focused wrapper around the existing title/subtitle editor.
-
-    This is an incremental UI split. The underlying editor is still shared for
-    compatibility, but the title creation form is hidden so users first choose a
-    title and then manage its subtitles.
-    """
+    """Subtitle-focused wrapper around the existing title/subtitle editor."""
 
     def __init__(
         self,
@@ -37,16 +32,8 @@ class SubtitleManagementTab(QWidget):
         self._add_guidance_tooltips()
 
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(8, 8, 8, 8)
-        layout.setSpacing(6)
-        layout.addWidget(
-            PageHeader(
-                "サブタイトルを管理",
-                "最初にタイトルを選び、そのタイトルに属するサブタイトルを登録・更新します。"
-                "管理番号や表示順は将来的に自動化する予定です。",
-            ),
-            0,
-        )
+        compact_layout(layout, margins=5, spacing=4)
+        layout.addWidget(PageHeader("サブタイトルを管理", "タイトルを選び、配下のサブタイトルを登録・更新します。"), 0)
         layout.addWidget(self.editor, 1)
 
     def _hide_title_creation_controls(self) -> None:
@@ -72,9 +59,9 @@ class SubtitleManagementTab(QWidget):
         replacements = {
             "タイトル": "タイトルを選択",
             "サブタイトル": "サブタイトル情報",
-            "コード": "管理番号（自動化予定）",
+            "コード": "管理番号",
             "sort_order": "表示順",
-            "選択中タイトル: 未選択": "選択中のタイトル: 未選択",
+            "選択中タイトル: 未選択": "選択中タイトル: 未選択",
             "操作者ID": "操作者",
         }
         long_hint = "タイトルを選択するとサブタイトル操作が有効になります"
@@ -90,12 +77,6 @@ class SubtitleManagementTab(QWidget):
                 label.hide()
 
     def _add_guidance_tooltips(self) -> None:
-        self.editor.operator_input.setToolTip(
-            "現在は変更履歴用に入力します。将来的には設定またはログイン情報から自動入力します。"
-        )
-        self.editor.subtitle_code_input.setToolTip(
-            "現在は互換性のため残しています。将来的には自動生成に変更します。"
-        )
-        self.editor.subtitle_sort_order_input.setToolTip(
-            "一覧での表示順です。未入力時は 0 として扱います。"
-        )
+        self.editor.operator_input.setToolTip("変更履歴に記録する操作者です。")
+        self.editor.subtitle_code_input.setToolTip("未入力の場合は自動生成されます。")
+        self.editor.subtitle_sort_order_input.setToolTip("一覧での表示順です。未入力時は 0 として扱います。")
