@@ -6,11 +6,13 @@ import json
 import sqlite3
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, Callable, TypeVar
 
 from app.application.authorization import ServiceRole, require_admin, require_editor_or_admin
 from app.domain.errors import ConflictError, NotFoundError, StateTransitionError, ValidationError
 from app.domain.normalization import normalize_for_comparison
+
+T = TypeVar("T")
 
 
 @dataclass(frozen=True)
@@ -45,35 +47,38 @@ class CoreService:
         self._connection.execute("PRAGMA foreign_keys = ON;")
 
     def create_name(self, payload: NameInput, operator_id: str, role: ServiceRole = "admin") -> int:
-        require_editor_or_admin(role, action="create_name")
-        self._validate_operator_id(operator_id)
-        normalized_name = normalize_for_comparison(payload.raw_name)
-        now = _utc_now()
-        try:
-            cursor = self._connection.execute(
-                """
-                INSERT INTO names(
-                    raw_name, normalized_name, note, icon_path, created_at, updated_at
+        def operation() -> int:
+            require_editor_or_admin(role, action="create_name")
+            self._validate_operator_id(operator_id)
+            normalized_name = normalize_for_comparison(payload.raw_name)
+            now = _utc_now()
+            try:
+                cursor = self._connection.execute(
+                    """
+                    INSERT INTO names(
+                        raw_name, normalized_name, note, icon_path, created_at, updated_at
+                    )
+                    VALUES (?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        payload.raw_name,
+                        normalized_name,
+                        payload.note,
+                        payload.icon_path,
+                        now,
+                        now,
+                    ),
                 )
-                VALUES (?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    payload.raw_name,
-                    normalized_name,
-                    payload.note,
-                    payload.icon_path,
-                    now,
-                    now,
-                ),
-            )
-        except sqlite3.IntegrityError as exc:
-            raise ConflictError("name already exists") from exc
+            except sqlite3.IntegrityError as exc:
+                raise ConflictError("name already exists") from exc
 
-        name_id = _require_lastrowid(cursor)
-        self._insert_change_log(
-            "names", name_id, "create", operator_id, None, self._get_name(name_id)
-        )
-        return name_id
+            name_id = _require_lastrowid(cursor)
+            self._insert_change_log(
+                "names", name_id, "create", operator_id, None, self._get_name(name_id)
+            )
+            return name_id
+
+        return self._write(operation)
 
     def update_name(
         self,
@@ -82,29 +87,32 @@ class CoreService:
         operator_id: str,
         role: ServiceRole = "admin",
     ) -> None:
-        require_editor_or_admin(role, action="update_name")
-        self._validate_operator_id(operator_id)
-        before = self._get_name(name_id)
-        if before["deleted_at"] is not None:
-            raise StateTransitionError("cannot update deleted name")
+        def operation() -> None:
+            require_editor_or_admin(role, action="update_name")
+            self._validate_operator_id(operator_id)
+            before = self._get_name(name_id)
+            if before["deleted_at"] is not None:
+                raise StateTransitionError("cannot update deleted name")
 
-        normalized_name = normalize_for_comparison(payload.raw_name)
-        now = _utc_now()
-        try:
-            self._connection.execute(
-                """
-                UPDATE names
-                SET raw_name = ?, normalized_name = ?, note = ?, icon_path = ?, updated_at = ?
-                WHERE id = ?
-                """,
-                (payload.raw_name, normalized_name, payload.note, payload.icon_path, now, name_id),
+            normalized_name = normalize_for_comparison(payload.raw_name)
+            now = _utc_now()
+            try:
+                self._connection.execute(
+                    """
+                    UPDATE names
+                    SET raw_name = ?, normalized_name = ?, note = ?, icon_path = ?, updated_at = ?
+                    WHERE id = ?
+                    """,
+                    (payload.raw_name, normalized_name, payload.note, payload.icon_path, now, name_id),
+                )
+            except sqlite3.IntegrityError as exc:
+                raise ConflictError("name already exists") from exc
+
+            self._insert_change_log(
+                "names", name_id, "update", operator_id, before, self._get_name(name_id)
             )
-        except sqlite3.IntegrityError as exc:
-            raise ConflictError("name already exists") from exc
 
-        self._insert_change_log(
-            "names", name_id, "update", operator_id, before, self._get_name(name_id)
-        )
+        self._write(operation)
 
     def delete_name(self, name_id: int, operator_id: str, role: ServiceRole = "admin") -> None:
         self._logical_delete("names", name_id, operator_id, role)
@@ -124,29 +132,32 @@ class CoreService:
         name_ids: list[int] | None = None,
         relation_type: str = "primary",
     ) -> int:
-        require_editor_or_admin(role, action="create_title")
-        self._validate_operator_id(operator_id)
-        now = _utc_now()
-        cursor = self._connection.execute(
-            """
-            INSERT INTO titles(title_name, note, icon_path, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?)
-            """,
-            (payload.title_name, payload.note, payload.icon_path, now, now),
-        )
-        title_id = _require_lastrowid(cursor)
-        self._insert_change_log(
-            "titles", title_id, "create", operator_id, None, self._get_title(title_id)
-        )
-        for name_id in name_ids or []:
-            self.link_name_to_title(
-                name_id=name_id,
-                title_id=title_id,
-                relation_type=relation_type,
-                operator_id=operator_id,
-                role=role,
+        def operation() -> int:
+            require_editor_or_admin(role, action="create_title")
+            self._validate_operator_id(operator_id)
+            now = _utc_now()
+            cursor = self._connection.execute(
+                """
+                INSERT INTO titles(title_name, note, icon_path, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                (payload.title_name, payload.note, payload.icon_path, now, now),
             )
-        return title_id
+            title_id = _require_lastrowid(cursor)
+            self._insert_change_log(
+                "titles", title_id, "create", operator_id, None, self._get_title(title_id)
+            )
+            for name_id in name_ids or []:
+                self._link_name_to_title_uncommitted(
+                    name_id=name_id,
+                    title_id=title_id,
+                    relation_type=relation_type,
+                    operator_id=operator_id,
+                    role=role,
+                )
+            return title_id
+
+        return self._write(operation)
 
     def update_title(
         self,
@@ -155,24 +166,27 @@ class CoreService:
         operator_id: str,
         role: ServiceRole = "admin",
     ) -> None:
-        require_editor_or_admin(role, action="update_title")
-        self._validate_operator_id(operator_id)
-        before = self._get_title(title_id)
-        if before["deleted_at"] is not None:
-            raise StateTransitionError("cannot update deleted title")
+        def operation() -> None:
+            require_editor_or_admin(role, action="update_title")
+            self._validate_operator_id(operator_id)
+            before = self._get_title(title_id)
+            if before["deleted_at"] is not None:
+                raise StateTransitionError("cannot update deleted title")
 
-        now = _utc_now()
-        self._connection.execute(
-            """
-            UPDATE titles
-            SET title_name = ?, note = ?, icon_path = ?, updated_at = ?
-            WHERE id = ?
-            """,
-            (payload.title_name, payload.note, payload.icon_path, now, title_id),
-        )
-        self._insert_change_log(
-            "titles", title_id, "update", operator_id, before, self._get_title(title_id)
-        )
+            now = _utc_now()
+            self._connection.execute(
+                """
+                UPDATE titles
+                SET title_name = ?, note = ?, icon_path = ?, updated_at = ?
+                WHERE id = ?
+                """,
+                (payload.title_name, payload.note, payload.icon_path, now, title_id),
+            )
+            self._insert_change_log(
+                "titles", title_id, "update", operator_id, before, self._get_title(title_id)
+            )
+
+        self._write(operation)
 
     def delete_title(self, title_id: int, operator_id: str, role: ServiceRole = "admin") -> None:
         self._logical_delete("titles", title_id, operator_id, role)
@@ -188,38 +202,41 @@ class CoreService:
     def create_subtitle(
         self, payload: SubtitleInput, operator_id: str, role: ServiceRole = "admin"
     ) -> int:
-        require_editor_or_admin(role, action="create_subtitle")
-        self._validate_operator_id(operator_id)
-        self._assert_active("titles", payload.title_id)
+        def operation() -> int:
+            require_editor_or_admin(role, action="create_subtitle")
+            self._validate_operator_id(operator_id)
+            self._assert_active("titles", payload.title_id)
 
-        now = _utc_now()
-        try:
-            cursor = self._connection.execute(
-                """
-                INSERT INTO subtitles(
-                    title_id, subtitle_code, subtitle_name, sort_order, note, icon_path,
-                    created_at, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    payload.title_id,
-                    payload.subtitle_code,
-                    payload.subtitle_name,
-                    payload.sort_order,
-                    payload.note,
-                    payload.icon_path,
-                    now,
-                    now,
-                ),
+            now = _utc_now()
+            try:
+                cursor = self._connection.execute(
+                    """
+                    INSERT INTO subtitles(
+                        title_id, subtitle_code, subtitle_name, sort_order, note, icon_path,
+                        created_at, updated_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        payload.title_id,
+                        payload.subtitle_code,
+                        payload.subtitle_name,
+                        payload.sort_order,
+                        payload.note,
+                        payload.icon_path,
+                        now,
+                        now,
+                    ),
+                )
+            except sqlite3.IntegrityError as exc:
+                raise ConflictError("subtitle already exists for title") from exc
+
+            subtitle_id = _require_lastrowid(cursor)
+            self._insert_change_log(
+                "subtitles", subtitle_id, "create", operator_id, None, self._get_subtitle(subtitle_id)
             )
-        except sqlite3.IntegrityError as exc:
-            raise ConflictError("subtitle already exists for title") from exc
+            return subtitle_id
 
-        subtitle_id = _require_lastrowid(cursor)
-        self._insert_change_log(
-            "subtitles", subtitle_id, "create", operator_id, None, self._get_subtitle(subtitle_id)
-        )
-        return subtitle_id
+        return self._write(operation)
 
     def update_subtitle(
         self,
@@ -228,39 +245,42 @@ class CoreService:
         operator_id: str,
         role: ServiceRole = "admin",
     ) -> None:
-        require_editor_or_admin(role, action="update_subtitle")
-        self._validate_operator_id(operator_id)
-        before = self._get_subtitle(subtitle_id)
-        if before["deleted_at"] is not None:
-            raise StateTransitionError("cannot update deleted subtitle")
+        def operation() -> None:
+            require_editor_or_admin(role, action="update_subtitle")
+            self._validate_operator_id(operator_id)
+            before = self._get_subtitle(subtitle_id)
+            if before["deleted_at"] is not None:
+                raise StateTransitionError("cannot update deleted subtitle")
 
-        self._assert_active("titles", payload.title_id)
-        now = _utc_now()
-        try:
-            self._connection.execute(
-                """
-                UPDATE subtitles
-                SET title_id = ?, subtitle_code = ?, subtitle_name = ?, sort_order = ?,
-                    note = ?, icon_path = ?, updated_at = ?
-                WHERE id = ?
-                """,
-                (
-                    payload.title_id,
-                    payload.subtitle_code,
-                    payload.subtitle_name,
-                    payload.sort_order,
-                    payload.note,
-                    payload.icon_path,
-                    now,
-                    subtitle_id,
-                ),
+            self._assert_active("titles", payload.title_id)
+            now = _utc_now()
+            try:
+                self._connection.execute(
+                    """
+                    UPDATE subtitles
+                    SET title_id = ?, subtitle_code = ?, subtitle_name = ?, sort_order = ?,
+                        note = ?, icon_path = ?, updated_at = ?
+                    WHERE id = ?
+                    """,
+                    (
+                        payload.title_id,
+                        payload.subtitle_code,
+                        payload.subtitle_name,
+                        payload.sort_order,
+                        payload.note,
+                        payload.icon_path,
+                        now,
+                        subtitle_id,
+                    ),
+                )
+            except sqlite3.IntegrityError as exc:
+                raise ConflictError("subtitle already exists for title") from exc
+
+            self._insert_change_log(
+                "subtitles", subtitle_id, "update", operator_id, before, self._get_subtitle(subtitle_id)
             )
-        except sqlite3.IntegrityError as exc:
-            raise ConflictError("subtitle already exists for title") from exc
 
-        self._insert_change_log(
-            "subtitles", subtitle_id, "update", operator_id, before, self._get_subtitle(subtitle_id)
-        )
+        self._write(operation)
 
     def delete_subtitle(
         self, subtitle_id: int, operator_id: str, role: ServiceRole = "admin"
@@ -284,6 +304,105 @@ class CoreService:
         relation_type: str,
         operator_id: str,
         role: ServiceRole = "admin",
+    ) -> int:
+        return self._write(
+            lambda: self._link_name_to_subtitle_uncommitted(
+                name_id=name_id,
+                subtitle_id=subtitle_id,
+                relation_type=relation_type,
+                operator_id=operator_id,
+                role=role,
+            )
+        )
+
+    def unlink_name_from_subtitle(
+        self, link_id: int, operator_id: str, role: ServiceRole = "admin"
+    ) -> None:
+        def operation() -> None:
+            require_admin(role, action="unlink_name_from_subtitle")
+            self._validate_operator_id(operator_id)
+            before = self._get_link(link_id)
+            if before["deleted_at"] is not None:
+                raise StateTransitionError("link already deleted")
+
+            now = _utc_now()
+            self._connection.execute(
+                "UPDATE name_subtitle_links SET deleted_at = ?, updated_at = ? WHERE id = ?",
+                (now, now, link_id),
+            )
+            self._insert_change_log(
+                "name_subtitle_links", link_id, "unlink", operator_id, before, self._get_link(link_id)
+            )
+
+        self._write(operation)
+
+    def restore_link(self, link_id: int, operator_id: str, role: ServiceRole = "admin") -> None:
+        self._restore("name_subtitle_links", link_id, operator_id, role)
+
+    def hard_delete_link(self, link_id: int, operator_id: str, role: ServiceRole = "admin") -> None:
+        self._hard_delete("name_subtitle_links", link_id, operator_id, role)
+
+    def link_name_to_title(
+        self,
+        name_id: int,
+        title_id: int,
+        relation_type: str,
+        operator_id: str,
+        role: ServiceRole = "admin",
+    ) -> int:
+        return self._write(
+            lambda: self._link_name_to_title_uncommitted(
+                name_id=name_id,
+                title_id=title_id,
+                relation_type=relation_type,
+                operator_id=operator_id,
+                role=role,
+            )
+        )
+
+    def unlink_name_from_title(
+        self, link_id: int, operator_id: str, role: ServiceRole = "admin"
+    ) -> None:
+        def operation() -> None:
+            require_admin(role, action="unlink_name_from_title")
+            self._validate_operator_id(operator_id)
+            before = self._get_name_title_link(link_id)
+            if before["deleted_at"] is not None:
+                raise StateTransitionError("name_title_link already deleted")
+
+            now = _utc_now()
+            self._connection.execute(
+                "UPDATE name_title_links SET deleted_at = ?, updated_at = ? WHERE id = ?",
+                (now, now, link_id),
+            )
+            self._insert_change_log(
+                "name_title_links",
+                link_id,
+                "unlink",
+                operator_id,
+                before,
+                self._get_name_title_link(link_id),
+            )
+
+        self._write(operation)
+
+    def restore_name_title_link(
+        self, link_id: int, operator_id: str, role: ServiceRole = "admin"
+    ) -> None:
+        self._restore("name_title_links", link_id, operator_id, role)
+
+    def hard_delete_name_title_link(
+        self, link_id: int, operator_id: str, role: ServiceRole = "admin"
+    ) -> None:
+        self._hard_delete("name_title_links", link_id, operator_id, role)
+
+    def _link_name_to_subtitle_uncommitted(
+        self,
+        name_id: int,
+        subtitle_id: int,
+        relation_type: str,
+        operator_id: str,
+        role: ServiceRole,
     ) -> int:
         require_editor_or_admin(role, action="link_name_to_subtitle")
         self._validate_operator_id(operator_id)
@@ -337,37 +456,13 @@ class CoreService:
         )
         return link_id
 
-    def unlink_name_from_subtitle(
-        self, link_id: int, operator_id: str, role: ServiceRole = "admin"
-    ) -> None:
-        require_admin(role, action="unlink_name_from_subtitle")
-        self._validate_operator_id(operator_id)
-        before = self._get_link(link_id)
-        if before["deleted_at"] is not None:
-            raise StateTransitionError("link already deleted")
-
-        now = _utc_now()
-        self._connection.execute(
-            "UPDATE name_subtitle_links SET deleted_at = ?, updated_at = ? WHERE id = ?",
-            (now, now, link_id),
-        )
-        self._insert_change_log(
-            "name_subtitle_links", link_id, "unlink", operator_id, before, self._get_link(link_id)
-        )
-
-    def restore_link(self, link_id: int, operator_id: str, role: ServiceRole = "admin") -> None:
-        self._restore("name_subtitle_links", link_id, operator_id, role)
-
-    def hard_delete_link(self, link_id: int, operator_id: str, role: ServiceRole = "admin") -> None:
-        self._hard_delete("name_subtitle_links", link_id, operator_id, role)
-
-    def link_name_to_title(
+    def _link_name_to_title_uncommitted(
         self,
         name_id: int,
         title_id: int,
         relation_type: str,
         operator_id: str,
-        role: ServiceRole = "admin",
+        role: ServiceRole,
     ) -> int:
         require_editor_or_admin(role, action="link_name_to_title")
         self._validate_operator_id(operator_id)
@@ -426,96 +521,72 @@ class CoreService:
         )
         return link_id
 
-    def unlink_name_from_title(
-        self, link_id: int, operator_id: str, role: ServiceRole = "admin"
-    ) -> None:
-        require_admin(role, action="unlink_name_from_title")
-        self._validate_operator_id(operator_id)
-        before = self._get_name_title_link(link_id)
-        if before["deleted_at"] is not None:
-            raise StateTransitionError("name_title_link already deleted")
-
-        now = _utc_now()
-        self._connection.execute(
-            "UPDATE name_title_links SET deleted_at = ?, updated_at = ? WHERE id = ?",
-            (now, now, link_id),
-        )
-        self._insert_change_log(
-            "name_title_links",
-            link_id,
-            "unlink",
-            operator_id,
-            before,
-            self._get_name_title_link(link_id),
-        )
-
-    def restore_name_title_link(
-        self, link_id: int, operator_id: str, role: ServiceRole = "admin"
-    ) -> None:
-        self._restore("name_title_links", link_id, operator_id, role)
-
-    def hard_delete_name_title_link(
-        self, link_id: int, operator_id: str, role: ServiceRole = "admin"
-    ) -> None:
-        self._hard_delete("name_title_links", link_id, operator_id, role)
-
     def _logical_delete(
         self, table: str, entity_id: int, operator_id: str, role: ServiceRole
     ) -> None:
-        require_admin(role, action=f"delete_{table}")
-        self._validate_operator_id(operator_id)
-        before = self._get_entity(table, entity_id)
-        if before["deleted_at"] is not None:
-            raise StateTransitionError(f"{table} already deleted")
+        def operation() -> None:
+            require_admin(role, action=f"delete_{table}")
+            self._validate_operator_id(operator_id)
+            before = self._get_entity(table, entity_id)
+            if before["deleted_at"] is not None:
+                raise StateTransitionError(f"{table} already deleted")
 
-        now = _utc_now()
-        self._connection.execute(
-            f"UPDATE {table} SET deleted_at = ?, updated_at = ? WHERE id = ?",
-            (now, now, entity_id),
-        )
-        self._insert_change_log(
-            table,
-            entity_id,
-            "delete",
-            operator_id,
-            before,
-            self._get_entity(table, entity_id),
-        )
+            now = _utc_now()
+            self._connection.execute(
+                f"UPDATE {table} SET deleted_at = ?, updated_at = ? WHERE id = ?",
+                (now, now, entity_id),
+            )
+            self._insert_change_log(
+                table,
+                entity_id,
+                "delete",
+                operator_id,
+                before,
+                self._get_entity(table, entity_id),
+            )
+
+        self._write(operation)
 
     def _restore(self, table: str, entity_id: int, operator_id: str, role: ServiceRole) -> None:
-        require_admin(role, action=f"restore_{table}")
-        self._validate_operator_id(operator_id)
-        before = self._get_entity(table, entity_id)
-        if before["deleted_at"] is None:
-            raise StateTransitionError(f"{table} is active")
+        def operation() -> None:
+            require_admin(role, action=f"restore_{table}")
+            self._validate_operator_id(operator_id)
+            before = self._get_entity(table, entity_id)
+            if before["deleted_at"] is None:
+                raise StateTransitionError(f"{table} is active")
 
-        now = _utc_now()
-        try:
-            self._connection.execute(
-                f"UPDATE {table} SET deleted_at = NULL, updated_at = ? WHERE id = ?",
-                (now, entity_id),
+            now = _utc_now()
+            try:
+                self._connection.execute(
+                    f"UPDATE {table} SET deleted_at = NULL, updated_at = ? WHERE id = ?",
+                    (now, entity_id),
+                )
+            except sqlite3.IntegrityError as exc:
+                raise ConflictError(f"{table} conflicts on restore") from exc
+
+            self._insert_change_log(
+                table,
+                entity_id,
+                "restore",
+                operator_id,
+                before,
+                self._get_entity(table, entity_id),
             )
-        except sqlite3.IntegrityError as exc:
-            raise ConflictError(f"{table} conflicts on restore") from exc
 
-        self._insert_change_log(
-            table,
-            entity_id,
-            "restore",
-            operator_id,
-            before,
-            self._get_entity(table, entity_id),
-        )
+        self._write(operation)
 
     def _hard_delete(self, table: str, entity_id: int, operator_id: str, role: ServiceRole) -> None:
-        require_admin(role, action=f"hard_delete_{table}")
-        self._validate_operator_id(operator_id)
-        before = self._get_entity(table, entity_id)
-        if before["deleted_at"] is None:
-            raise StateTransitionError(f"{table} must be logically deleted first")
+        def operation() -> None:
+            require_admin(role, action=f"hard_delete_{table}")
+            self._validate_operator_id(operator_id)
+            before = self._get_entity(table, entity_id)
+            if before["deleted_at"] is None:
+                raise StateTransitionError(f"{table} must be logically deleted first")
 
-        self._connection.execute(f"DELETE FROM {table} WHERE id = ?", (entity_id,))
-        self._insert_change_log(table, entity_id, "hard_delete", operator_id, before, None)
+            self._connection.execute(f"DELETE FROM {table} WHERE id = ?", (entity_id,))
+            self._insert_change_log(table, entity_id, "hard_delete", operator_id, before, None)
+
+        self._write(operation)
 
     def _assert_active(self, table: str, entity_id: int) -> None:
         entity = self._get_entity(table, entity_id)
@@ -571,6 +642,15 @@ class CoreService:
                 _utc_now(),
             ),
         )
+
+    def _write(self, operation: Callable[[], T]) -> T:
+        try:
+            result = operation()
+        except Exception:
+            self._connection.rollback()
+            raise
+        self._connection.commit()
+        return result
 
     @staticmethod
     def _validate_operator_id(operator_id: str) -> None:
