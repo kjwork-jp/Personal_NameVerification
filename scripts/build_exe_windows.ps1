@@ -21,7 +21,8 @@ python -m pip install -e ".[dev]"
 if ($LASTEXITCODE -ne 0) { throw "dependency installation failed" }
 
 Write-Host "[5/7] Run quality gates"
-pytest -q
+$pytestBaseTemp = Join-Path "tmp" ("pytest-" + $PID)
+pytest -q --basetemp $pytestBaseTemp
 if ($LASTEXITCODE -ne 0) { throw "pytest failed" }
 ruff check .
 if ($LASTEXITCODE -ne 0) { throw "ruff failed" }
