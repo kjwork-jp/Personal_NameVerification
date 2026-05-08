@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import sqlite3
 from pathlib import Path
 
+from PySide6.QtGui import QCloseEvent
 from PySide6.QtWidgets import QMainWindow, QTabWidget
 
 from app.application.backup_restore_services import BackupRestoreService
@@ -36,8 +38,10 @@ class MainWindow(QMainWindow):
         backup_restore_service: BackupRestoreService | None = None,
         import_service: ImportService | None = None,
         database_path: Path | None = None,
+        connection: sqlite3.Connection | None = None,
     ) -> None:
         super().__init__()
+        self._connection = connection
         self.setWindowTitle("NameVerification v3")
         self.resize(1180, 760)
         apply_friendly_theme(self)
@@ -105,3 +109,9 @@ class MainWindow(QMainWindow):
             )
         tabs.addTab(HelpSettingsTab(database_path=database_path), "ヘルプ / 設定")
         self.setCentralWidget(tabs)
+
+    def closeEvent(self, event: QCloseEvent) -> None:  # noqa: N802
+        if self._connection is not None:
+            self._connection.commit()
+            self._connection.close()
+        super().closeEvent(event)

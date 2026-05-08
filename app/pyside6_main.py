@@ -32,6 +32,7 @@ def main() -> int:
         backup_restore_service=BackupRestoreService(),
         import_service=ImportService(connection),
         database_path=database_path,
+        connection=connection,
     )
     window.show()
 
