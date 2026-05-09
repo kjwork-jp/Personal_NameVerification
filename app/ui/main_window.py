@@ -46,10 +46,11 @@ class MainWindow(QMainWindow):
         self.resize(1180, 760)
         apply_friendly_theme(self)
 
-        tabs = QTabWidget(self)
+        self.tabs = QTabWidget(self)
         active_role = role_context or RoleContext.admin()
-        tabs.addTab(SearchTab(query_service=query_service, role_context=active_role), "検索")
-        tabs.addTab(
+        self._tabs_by_name: dict[str, object] = {}
+        self._add_tab(SearchTab(query_service=query_service, role_context=active_role), "検索")
+        self._add_tab(
             NameManagementTab(
                 core_service=core_service,
                 query_service=query_service,
@@ -57,7 +58,7 @@ class MainWindow(QMainWindow):
             ),
             "名前を管理",
         )
-        tabs.addTab(
+        self._add_tab(
             TitleManagementTab(
                 core_service=core_service,
                 query_service=query_service,
@@ -65,7 +66,7 @@ class MainWindow(QMainWindow):
             ),
             "タイトルを管理",
         )
-        tabs.addTab(
+        self._add_tab(
             SubtitleManagementTab(
                 core_service=core_service,
                 query_service=query_service,
@@ -73,7 +74,7 @@ class MainWindow(QMainWindow):
             ),
             "サブタイトルを管理",
         )
-        tabs.addTab(
+        self._add_tab(
             LinkManagementTab(
                 core_service=core_service,
                 query_service=query_service,
@@ -81,7 +82,7 @@ class MainWindow(QMainWindow):
             ),
             "関連付け",
         )
-        tabs.addTab(
+        self._add_tab(
             TrashTab(
                 core_service=core_service,
                 query_service=query_service,
@@ -89,7 +90,7 @@ class MainWindow(QMainWindow):
             ),
             "削除データ",
         )
-        tabs.addTab(
+        self._add_tab(
             AuditLogTab(query_service=query_service, role_context=active_role),
             "操作履歴",
         )
@@ -98,7 +99,7 @@ class MainWindow(QMainWindow):
             and backup_restore_service is not None
             and import_service is not None
         ):
-            tabs.addTab(
+            self._add_tab(
                 OperationsTab(
                     export_backup_service=export_backup_service,
                     backup_restore_service=backup_restore_service,
@@ -107,8 +108,34 @@ class MainWindow(QMainWindow):
                 ),
                 "データ入出力",
             )
-        tabs.addTab(HelpSettingsTab(database_path=database_path), "ヘルプ / 設定")
-        self.setCentralWidget(tabs)
+        self._add_tab(HelpSettingsTab(database_path=database_path), "ヘルプ / 設定")
+        self.tabs.currentChanged.connect(self._refresh_current_tab)
+        self.setCentralWidget(self.tabs)
+
+    def _add_tab(self, widget: object, title: str) -> None:
+        self.tabs.addTab(widget, title)
+        self._tabs_by_name[title] = widget
+
+    def _refresh_current_tab(self) -> None:
+        widget = self.tabs.currentWidget()
+        if widget is None:
+            return
+        for method_name in (
+            "refresh",
+            "_refresh_all",
+            "_refresh_list",
+            "_on_search_clicked",
+            "_reload",
+        ):
+            method = getattr(widget, method_name, None)
+            if callable(method):
+                method()
+                return
+        editor = getattr(widget, "editor", None)
+        if editor is not None:
+            method = getattr(editor, "_refresh_titles", None)
+            if callable(method):
+                method()
 
     def closeEvent(self, event: QCloseEvent) -> None:  # noqa: N802
         if self._connection is not None:
