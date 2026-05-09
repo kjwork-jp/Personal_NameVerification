@@ -41,13 +41,39 @@ class QueryService:
         params: list[Any] = []
 
         normalized_query = normalize_with_raw(query).normalized_text
-        if normalized_query is not None:
+        raw_query = query.strip() if query else None
+        if normalized_query is not None and raw_query:
             if exact_match:
-                conditions.append("n.normalized_name = ?")
-                params.append(normalized_query)
+                conditions.append(
+                    "(n.normalized_name = ? OR "
+                    "EXISTS (SELECT 1 FROM name_title_links ntq "
+                    "JOIN titles tq ON tq.id = ntq.title_id "
+                    "WHERE ntq.name_id = n.id AND ntq.deleted_at IS NULL "
+                    "AND tq.deleted_at IS NULL AND tq.title_name = ?) OR "
+                    "EXISTS (SELECT 1 FROM name_subtitle_links lsq "
+                    "JOIN subtitles sq ON sq.id = lsq.subtitle_id "
+                    "JOIN titles tsq ON tsq.id = sq.title_id "
+                    "WHERE lsq.name_id = n.id AND lsq.deleted_at IS NULL "
+                    "AND sq.deleted_at IS NULL AND tsq.deleted_at IS NULL "
+                    "AND (sq.subtitle_name = ? OR sq.subtitle_code = ?)))"
+                )
+                params.extend([normalized_query, raw_query, raw_query, raw_query])
             else:
-                conditions.append("n.normalized_name LIKE ?")
-                params.append(f"%{normalized_query}%")
+                conditions.append(
+                    "(n.normalized_name LIKE ? OR "
+                    "EXISTS (SELECT 1 FROM name_title_links ntq "
+                    "JOIN titles tq ON tq.id = ntq.title_id "
+                    "WHERE ntq.name_id = n.id AND ntq.deleted_at IS NULL "
+                    "AND tq.deleted_at IS NULL AND tq.title_name LIKE ?) OR "
+                    "EXISTS (SELECT 1 FROM name_subtitle_links lsq "
+                    "JOIN subtitles sq ON sq.id = lsq.subtitle_id "
+                    "JOIN titles tsq ON tsq.id = sq.title_id "
+                    "WHERE lsq.name_id = n.id AND lsq.deleted_at IS NULL "
+                    "AND sq.deleted_at IS NULL AND tsq.deleted_at IS NULL "
+                    "AND (sq.subtitle_name LIKE ? OR sq.subtitle_code LIKE ?)))"
+                )
+                like_query = f"%{raw_query}%"
+                params.extend([f"%{normalized_query}%", like_query, like_query, like_query])
 
         if title_id is not None:
             conditions.append(
@@ -62,8 +88,10 @@ class QueryService:
         if has_links is not None:
             comparator = "> 0" if has_links else "= 0"
             conditions.append(
-                "(SELECT COUNT(1) FROM name_subtitle_links l3 "
-                "WHERE l3.name_id = n.id AND l3.deleted_at IS NULL) "
+                "((SELECT COUNT(1) FROM name_subtitle_links l3 "
+                "WHERE l3.name_id = n.id AND l3.deleted_at IS NULL) + "
+                "(SELECT COUNT(1) FROM name_title_links nt3 "
+                "WHERE nt3.name_id = n.id AND nt3.deleted_at IS NULL)) "
                 f"{comparator}"
             )
 
@@ -81,13 +109,16 @@ class QueryService:
                 n.normalized_name,
                 n.note,
                 n.deleted_at,
-                COUNT(DISTINCT l.id) AS linked_count,
-                GROUP_CONCAT(DISTINCT s.title_id) AS title_ids
+                COUNT(DISTINCT l.id) AS subtitle_linked_count,
+                COUNT(DISTINCT nt.id) AS title_linked_count,
+                GROUP_CONCAT(DISTINCT COALESCE(s.title_id, nt.title_id)) AS title_ids
             FROM names n
             LEFT JOIN name_subtitle_links l
                 ON l.name_id = n.id AND l.deleted_at IS NULL
             LEFT JOIN subtitles s
                 ON s.id = l.subtitle_id
+            LEFT JOIN name_title_links nt
+                ON nt.name_id = n.id AND nt.deleted_at IS NULL
             {where_clause}
             GROUP BY n.id
             ORDER BY n.updated_at DESC, n.id DESC
@@ -102,9 +133,11 @@ class QueryService:
                 normalized_name=row["normalized_name"],
                 note=row["note"],
                 deleted_at=row["deleted_at"],
-                linked_count=int(row["linked_count"]),
+                linked_count=int(row["subtitle_linked_count"]) + int(row["title_linked_count"]),
                 title_ids=_parse_int_tuple(row["title_ids"]),
                 public_id=row["public_id"],
+                title_linked_count=int(row["title_linked_count"]),
+                subtitle_linked_count=int(row["subtitle_linked_count"]),
             )
             for row in rows
         ]
