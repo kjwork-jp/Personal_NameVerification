@@ -12,6 +12,13 @@ from app.ui.role_context import RoleContext
 def apply_operator_context(target: Any, role_context: RoleContext) -> None:
     """Apply the login operator to a tab and hide operator input widgets."""
 
+    _apply_operator_to_target(target, role_context)
+    editor = getattr(target, "editor", None)
+    if editor is not None:
+        _apply_operator_to_target(editor, role_context)
+
+
+def _apply_operator_to_target(target: Any, role_context: RoleContext) -> None:
     operator_input = getattr(target, "operator_input", None)
     if isinstance(operator_input, QLineEdit):
         operator_input.setText(role_context.operator_id)
