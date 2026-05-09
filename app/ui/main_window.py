@@ -6,7 +6,7 @@ import sqlite3
 from pathlib import Path
 
 from PySide6.QtGui import QCloseEvent
-from PySide6.QtWidgets import QMainWindow, QTabWidget
+from PySide6.QtWidgets import QMainWindow, QTabWidget, QWidget
 
 from app.application.backup_restore_services import BackupRestoreService
 from app.application.core_services import CoreService
@@ -14,6 +14,7 @@ from app.application.export_backup_services import ExportBackupService
 from app.application.import_services import ImportService
 from app.application.query_services import QueryService
 from app.ui.audit_log_tab import AuditLogTab
+from app.ui.context_helpers import apply_operator_context
 from app.ui.help_settings_tab import HelpSettingsTab
 from app.ui.link_management_tab import LinkManagementTab
 from app.ui.name_management_tab import NameManagementTab
@@ -42,19 +43,19 @@ class MainWindow(QMainWindow):
     ) -> None:
         super().__init__()
         self._connection = connection
+        self._role_context = role_context or RoleContext.admin()
         self.setWindowTitle("NameVerification v3")
         self.resize(1180, 760)
         apply_friendly_theme(self)
 
         self.tabs = QTabWidget(self)
-        active_role = role_context or RoleContext.admin()
-        self._tabs_by_name: dict[str, object] = {}
-        self._add_tab(SearchTab(query_service=query_service, role_context=active_role), "検索")
+        self._tabs_by_name: dict[str, QWidget] = {}
+        self._add_tab(SearchTab(query_service=query_service, role_context=self._role_context), "検索")
         self._add_tab(
             NameManagementTab(
                 core_service=core_service,
                 query_service=query_service,
-                role_context=active_role,
+                role_context=self._role_context,
             ),
             "名前を管理",
         )
@@ -62,7 +63,7 @@ class MainWindow(QMainWindow):
             TitleManagementTab(
                 core_service=core_service,
                 query_service=query_service,
-                role_context=active_role,
+                role_context=self._role_context,
             ),
             "タイトルを管理",
         )
@@ -70,7 +71,7 @@ class MainWindow(QMainWindow):
             SubtitleManagementTab(
                 core_service=core_service,
                 query_service=query_service,
-                role_context=active_role,
+                role_context=self._role_context,
             ),
             "サブタイトルを管理",
         )
@@ -78,7 +79,7 @@ class MainWindow(QMainWindow):
             LinkManagementTab(
                 core_service=core_service,
                 query_service=query_service,
-                role_context=active_role,
+                role_context=self._role_context,
             ),
             "関連付け",
         )
@@ -86,12 +87,12 @@ class MainWindow(QMainWindow):
             TrashTab(
                 core_service=core_service,
                 query_service=query_service,
-                role_context=active_role,
+                role_context=self._role_context,
             ),
             "削除データ",
         )
         self._add_tab(
-            AuditLogTab(query_service=query_service, role_context=active_role),
+            AuditLogTab(query_service=query_service, role_context=self._role_context),
             "操作履歴",
         )
         if (
@@ -104,7 +105,7 @@ class MainWindow(QMainWindow):
                     export_backup_service=export_backup_service,
                     backup_restore_service=backup_restore_service,
                     import_service=import_service,
-                    role_context=active_role,
+                    role_context=self._role_context,
                 ),
                 "データ入出力",
             )
@@ -112,7 +113,8 @@ class MainWindow(QMainWindow):
         self.tabs.currentChanged.connect(self._refresh_current_tab)
         self.setCentralWidget(self.tabs)
 
-    def _add_tab(self, widget: object, title: str) -> None:
+    def _add_tab(self, widget: QWidget, title: str) -> None:
+        apply_operator_context(widget, self._role_context)
         self.tabs.addTab(widget, title)
         self._tabs_by_name[title] = widget
 
