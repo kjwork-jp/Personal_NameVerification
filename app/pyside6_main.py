@@ -9,7 +9,7 @@ from pathlib import Path
 
 def main() -> int:
     """Launch the minimal PySide6 application shell."""
-    from PySide6.QtWidgets import QApplication
+    from PySide6.QtWidgets import QApplication, QDialog
 
     from app.application.backup_restore_services import BackupRestoreService
     from app.application.core_services import CoreService
@@ -17,6 +17,7 @@ def main() -> int:
     from app.application.import_services import ImportService
     from app.application.query_services import QueryService
     from app.infrastructure.db import initialize_database
+    from app.ui.login_dialog import LoginDialog
     from app.ui.main_window import MainWindow
 
     database_path = Path(os.environ.get("NAMEVERIFICATION_DB_PATH", "nameverification.db"))
@@ -25,9 +26,16 @@ def main() -> int:
     core_service = CoreService(connection)
 
     app = QApplication(sys.argv)
+    login = LoginDialog()
+    if login.exec() != QDialog.DialogCode.Accepted:
+        connection.close()
+        return 0
+    role_context = login.role_context()
+
     window = MainWindow(
         query_service=query_service,
         core_service=core_service,
+        role_context=role_context,
         export_backup_service=ExportBackupService(connection),
         backup_restore_service=BackupRestoreService(),
         import_service=ImportService(connection),
