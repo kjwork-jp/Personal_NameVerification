@@ -15,6 +15,8 @@ class NameSearchRow:
     linked_count: int
     title_ids: tuple[int, ...]
     public_id: str | None = None
+    title_linked_count: int = 0
+    subtitle_linked_count: int = 0
 
 
 @dataclass(frozen=True)
