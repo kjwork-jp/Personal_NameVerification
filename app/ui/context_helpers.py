@@ -27,8 +27,11 @@ def _apply_operator_to_target(target: Any, role_context: RoleContext) -> None:
 
 
 def _hide_form_label_for_widget(root: Any, widget: QWidget) -> None:
-    if isinstance(root, QWidget) and root.layout() is not None:
-        _hide_form_label_in_layout(root.layout(), widget)
+    if not isinstance(root, QWidget):
+        return
+    layout = root.layout()
+    if layout is not None:
+        _hide_form_label_in_layout(layout, widget)
 
 
 def _hide_form_label_in_layout(layout: QLayout, widget: QWidget) -> None:
@@ -44,5 +47,8 @@ def _hide_form_label_in_layout(layout: QLayout, widget: QWidget) -> None:
         if child_layout is not None:
             _hide_form_label_in_layout(child_layout, widget)
         child_widget = item.widget()
-        if child_widget is not None and child_widget.layout() is not None:
-            _hide_form_label_in_layout(child_widget.layout(), widget)
+        if child_widget is None:
+            continue
+        widget_layout = child_widget.layout()
+        if widget_layout is not None:
+            _hide_form_label_in_layout(widget_layout, widget)

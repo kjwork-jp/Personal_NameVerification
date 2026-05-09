@@ -50,7 +50,10 @@ class MainWindow(QMainWindow):
 
         self.tabs = QTabWidget(self)
         self._tabs_by_name: dict[str, QWidget] = {}
-        self._add_tab(SearchTab(query_service=query_service, role_context=self._role_context), "検索")
+        self._add_tab(
+            SearchTab(query_service=query_service, role_context=self._role_context),
+            "検索",
+        )
         self._add_tab(
             NameManagementTab(
                 core_service=core_service,

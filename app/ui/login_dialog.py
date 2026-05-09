@@ -13,7 +13,7 @@ from PySide6.QtWidgets import (
 )
 
 from app.ui.input_defaults import default_operator_id
-from app.ui.role_context import RoleContext, UserRole
+from app.ui.role_context import RoleContext
 
 
 class LoginDialog(QDialog):
