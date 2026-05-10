@@ -23,7 +23,9 @@ class StubCoreService:
         self.calls: list[str] = []
 
     def create_title(self, payload, operator_id: str, role: str = "admin", *, name_ids=None) -> int:  # type: ignore[no-untyped-def]
-        self.calls.append(f"create_title:{payload.title_name}:{operator_id}:{role}")
+        self.calls.append(
+            f"create_title:{payload.title_name}:{operator_id}:{role}:{name_ids or []}"
+        )
         return 1
 
     def update_title(self, title_id: int, payload, operator_id: str, role: str = "admin") -> None:  # type: ignore[no-untyped-def]
@@ -88,6 +90,38 @@ class StubQueryService:
             ),
         ]
 
+    def search_names(self, *args, **kwargs) -> list[NameSearchRow]:  # type: ignore[no-untyped-def]
+        _ = (args, kwargs)
+        return [
+            NameSearchRow(
+                id=100,
+                raw_name="Alice",
+                normalized_name="alice",
+                note=None,
+                deleted_at=None,
+                linked_count=0,
+                title_ids=(),
+            )
+        ]
+
+    def list_names_for_title(
+        self, title_id: int, role: str = "admin", *, include_deleted: bool = False
+    ) -> list[NameTitleLinkRow]:
+        _ = (role, include_deleted)
+        if title_id != 1:
+            return []
+        return [
+            NameTitleLinkRow(
+                link_id=900,
+                name_id=100,
+                title_id=1,
+                relation_type="primary",
+                raw_name="Alice",
+                title_name="Title1",
+                link_deleted_at=None,
+            )
+        ]
+
     def list_titles(
         self, role: str = "admin", *, include_deleted: bool = False
     ) -> list[TitleDetail]:
@@ -132,6 +166,7 @@ def test_title_subtitle_management_operations(monkeypatch: pytest.MonkeyPatch) -
     tab.operator_input.setText("op-1")
 
     tab.title_name_input.setText("NewTitle")
+    tab.title_link_name_combo.setCurrentIndex(1)
     tab._create_title()
     tab.titles_table.selectRow(0)
     tab.title_name_input.setText("UpdatedTitle")
@@ -152,7 +187,7 @@ def test_title_subtitle_management_operations(monkeypatch: pytest.MonkeyPatch) -
     tab._update_subtitle()
     tab._delete_subtitle()
 
-    assert any(call.startswith("create_title:NewTitle:op-1:admin") for call in core.calls)
+    assert any(call.startswith("create_title:NewTitle:op-1:admin:[100]") for call in core.calls)
     assert any(call.startswith("update_title:1:UpdatedTitle:op-1:admin") for call in core.calls)
     assert any(call.startswith("delete_title:1:op-1:admin") for call in core.calls)
     assert any(call.startswith("restore_title:2:op-1:admin") for call in core.calls)
@@ -160,6 +195,12 @@ def test_title_subtitle_management_operations(monkeypatch: pytest.MonkeyPatch) -
     assert any(call.startswith("create_subtitle:1:SNEW:op-1:admin") for call in core.calls)
     assert any(call.startswith("update_subtitle:11:S1-U:op-1:admin") for call in core.calls)
     assert any(call.startswith("delete_subtitle:11:op-1:admin") for call in core.calls)
+
+    assert tab.titles_table.columnCount() == 7
+    assert tab.subtitles_table.columnCount() == 10
+    assert tab.titles_table.item(0, 2).text() == "Title1"
+    assert tab.titles_table.item(0, 6).text() == "Alice"
+    assert tab.subtitles_table.item(0, 3).text() == "Title1"
 
 
 def test_title_subtitle_management_requires_operator_id() -> None:
@@ -212,8 +253,11 @@ def test_title_subtitle_role_guards() -> None:
         role_context=RoleContext(role="admin"),
     )
     assert admin.title_delete_button.isEnabled()
-    assert not admin.title_restore_button.isEnabled()
+    assert admin.title_restore_button.isHidden()
+    assert admin.title_hard_delete_button.isHidden()
     assert admin.subtitle_delete_button.isEnabled()
+    assert admin.subtitle_restore_button.isHidden()
+    assert admin.subtitle_hard_delete_button.isHidden()
 
 
 def test_selected_title_label_and_subtitle_form_clear_on_title_change() -> None:
@@ -224,6 +268,7 @@ def test_selected_title_label_and_subtitle_form_clear_on_title_change() -> None:
 
     tab.titles_table.selectRow(0)
     assert "Title1" in tab.selected_title_label.text()
+    assert "Title1" in tab.title_selector_combo.currentText()
 
     tab.subtitle_code_input.setText("TEMP")
     tab.titles_table.selectRow(1)
@@ -232,6 +277,18 @@ def test_selected_title_label_and_subtitle_form_clear_on_title_change() -> None:
     assert tab.subtitle_code_input.text() == ""
     assert "削除済みタイトル" in tab.subtitle_hint_label.text()
     assert not tab.subtitle_create_button.isEnabled()
+
+
+def test_title_combo_selection_updates_table_selection() -> None:
+    _app()
+    tab = TitleSubtitleManagementTab(
+        core_service=StubCoreService(), query_service=StubQueryService()
+    )
+
+    tab.title_selector_combo.setCurrentIndex(1)
+
+    assert tab.titles_table.currentRow() == 1
+    assert "Title2" in tab.selected_title_label.text()
 
 
 def test_cannot_create_or_update_subtitle_under_deleted_title() -> None:
@@ -284,8 +341,8 @@ def test_title_buttons_follow_deleted_state() -> None:
     tab.titles_table.selectRow(1)
     assert not tab.title_update_button.isEnabled()
     assert not tab.title_delete_button.isEnabled()
-    assert tab.title_restore_button.isEnabled()
-    assert tab.title_hard_delete_button.isEnabled()
+    assert not tab.title_restore_button.isEnabled()
+    assert not tab.title_hard_delete_button.isEnabled()
 
 
 class SubtitleDeletedOnActiveTitleQueryService(StubQueryService):
@@ -319,25 +376,5 @@ def test_subtitle_destructive_buttons_follow_subtitle_deleted_state() -> None:
 
     assert not tab.subtitle_update_button.isEnabled()
     assert not tab.subtitle_delete_button.isEnabled()
-    assert tab.subtitle_restore_button.isEnabled()
-    assert tab.subtitle_hard_delete_button.isEnabled()
-
-    def search_names(self, *args, **kwargs) -> list[NameSearchRow]:  # type: ignore[no-untyped-def]
-        _ = (args, kwargs)
-        return [
-            NameSearchRow(
-                id=100,
-                raw_name="Alice",
-                normalized_name="alice",
-                note=None,
-                deleted_at=None,
-                linked_count=0,
-                title_ids=(),
-            )
-        ]
-
-    def list_names_for_title(
-        self, title_id: int, role: str = "admin", *, include_deleted: bool = False
-    ) -> list[NameTitleLinkRow]:
-        _ = (title_id, role, include_deleted)
-        return []
+    assert not tab.subtitle_restore_button.isEnabled()
+    assert not tab.subtitle_hard_delete_button.isEnabled()
