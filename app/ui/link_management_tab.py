@@ -11,22 +11,21 @@ from PySide6.QtWidgets import (
     QLabel,
     QLineEdit,
     QPushButton,
-    QTableWidget,
-    QTableWidgetItem,
+    QTabWidget,
     QVBoxLayout,
     QWidget,
 )
 
 from app.ui.dialogs import confirm_destructive_action
+from app.ui.input_defaults import default_operator_id
 from app.ui.permissions import can_link, can_unlink
 from app.ui.public_id_display import short_public_id
-from app.ui.relation_types import RELATION_TYPE_OPTIONS
 from app.ui.role_context import RoleContext
-from app.ui.ui_style import PageHeader
+from app.ui.ui_style import PageHeader, compact_layout
 
 
 class LinkManagementTab(QWidget):
-    """UI for managing relationships between names and subtitles."""
+    """UI for registering and removing name/subtitle relationships."""
 
     def __init__(
         self,
@@ -43,76 +42,83 @@ class LinkManagementTab(QWidget):
         self._subtitles: list[Any] = []
         self._links: list[Any] = []
 
-        self.operator_input = QLineEdit()
-        self.operator_input.setPlaceholderText("操作者名または運用担当者ID")
-        self.operator_input.setToolTip("変更履歴に記録する操作者を入力します")
-        self.relation_type_combo = QComboBox()
-        self.relation_type_combo.addItem("-- 関連の種類を選択 --", "")
-        for option in RELATION_TYPE_OPTIONS:
-            self.relation_type_combo.addItem(_relation_label(option.label), option.value)
-        self.relation_type_combo.setToolTip("名前とサブタイトルの関係を選択してください")
-        self.relation_type_combo.currentIndexChanged.connect(self._on_relation_type_changed)
-        self.custom_relation_type_input = QLineEdit()
-        self.custom_relation_type_input.setPlaceholderText("補足説明（任意）")
-        self.custom_relation_type_input.setEnabled(False)
-        self.custom_relation_type_input.setToolTip(
-            "その他を選択した場合だけ、関係の説明を入力します"
-        )
+        self.operator_input = QLineEdit(default_operator_id())
+        self.operator_input.setPlaceholderText("操作者（自動入力）")
         self.message_label = QLabel("")
 
-        self.names_table = QTableWidget(0, 2)
-        self.names_table.setHorizontalHeaderLabels(["内部ID", "名前 / 公開ID"])
-        self.names_table.setColumnHidden(0, True)
-        self.titles_table = QTableWidget(0, 2)
-        self.titles_table.setHorizontalHeaderLabels(["内部ID", "タイトル / 公開ID"])
-        self.titles_table.setColumnHidden(0, True)
-        self.subtitles_table = QTableWidget(0, 3)
-        self.subtitles_table.setHorizontalHeaderLabels(["内部ID", "管理番号", "サブタイトル / 公開ID"])
-        self.subtitles_table.setColumnHidden(0, True)
-        self.subtitles_table.setColumnHidden(1, True)
-        self.links_table = QTableWidget(0, 4)
-        self.links_table.setHorizontalHeaderLabels(
-            ["内部リンクID", "タイトル / 公開ID", "管理番号", "関連の種類"]
-        )
-        self.links_table.setColumnHidden(0, True)
-        self.links_table.setColumnHidden(2, True)
+        self.register_name_combo = QComboBox()
+        self.register_title_combo = QComboBox()
+        self.register_subtitle_combo = QComboBox()
+        self.unregister_name_combo = QComboBox()
+        self.unregister_link_combo = QComboBox()
 
-        self.names_table.itemSelectionChanged.connect(self._refresh_links)
-        self.titles_table.itemSelectionChanged.connect(self._refresh_subtitles)
-        self.refresh_button = QPushButton("一覧を更新")
-        self.link_button = QPushButton("関連付ける")
-        self.unlink_button = QPushButton("関連を外す")
+        self.refresh_button = QPushButton("再読込")
+        self.link_button = QPushButton("登録")
+        self.unlink_button = QPushButton("解除")
         self.refresh_button.clicked.connect(self._refresh_all)
         self.link_button.clicked.connect(self._create_link)
         self.unlink_button.clicked.connect(self._unlink_link)
+        self.register_name_combo.currentIndexChanged.connect(self._refresh_registration_subtitles)
+        self.register_title_combo.currentIndexChanged.connect(self._refresh_registration_subtitles)
+        self.unregister_name_combo.currentIndexChanged.connect(self._refresh_unlink_candidates)
 
-        form = QFormLayout()
-        form.addRow("操作者", self.operator_input)
-        form.addRow("関連の種類", self.relation_type_combo)
-        form.addRow("補足説明", self.custom_relation_type_input)
-        actions = QHBoxLayout()
-        actions.addWidget(self.refresh_button)
-        actions.addWidget(self.link_button)
-        actions.addWidget(self.unlink_button)
+        register_form = QFormLayout()
+        compact_layout(register_form, margins=2, spacing=3)
+        register_form.addRow("名前", self.register_name_combo)
+        register_form.addRow("タイトル", self.register_title_combo)
+        register_form.addRow("未関連サブタイトル", self.register_subtitle_combo)
+
+        register_actions = QHBoxLayout()
+        compact_layout(register_actions, margins=0, spacing=4)
+        register_actions.addStretch(1)
+        register_actions.addWidget(self.link_button)
+
+        register_page = QWidget()
+        register_layout = QVBoxLayout(register_page)
+        compact_layout(register_layout, margins=3, spacing=4)
+        register_layout.addWidget(QLabel("未関連の組み合わせだけを登録します。関連種類は内部で primary 固定です。"))
+        register_layout.addLayout(register_form)
+        register_layout.addLayout(register_actions)
+        register_layout.addStretch(1)
+
+        unregister_form = QFormLayout()
+        compact_layout(unregister_form, margins=2, spacing=3)
+        unregister_form.addRow("名前", self.unregister_name_combo)
+        unregister_form.addRow("既存関連", self.unregister_link_combo)
+
+        unregister_actions = QHBoxLayout()
+        compact_layout(unregister_actions, margins=0, spacing=4)
+        unregister_actions.addStretch(1)
+        unregister_actions.addWidget(self.unlink_button)
+
+        unregister_page = QWidget()
+        unregister_layout = QVBoxLayout(unregister_page)
+        compact_layout(unregister_layout, margins=3, spacing=4)
+        unregister_layout.addWidget(QLabel("既に関連付いているデータだけを解除します。"))
+        unregister_layout.addLayout(unregister_form)
+        unregister_layout.addLayout(unregister_actions)
+        unregister_layout.addStretch(1)
+
+        self.tabs = QTabWidget()
+        self.tabs.addTab(register_page, "登録")
+        self.tabs.addTab(unregister_page, "解除")
+
+        top_form = QFormLayout()
+        compact_layout(top_form, margins=2, spacing=3)
+        top_form.addRow("操作者", self.operator_input)
+
+        top_actions = QHBoxLayout()
+        compact_layout(top_actions, margins=0, spacing=4)
+        top_actions.addStretch(1)
+        top_actions.addWidget(self.refresh_button)
+
         layout = QVBoxLayout(self)
-        layout.addWidget(
-            PageHeader(
-                "関連付け",
-                "名前・タイトル・サブタイトルの関連を手動で調整する画面です。"
-                "通常はタイトル管理やサブタイトル管理から登録し、例外的な修正だけここで行います。",
-            )
-        )
-        layout.addLayout(form)
-        layout.addLayout(actions)
+        compact_layout(layout, margins=5, spacing=4)
+        layout.addWidget(PageHeader("関連付け", "名前とサブタイトルの登録・解除を分けて操作します。"))
+        layout.addLayout(top_form)
+        layout.addLayout(top_actions)
         layout.addWidget(self.message_label)
-        layout.addWidget(QLabel("1. 名前を選択"))
-        layout.addWidget(self.names_table)
-        layout.addWidget(QLabel("2. タイトルを選択"))
-        layout.addWidget(self.titles_table)
-        layout.addWidget(QLabel("3. サブタイトルを選択"))
-        layout.addWidget(self.subtitles_table)
-        layout.addWidget(QLabel("現在の関連一覧"))
-        layout.addWidget(self.links_table)
+        layout.addWidget(self.tabs, 1)
 
         self._apply_role_guards()
         self._refresh_all()
@@ -122,14 +128,10 @@ class LinkManagementTab(QWidget):
         self.link_button.setEnabled(can_link(role))
         self.unlink_button.setEnabled(can_unlink(role))
         self.link_button.setToolTip(
-            "このロールでは実行できません"
-            if not can_link(role)
-            else "操作者・関連の種類・名前・サブタイトルの選択が必要です"
+            "このロールでは実行できません" if not can_link(role) else "未関連の名前とサブタイトルを関連付けます"
         )
         self.unlink_button.setToolTip(
-            "このロールでは実行できません"
-            if not can_unlink(role)
-            else "解除対象の関連を選択してください"
+            "このロールでは実行できません" if not can_unlink(role) else "既存関連を解除します"
         )
 
     def _refresh_all(self) -> None:
@@ -143,141 +145,77 @@ class LinkManagementTab(QWidget):
             include_deleted=False,
             role=self._role_context.role,
         )
-        self.names_table.setRowCount(len(self._names))
-        for row_index, row in enumerate(self._names):
-            self.names_table.setItem(row_index, 0, QTableWidgetItem(str(row.id)))
-            item = QTableWidgetItem(_name_label(row))
-            item.setToolTip(_entity_tooltip("名前", row.id, getattr(row, "public_id", None)))
-            self.names_table.setItem(row_index, 1, item)
-        self.titles_table.setRowCount(len(self._titles))
-        for row_index, row in enumerate(self._titles):
-            self.titles_table.setItem(row_index, 0, QTableWidgetItem(str(row.id)))
-            item = QTableWidgetItem(_title_label(row))
-            item.setToolTip(_entity_tooltip("タイトル", row.id, getattr(row, "public_id", None)))
-            self.titles_table.setItem(row_index, 1, item)
-        if self._names:
-            self.names_table.selectRow(0)
-        if self._titles:
-            self.titles_table.selectRow(0)
-        self._refresh_subtitles()
-        self._refresh_links()
+        self._populate_combo(self.register_name_combo, self._names, _name_label)
+        self._populate_combo(self.unregister_name_combo, self._names, _name_label)
+        self._populate_combo(self.register_title_combo, self._titles, _title_label)
+        self._refresh_registration_subtitles()
+        self._refresh_unlink_candidates()
 
-    def _selected_name_id(self) -> int | None:
-        row_index = self.names_table.currentRow()
-        if 0 <= row_index < len(self._names):
-            return int(self._names[row_index].id)
-        return None
-
-    def _selected_title_id(self) -> int | None:
-        row_index = self.titles_table.currentRow()
-        if 0 <= row_index < len(self._titles):
-            return int(self._titles[row_index].id)
-        return None
-
-    def _selected_subtitle_id(self) -> int | None:
-        row_index = self.subtitles_table.currentRow()
-        if 0 <= row_index < len(self._subtitles):
-            return int(self._subtitles[row_index].id)
-        return None
-
-    def _selected_link_id(self) -> int | None:
-        row_index = self.links_table.currentRow()
-        if 0 <= row_index < len(self._links):
-            return int(self._links[row_index].link_id)
-        return None
-
-    def _refresh_subtitles(self) -> None:
-        title_id = self._selected_title_id()
+    def _refresh_registration_subtitles(self) -> None:
+        name_id = self._selected_data(self.register_name_combo)
+        title_id = self._selected_data(self.register_title_combo)
         if title_id is None:
             self._subtitles = []
-        else:
-            self._subtitles = _call_optional_role(
-                self._query_service.list_subtitles,
-                title_id,
-                include_deleted=False,
-                role=self._role_context.role,
-            )
-        self.subtitles_table.setRowCount(len(self._subtitles))
-        for row_index, row in enumerate(self._subtitles):
-            self.subtitles_table.setItem(row_index, 0, QTableWidgetItem(str(row.id)))
-            self.subtitles_table.setItem(row_index, 1, QTableWidgetItem(row.subtitle_code))
-            item = QTableWidgetItem(_subtitle_label(row))
-            item.setToolTip(_entity_tooltip("サブタイトル", row.id, getattr(row, "public_id", None)))
-            self.subtitles_table.setItem(row_index, 2, item)
-        if self._subtitles:
-            self.subtitles_table.selectRow(0)
-
-    def _refresh_links(self) -> None:
-        name_id = self._selected_name_id()
-        if name_id is None:
-            self._links = []
-        else:
-            self._links = _call_optional_role(
+            self.register_subtitle_combo.clear()
+            return
+        subtitles = _call_optional_role(
+            self._query_service.list_subtitles,
+            title_id,
+            include_deleted=False,
+            role=self._role_context.role,
+        )
+        linked_subtitle_ids: set[int] = set()
+        if name_id is not None:
+            linked_rows = _call_optional_role(
                 self._query_service.list_related_rows,
                 name_id,
                 include_deleted=False,
                 role=self._role_context.role,
             )
-        self.links_table.setRowCount(len(self._links))
-        for row_index, row in enumerate(self._links):
-            self.links_table.setItem(row_index, 0, QTableWidgetItem(str(row.link_id)))
-            title_item = QTableWidgetItem(_related_title_label(row))
-            title_item.setToolTip(
-                " / ".join(
-                    [
-                        f"リンク内部ID={row.link_id}",
-                        f"リンク公開ID={getattr(row, 'link_public_id', None) or '未採番'}",
-                        f"タイトル公開ID={getattr(row, 'title_public_id', None) or '未採番'}",
-                        f"サブタイトル公開ID={getattr(row, 'subtitle_public_id', None) or '未採番'}",
-                    ]
-                )
-            )
-            self.links_table.setItem(row_index, 1, title_item)
-            self.links_table.setItem(row_index, 2, QTableWidgetItem(row.subtitle_code))
-            relation_item = QTableWidgetItem(_relation_label(row.relation_type))
-            relation_item.setToolTip(f"リンク公開ID={getattr(row, 'link_public_id', None) or '未採番'}")
-            self.links_table.setItem(row_index, 3, relation_item)
-        if self._links:
-            self.links_table.selectRow(0)
+            linked_subtitle_ids = {int(row.subtitle_id) for row in linked_rows}
+        self._subtitles = [row for row in subtitles if int(row.id) not in linked_subtitle_ids]
+        self._populate_combo(self.register_subtitle_combo, self._subtitles, _subtitle_label)
 
-    def _on_relation_type_changed(self) -> None:
-        is_custom = str(self.relation_type_combo.currentData()) == "other"
-        self.custom_relation_type_input.setEnabled(is_custom)
-        self.custom_relation_type_input.setToolTip(
-            "その他の関係を説明してください" if is_custom else "その他を選択した場合だけ入力できます"
+    def _refresh_unlink_candidates(self) -> None:
+        name_id = self._selected_data(self.unregister_name_combo)
+        if name_id is None:
+            self._links = []
+            self.unregister_link_combo.clear()
+            return
+        self._links = _call_optional_role(
+            self._query_service.list_related_rows,
+            name_id,
+            include_deleted=False,
+            role=self._role_context.role,
         )
-        if not is_custom:
-            self.custom_relation_type_input.clear()
+        self._populate_combo(self.unregister_link_combo, self._links, _link_label, data_attr="link_id")
 
     def _create_link(self) -> None:
         operator_id = self._require_operator_id()
+        name_id = self._selected_data(self.register_name_combo)
+        subtitle_id = self._selected_data(self.register_subtitle_combo)
         if operator_id is None:
             return
-        relation_type = self._selected_relation_type()
-        if relation_type is None:
-            return
-        name_id = self._selected_name_id()
-        subtitle_id = self._selected_subtitle_id()
         if name_id is None or subtitle_id is None:
-            self._set_message("名前とサブタイトルを選択してください", is_error=True)
+            self._set_message("名前と未関連サブタイトルを選択してください", is_error=True)
             return
         self._core_service.link_name_to_subtitle(
             name_id,
             subtitle_id,
-            relation_type=relation_type,
+            relation_type="primary",
             operator_id=operator_id,
             role=self._role_context.role,
         )
-        self._set_message("関連付けを作成しました")
-        self._refresh_links()
+        self._set_message("関連付けを登録しました")
+        self._refresh_all()
 
     def _unlink_link(self) -> None:
         operator_id = self._require_operator_id()
+        link_id = self._selected_data(self.unregister_link_combo)
         if operator_id is None:
             return
-        link_id = self._selected_link_id()
         if link_id is None:
-            self._set_message("外す関連を選択してください", is_error=True)
+            self._set_message("解除する既存関連を選択してください", is_error=True)
             return
         if not confirm_destructive_action(
             self,
@@ -291,21 +229,28 @@ class LinkManagementTab(QWidget):
             operator_id=operator_id,
             role=self._role_context.role,
         )
-        self._set_message("関連を外しました")
-        self._refresh_links()
+        self._set_message("関連を解除しました")
+        self._refresh_all()
 
-    def _selected_relation_type(self) -> str | None:
-        selected_value = str(self.relation_type_combo.currentData())
-        if not selected_value:
-            self._set_message("関連の種類を選択してください", is_error=True)
+    def _populate_combo(
+        self,
+        combo: QComboBox,
+        rows: list[Any],
+        label_func: Any,
+        *,
+        data_attr: str = "id",
+    ) -> None:
+        combo.blockSignals(True)
+        combo.clear()
+        for row in rows:
+            combo.addItem(label_func(row), int(getattr(row, data_attr)))
+        combo.blockSignals(False)
+
+    def _selected_data(self, combo: QComboBox) -> int | None:
+        if combo.currentIndex() < 0:
             return None
-        if selected_value == "other":
-            custom_value = self.custom_relation_type_input.text().strip()
-            if not custom_value:
-                self._set_message("補足説明を入力してください", is_error=True)
-                return None
-            return custom_value
-        return selected_value
+        value = combo.currentData()
+        return int(value) if value is not None else None
 
     def _require_operator_id(self) -> str | None:
         operator_id = self.operator_input.text().strip()
@@ -329,26 +274,11 @@ def _title_label(row: Any) -> str:
 
 
 def _subtitle_label(row: Any) -> str:
-    return f"{row.subtitle_name} / 公開ID={short_public_id(getattr(row, 'public_id', None))}"
+    return f"{row.subtitle_code} / {row.subtitle_name} / 公開ID={short_public_id(getattr(row, 'public_id', None))}"
 
 
-def _related_title_label(row: Any) -> str:
-    return f"{row.title_name} / リンク公開ID={short_public_id(getattr(row, 'link_public_id', None))}"
-
-
-def _entity_tooltip(label: str, internal_id: int, public_id: str | None) -> str:
-    return f"{label}内部ID={internal_id} / {label}公開ID={public_id or '未採番'}"
-
-
-def _relation_label(value: str) -> str:
-    mapping = {
-        "primary": "主要",
-        "secondary": "補助",
-        "alias": "別名",
-        "other": "その他",
-        "primary（主関連）": "主要",
-    }
-    return mapping.get(value, value)
+def _link_label(row: Any) -> str:
+    return f"{row.title_name} / {row.subtitle_code} / {row.subtitle_name} / リンク公開ID={short_public_id(getattr(row, 'link_public_id', None))}"
 
 
 def _call_optional_role(function: Any, *args: Any, **kwargs: Any) -> Any:
