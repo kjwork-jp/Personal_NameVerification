@@ -13,7 +13,6 @@ from PySide6.QtWidgets import (
     QPushButton,
     QTableWidget,
     QTableWidgetItem,
-    QTextEdit,
     QVBoxLayout,
     QWidget,
 )
@@ -23,7 +22,9 @@ from app.application.read_models import NameDetail, NameSearchRow
 from app.ui.dialogs import confirm_destructive_action
 from app.ui.input_defaults import default_operator_id, friendly_error_message
 from app.ui.permissions import can_create_or_update, can_run_destructive_actions
+from app.ui.public_id_display import short_public_id
 from app.ui.role_context import RoleContext, UserRole
+from app.ui.ui_style import PageHeader, compact_layout
 
 
 class NameWriteService(Protocol):
@@ -90,7 +91,7 @@ class _SelectedName:
 
 
 class NameManagementTab(QWidget):
-    """UI for name create/update/delete/restore/hard-delete flows."""
+    """UI for name create/update/delete flows."""
 
     def __init__(
         self,
@@ -111,25 +112,48 @@ class NameManagementTab(QWidget):
         self.operator_input.setToolTip(
             "初期値は自動入力されます。必要な場合だけ変更してください。"
         )
+
+        self.filter_input = QLineEdit()
+        self.filter_input.setPlaceholderText("名前・検索用表記・備考で絞り込み")
+        self.filter_input.returnPressed.connect(self._refresh_list)
+
         self.raw_name_input = QLineEdit()
         self.raw_name_input.setPlaceholderText("表示名")
         self.note_input = QLineEdit()
         self.note_input.setPlaceholderText("備考")
         self.message_label = QLabel("")
 
-        self.names_table = QTableWidget(0, 4)
-        self.names_table.setHorizontalHeaderLabels(["ID", "名前", "状態", "紐づき数"])
+        self.names_table = QTableWidget(0, 9)
+        self.names_table.setHorizontalHeaderLabels(
+            [
+                "内部ID",
+                "公開ID",
+                "名前",
+                "検索用表記",
+                "状態",
+                "タイトル関連数",
+                "サブタイトル関連数",
+                "関連合計",
+                "備考",
+            ]
+        )
         self.names_table.setColumnHidden(0, True)
+        self.names_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self.names_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.names_table.itemSelectionChanged.connect(self._on_row_selected)
-        self.detail_text = QTextEdit()
-        self.detail_text.setReadOnly(True)
 
         self.refresh_button = QPushButton("再読込")
         self.create_button = QPushButton("新規作成")
         self.update_button = QPushButton("更新")
-        self.delete_button = QPushButton("論理削除")
+        self.delete_button = QPushButton("ゴミ箱に入れる")
+
+        # Trash tab owns restore/hard-delete UX. Keep attributes for compatibility
+        # with existing tests/helpers, but do not expose them in the normal tab.
         self.restore_button = QPushButton("復元")
         self.hard_delete_button = QPushButton("完全削除")
+        self.restore_button.hide()
+        self.hard_delete_button.hide()
+
         self.refresh_button.clicked.connect(self._refresh_list)
         self.create_button.clicked.connect(self._create_name)
         self.update_button.clicked.connect(self._update_name)
@@ -138,28 +162,29 @@ class NameManagementTab(QWidget):
         self.hard_delete_button.clicked.connect(self._hard_delete_name)
 
         form = QFormLayout()
+        compact_layout(form, margins=2, spacing=3)
         form.addRow("操作者ID", self.operator_input)
+        form.addRow("絞り込み", self.filter_input)
         form.addRow("名前", self.raw_name_input)
         form.addRow("備考", self.note_input)
 
         actions = QHBoxLayout()
+        compact_layout(actions, margins=0, spacing=4)
         for button in [
             self.refresh_button,
             self.create_button,
             self.update_button,
             self.delete_button,
-            self.restore_button,
-            self.hard_delete_button,
         ]:
             actions.addWidget(button)
 
         layout = QVBoxLayout(self)
+        compact_layout(layout, margins=5, spacing=4)
+        layout.addWidget(PageHeader("名前", "名前の登録・更新と関連数の確認を行います。"))
         layout.addLayout(form)
         layout.addLayout(actions)
         layout.addWidget(self.message_label)
-        layout.addWidget(self.names_table)
-        layout.addWidget(QLabel("詳細"))
-        layout.addWidget(self.detail_text)
+        layout.addWidget(self.names_table, 1)
 
         self._apply_role_guards()
         self._refresh_list()
@@ -171,8 +196,8 @@ class NameManagementTab(QWidget):
         self.create_button.setEnabled(can_write)
         self.update_button.setEnabled(can_write)
         self.delete_button.setEnabled(can_destructive)
-        self.restore_button.setEnabled(can_destructive)
-        self.hard_delete_button.setEnabled(can_destructive)
+        self.restore_button.setEnabled(False)
+        self.hard_delete_button.setEnabled(False)
         disabled = "このロールでは実行できません"
         self.create_button.setToolTip(
             disabled if not can_write else "操作者ID を入力して実行します"
@@ -181,18 +206,15 @@ class NameManagementTab(QWidget):
             disabled if not can_write else "行を選択して実行します"
         )
         self.delete_button.setToolTip(
-            disabled if not can_destructive else "行を選択して実行します"
+            disabled if not can_destructive else "選択行をゴミ箱に入れます"
         )
-        self.restore_button.setToolTip(
-            disabled if not can_destructive else "削除済み行を選択してください"
-        )
-        self.hard_delete_button.setToolTip(
-            disabled if not can_destructive else "削除済み行を選択してください"
-        )
+        self.restore_button.setToolTip("復元は削除データタブで行います")
+        self.hard_delete_button.setToolTip("完全削除は削除データタブで行います")
 
     def _refresh_list(self) -> None:
         try:
             self._rows = self._query_service.search_names(
+                query=self.filter_input.text() or None,
                 include_deleted=True,
                 role=self._role_context.role,
             )
@@ -203,24 +225,31 @@ class NameManagementTab(QWidget):
         self.names_table.setRowCount(len(self._rows))
         for i, row in enumerate(self._rows):
             self.names_table.setItem(i, 0, QTableWidgetItem(str(row.id)))
-            self.names_table.setItem(i, 1, QTableWidgetItem(row.raw_name))
+            self.names_table.setItem(i, 1, QTableWidgetItem(short_public_id(row.public_id)))
+            self.names_table.setItem(i, 2, QTableWidgetItem(row.raw_name))
+            self.names_table.setItem(i, 3, QTableWidgetItem(row.normalized_name))
             self.names_table.setItem(
                 i,
-                2,
+                4,
                 QTableWidgetItem("削除済み" if row.deleted_at else "有効"),
             )
-            self.names_table.setItem(i, 3, QTableWidgetItem(str(row.linked_count)))
+            self.names_table.setItem(i, 5, QTableWidgetItem(str(row.title_related_count)))
+            self.names_table.setItem(i, 6, QTableWidgetItem(str(row.subtitle_related_count)))
+            self.names_table.setItem(i, 7, QTableWidgetItem(str(row.linked_count)))
+            self.names_table.setItem(i, 8, QTableWidgetItem(row.note or ""))
+
         self._selected = None
-        self.detail_text.clear()
         if self._rows:
             self.names_table.selectRow(0)
             self._on_row_selected()
+        else:
+            self.raw_name_input.clear()
+            self.note_input.clear()
 
     def _on_row_selected(self) -> None:
         idx = self.names_table.currentRow()
         if idx < 0 or idx >= len(self._rows):
             self._selected = None
-            self.detail_text.clear()
             return
         row = self._rows[idx]
         self._selected = _SelectedName(row.id, row.deleted_at is not None)
@@ -234,20 +263,6 @@ class NameManagementTab(QWidget):
             self._set_message(f"詳細取得に失敗しました: {exc}", is_error=True)
             return
         self.note_input.setText(detail.note or "")
-        status = "削除済み" if detail.deleted_at else "有効"
-        self.detail_text.setPlainText(
-            "\n".join(
-                [
-                    f"公開ID: {detail.public_id or '未採番'}",
-                    f"内部ID: {detail.id}",
-                    f"名前: {detail.raw_name}",
-                    f"正規化名: {detail.normalized_name}",
-                    f"状態: {status}",
-                    f"更新日時: {detail.updated_at}",
-                    f"備考: {detail.note or ''}",
-                ]
-            )
-        )
 
     def _create_name(self) -> None:
         if not can_create_or_update(self._role_context.role):
@@ -303,17 +318,17 @@ class NameManagementTab(QWidget):
             return
         if not confirm_destructive_action(
             self,
-            "論理削除の確認",
-            f"名前ID={selected.id} を論理削除します。よろしいですか？",
+            "ゴミ箱に入れる確認",
+            f"名前ID={selected.id} をゴミ箱に入れます。よろしいですか？",
         ):
-            self._set_message("論理削除をキャンセルしました")
+            self._set_message("ゴミ箱への移動をキャンセルしました")
             return
         self._core_service.delete_name(
             selected.id,
             operator_id=operator_id,
             role=self._role_context.role,
         )
-        self._set_message("論理削除しました")
+        self._set_message("ゴミ箱に入れました")
         self._refresh_list()
 
     def _restore_name(self) -> None:
@@ -340,6 +355,7 @@ class NameManagementTab(QWidget):
             role=self._role_context.role,
         )
         self._set_message("復元しました")
+        self._refresh_list()
 
     def _hard_delete_name(self) -> None:
         selected = self._require_selected()
@@ -365,6 +381,7 @@ class NameManagementTab(QWidget):
             role=self._role_context.role,
         )
         self._set_message("完全削除しました")
+        self._refresh_list()
 
     def _current_payload(self) -> NameInput:
         return NameInput(raw_name=self.raw_name_input.text(), note=self.note_input.text() or None)
