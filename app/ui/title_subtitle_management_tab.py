@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import Any, Protocol
 
 from PySide6.QtWidgets import (
+    QComboBox,
     QFormLayout,
     QHBoxLayout,
     QLabel,
@@ -133,8 +134,12 @@ class TitleSubtitleManagementTab(QWidget):
 
         self.operator_input = QLineEdit(default_operator_id())
         self.operator_input.setPlaceholderText("操作者（自動入力）")
+        self.title_selector_combo = QComboBox()
+        self.title_selector_combo.setToolTip("登録済みタイトルを選択します")
         self.title_name_input = QLineEdit()
         self.title_note_input = QLineEdit()
+        self.title_link_name_combo = QComboBox()
+        self.title_link_name_combo.setToolTip("タイトル作成時に関連付ける名前を1つだけ選択します")
         self.subtitle_code_input = QLineEdit()
         self.subtitle_code_input.setPlaceholderText("未入力なら自動生成")
         self.subtitle_name_input = QLineEdit()
@@ -147,30 +152,56 @@ class TitleSubtitleManagementTab(QWidget):
         self.subtitle_hint_label = QLabel("タイトルを選択するとサブタイトル操作が有効になります")
         self.title_link_names_list = QListWidget()
         self.title_link_names_list.setSelectionMode(QListWidget.SelectionMode.MultiSelection)
-        self.linked_names_label = QLabel("紐づき名前: なし")
+        self.title_link_names_list.hide()
+        self.linked_names_label = QLabel("関連する名前: なし")
 
-        self.titles_table = QTableWidget(0, 3)
-        self.titles_table.setHorizontalHeaderLabels(["ID", "タイトル", "状態"])
+        self.titles_table = QTableWidget(0, 7)
+        self.titles_table.setHorizontalHeaderLabels(
+            ["内部ID", "公開ID", "タイトル名", "状態", "更新日時", "備考", "関連する名前"]
+        )
         self.titles_table.setColumnHidden(0, True)
+        self.titles_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self.titles_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.titles_table.itemSelectionChanged.connect(self._on_title_selected)
+        self.title_selector_combo.currentIndexChanged.connect(self._on_title_combo_changed)
 
-        self.subtitles_table = QTableWidget(0, 4)
-        self.subtitles_table.setHorizontalHeaderLabels(["ID", "コード", "サブタイトル", "状態"])
+        self.subtitles_table = QTableWidget(0, 10)
+        self.subtitles_table.setHorizontalHeaderLabels(
+            [
+                "内部ID",
+                "公開ID",
+                "タイトル内部ID",
+                "タイトル名",
+                "管理番号",
+                "サブタイトル名",
+                "状態",
+                "表示順",
+                "更新日時",
+                "備考",
+            ]
+        )
         self.subtitles_table.setColumnHidden(0, True)
+        self.subtitles_table.setColumnHidden(2, True)
+        self.subtitles_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self.subtitles_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.subtitles_table.itemSelectionChanged.connect(self._on_subtitle_selected)
 
         self.title_refresh_button = QPushButton("再読込")
         self.title_create_button = QPushButton("作成")
         self.title_update_button = QPushButton("更新")
-        self.title_delete_button = QPushButton("論理削除")
+        self.title_delete_button = QPushButton("ゴミ箱に入れる")
         self.title_restore_button = QPushButton("復元")
         self.title_hard_delete_button = QPushButton("完全削除")
+        self.title_restore_button.hide()
+        self.title_hard_delete_button.hide()
         self.subtitle_refresh_button = QPushButton("再読込")
         self.subtitle_create_button = QPushButton("作成")
         self.subtitle_update_button = QPushButton("更新")
-        self.subtitle_delete_button = QPushButton("論理削除")
+        self.subtitle_delete_button = QPushButton("ゴミ箱に入れる")
         self.subtitle_restore_button = QPushButton("復元")
         self.subtitle_hard_delete_button = QPushButton("完全削除")
+        self.subtitle_restore_button.hide()
+        self.subtitle_hard_delete_button.hide()
 
         self.title_refresh_button.clicked.connect(self._refresh_titles)
         self.title_create_button.clicked.connect(self._create_title)
@@ -191,42 +222,52 @@ class TitleSubtitleManagementTab(QWidget):
 
         title_form = QFormLayout()
         compact_layout(title_form, margins=2, spacing=3)
+        title_form.addRow("タイトル選択", self.title_selector_combo)
         title_form.addRow("タイトル名", self.title_name_input)
         title_form.addRow("備考", self.title_note_input)
+        title_form.addRow("関連付ける名前", self.title_link_name_combo)
 
         subtitle_form = QFormLayout()
         compact_layout(subtitle_form, margins=2, spacing=3)
-        subtitle_form.addRow("コード", self.subtitle_code_input)
+        subtitle_form.addRow("タイトル選択", self.selected_title_label)
+        subtitle_form.addRow("管理番号", self.subtitle_code_input)
         subtitle_form.addRow("サブタイトル名", self.subtitle_name_input)
-        subtitle_form.addRow("sort_order", self.subtitle_sort_order_input)
+        subtitle_form.addRow("表示順", self.subtitle_sort_order_input)
         subtitle_form.addRow("備考", self.subtitle_note_input)
 
         title_actions = QHBoxLayout()
         compact_layout(title_actions, margins=0, spacing=3)
-        for button in [self.title_refresh_button, self.title_create_button, self.title_update_button, self.title_delete_button, self.title_restore_button, self.title_hard_delete_button]:
+        for button in [
+            self.title_refresh_button,
+            self.title_create_button,
+            self.title_update_button,
+            self.title_delete_button,
+        ]:
             title_actions.addWidget(button)
 
         subtitle_actions = QHBoxLayout()
         compact_layout(subtitle_actions, margins=0, spacing=3)
-        for button in [self.subtitle_refresh_button, self.subtitle_create_button, self.subtitle_update_button, self.subtitle_delete_button, self.subtitle_restore_button, self.subtitle_hard_delete_button]:
+        for button in [
+            self.subtitle_refresh_button,
+            self.subtitle_create_button,
+            self.subtitle_update_button,
+            self.subtitle_delete_button,
+        ]:
             subtitle_actions.addWidget(button)
 
         title_panel = QWidget()
         title_layout = QVBoxLayout(title_panel)
         compact_layout(title_layout, margins=3, spacing=4)
-        title_layout.addWidget(QLabel("タイトル"))
+        title_layout.addWidget(QLabel("タイトル情報"))
         title_layout.addLayout(title_form)
         title_layout.addLayout(title_actions)
-        title_layout.addWidget(QLabel("タイトル作成時に紐づける名前"))
-        title_layout.addWidget(self.title_link_names_list, 1)
         title_layout.addWidget(self.linked_names_label)
         title_layout.addWidget(self.titles_table, 2)
 
         subtitle_panel = QWidget()
         subtitle_layout = QVBoxLayout(subtitle_panel)
         compact_layout(subtitle_layout, margins=3, spacing=4)
-        subtitle_layout.addWidget(QLabel("サブタイトル"))
-        subtitle_layout.addWidget(self.selected_title_label)
+        subtitle_layout.addWidget(QLabel("サブタイトル情報"))
         subtitle_layout.addWidget(self.subtitle_hint_label)
         subtitle_layout.addLayout(subtitle_form)
         subtitle_layout.addLayout(subtitle_actions)
@@ -252,15 +293,28 @@ class TitleSubtitleManagementTab(QWidget):
         if selected_title_id is None and self._selected_title is not None:
             selected_title_id = self._selected_title.id
         try:
-            self._titles = _call_with_optional_role(self._query_service.list_titles, role=self._role_context.role, include_deleted=True)
+            self._titles = _call_with_optional_role(
+                self._query_service.list_titles,
+                role=self._role_context.role,
+                include_deleted=True,
+            )
         except Exception as exc:  # noqa: BLE001
             self._set_message(f"タイトル一覧取得に失敗しました: {exc}", is_error=True)
             return
         self.titles_table.setRowCount(len(self._titles))
+        self.title_selector_combo.blockSignals(True)
+        self.title_selector_combo.clear()
         for row_index, row in enumerate(self._titles):
+            linked_names = self._linked_names_text(row.id)
             self.titles_table.setItem(row_index, 0, QTableWidgetItem(str(row.id)))
-            self.titles_table.setItem(row_index, 1, QTableWidgetItem(row.title_name))
-            self.titles_table.setItem(row_index, 2, QTableWidgetItem("削除済み" if row.deleted_at else "有効"))
+            self.titles_table.setItem(row_index, 1, QTableWidgetItem(short_public_id(row.public_id)))
+            self.titles_table.setItem(row_index, 2, QTableWidgetItem(row.title_name))
+            self.titles_table.setItem(row_index, 3, QTableWidgetItem("削除済み" if row.deleted_at else "有効"))
+            self.titles_table.setItem(row_index, 4, QTableWidgetItem(row.updated_at))
+            self.titles_table.setItem(row_index, 5, QTableWidgetItem(row.note or ""))
+            self.titles_table.setItem(row_index, 6, QTableWidgetItem(linked_names))
+            self.title_selector_combo.addItem(_title_combo_label(row), row.id)
+        self.title_selector_combo.blockSignals(False)
         self._selected_title = None
         self._selected_subtitle = None
         self._subtitles = []
@@ -277,6 +331,7 @@ class TitleSubtitleManagementTab(QWidget):
                 if row.id == selected_title_id:
                     selected_index = row_index
                     break
+        self.title_selector_combo.setCurrentIndex(selected_index)
         self.titles_table.selectRow(selected_index)
         self._select_title_by_index(selected_index)
 
@@ -290,16 +345,28 @@ class TitleSubtitleManagementTab(QWidget):
             self._update_action_states()
             return
         try:
-            self._subtitles = _call_with_optional_role(self._query_service.list_subtitles, title.id, role=self._role_context.role, include_deleted=True)
+            self._subtitles = _call_with_optional_role(
+                self._query_service.list_subtitles,
+                title.id,
+                role=self._role_context.role,
+                include_deleted=True,
+            )
         except Exception as exc:  # noqa: BLE001
             self._set_message(f"サブタイトル一覧取得に失敗しました: {exc}", is_error=True)
             return
+        title_name = self._selected_title_name()
         self.subtitles_table.setRowCount(len(self._subtitles))
         for row_index, row in enumerate(self._subtitles):
             self.subtitles_table.setItem(row_index, 0, QTableWidgetItem(str(row.id)))
-            self.subtitles_table.setItem(row_index, 1, QTableWidgetItem(row.subtitle_code))
-            self.subtitles_table.setItem(row_index, 2, QTableWidgetItem(row.subtitle_name))
-            self.subtitles_table.setItem(row_index, 3, QTableWidgetItem("削除済み" if row.deleted_at else "有効"))
+            self.subtitles_table.setItem(row_index, 1, QTableWidgetItem(short_public_id(row.public_id)))
+            self.subtitles_table.setItem(row_index, 2, QTableWidgetItem(str(row.title_id)))
+            self.subtitles_table.setItem(row_index, 3, QTableWidgetItem(title_name))
+            self.subtitles_table.setItem(row_index, 4, QTableWidgetItem(row.subtitle_code))
+            self.subtitles_table.setItem(row_index, 5, QTableWidgetItem(row.subtitle_name))
+            self.subtitles_table.setItem(row_index, 6, QTableWidgetItem("削除済み" if row.deleted_at else "有効"))
+            self.subtitles_table.setItem(row_index, 7, QTableWidgetItem(str(row.sort_order)))
+            self.subtitles_table.setItem(row_index, 8, QTableWidgetItem(row.updated_at))
+            self.subtitles_table.setItem(row_index, 9, QTableWidgetItem(row.note or ""))
         self._selected_subtitle = None
         self._clear_subtitle_form()
         if title.deleted or not self._subtitles:
@@ -313,6 +380,11 @@ class TitleSubtitleManagementTab(QWidget):
                     break
         self.subtitles_table.selectRow(selected_index)
         self._select_subtitle_by_index(selected_index)
+
+    def _on_title_combo_changed(self, index: int) -> None:
+        if 0 <= index < len(self._titles):
+            self.titles_table.selectRow(index)
+            self._select_title_by_index(index)
 
     def _on_title_selected(self) -> None:
         self._select_title_by_index(self.titles_table.currentRow())
@@ -329,6 +401,9 @@ class TitleSubtitleManagementTab(QWidget):
             return
         row = self._titles[index]
         self._selected_title = _TitleSelection(row.id, row.deleted_at is not None)
+        self.title_selector_combo.blockSignals(True)
+        self.title_selector_combo.setCurrentIndex(index)
+        self.title_selector_combo.blockSignals(False)
         self.title_name_input.setText(row.title_name)
         self.title_note_input.setText(row.note or "")
         self._update_selected_title_label(row)
@@ -360,7 +435,12 @@ class TitleSubtitleManagementTab(QWidget):
         if operator_id is None:
             return
         try:
-            self._core_service.create_title(self._title_payload(), operator_id=operator_id, role=self._role_context.role, name_ids=self._selected_name_ids_for_create())
+            self._core_service.create_title(
+                self._title_payload(),
+                operator_id=operator_id,
+                role=self._role_context.role,
+                name_ids=self._selected_name_ids_for_create(),
+            )
             self._set_message("タイトル作成しました")
             self._refresh_titles()
         except Exception as exc:  # noqa: BLE001
@@ -375,7 +455,12 @@ class TitleSubtitleManagementTab(QWidget):
             self._set_message("削除済みタイトルは更新できません", is_error=True)
             return
         try:
-            self._core_service.update_title(selected.id, self._title_payload(), operator_id=operator_id, role=self._role_context.role)
+            self._core_service.update_title(
+                selected.id,
+                self._title_payload(),
+                operator_id=operator_id,
+                role=self._role_context.role,
+            )
             self._set_message("タイトル更新しました")
             self._refresh_titles(selected.id)
         except Exception as exc:  # noqa: BLE001
@@ -390,7 +475,11 @@ class TitleSubtitleManagementTab(QWidget):
             self._set_message("削除済みタイトルにはサブタイトル作成できません", is_error=True)
             return
         try:
-            self._core_service.create_subtitle(self._subtitle_payload(selected.id), operator_id=operator_id, role=self._role_context.role)
+            self._core_service.create_subtitle(
+                self._subtitle_payload(selected.id),
+                operator_id=operator_id,
+                role=self._role_context.role,
+            )
             self._set_message("サブタイトル作成しました")
             self._refresh_subtitles()
         except Exception as exc:  # noqa: BLE001
@@ -406,14 +495,19 @@ class TitleSubtitleManagementTab(QWidget):
             self._set_message("削除済みデータは更新できません", is_error=True)
             return
         try:
-            self._core_service.update_subtitle(selected_subtitle.id, self._subtitle_payload(selected_title.id), operator_id=operator_id, role=self._role_context.role)
+            self._core_service.update_subtitle(
+                selected_subtitle.id,
+                self._subtitle_payload(selected_title.id),
+                operator_id=operator_id,
+                role=self._role_context.role,
+            )
             self._set_message("サブタイトル更新しました")
             self._refresh_subtitles(selected_subtitle.id)
         except Exception as exc:  # noqa: BLE001
             self._set_message(friendly_error_message("サブタイトル更新", exc), is_error=True)
 
     def _delete_title(self) -> None:
-        self._mutate_title("論理削除", "delete_title", require_deleted=False)
+        self._mutate_title("ゴミ箱に入れる", "delete_title", require_deleted=False)
 
     def _restore_title(self) -> None:
         self._mutate_title("復元", "restore_title", require_deleted=True)
@@ -422,7 +516,7 @@ class TitleSubtitleManagementTab(QWidget):
         self._mutate_title("完全削除", "hard_delete_title", require_deleted=True)
 
     def _delete_subtitle(self) -> None:
-        self._mutate_subtitle("論理削除", "delete_subtitle", require_deleted=False)
+        self._mutate_subtitle("ゴミ箱に入れる", "delete_subtitle", require_deleted=False)
 
     def _restore_subtitle(self) -> None:
         self._mutate_subtitle("復元", "restore_subtitle", require_deleted=True)
@@ -441,10 +535,14 @@ class TitleSubtitleManagementTab(QWidget):
         if selected.deleted != require_deleted:
             self._set_message("対象の状態が操作条件に合いません", is_error=True)
             return
-        if not confirm_destructive_action(self, f"{label}の確認", f"タイトルID={selected.id} を{label}します。よろしいですか？"):
+        if not confirm_destructive_action(
+            self,
+            f"{label}の確認",
+            f"タイトルID={selected.id} を{label}します。よろしいですか？",
+        ):
             return
         getattr(self._core_service, method_name)(selected.id, operator_id=operator_id, role=self._role_context.role)
-        self._set_message(f"タイトル{label}しました")
+        self._set_message(f"タイトルを{label}しました")
         self._refresh_titles(None if method_name == "hard_delete_title" else selected.id)
 
     def _mutate_subtitle(self, label: str, method_name: str, *, require_deleted: bool) -> None:
@@ -459,10 +557,14 @@ class TitleSubtitleManagementTab(QWidget):
         if selected_title.deleted or selected_subtitle.deleted != require_deleted:
             self._set_message("対象の状態が操作条件に合いません", is_error=True)
             return
-        if not confirm_destructive_action(self, f"{label}の確認", f"サブタイトルID={selected_subtitle.id} を{label}します。よろしいですか？"):
+        if not confirm_destructive_action(
+            self,
+            f"{label}の確認",
+            f"サブタイトルID={selected_subtitle.id} を{label}します。よろしいですか？",
+        ):
             return
         getattr(self._core_service, method_name)(selected_subtitle.id, operator_id=operator_id, role=self._role_context.role)
-        self._set_message(f"サブタイトル{label}しました")
+        self._set_message(f"サブタイトルを{label}しました")
         self._refresh_subtitles(None if method_name == "hard_delete_subtitle" else selected_subtitle.id)
 
     def _title_payload(self) -> TitleInput:
@@ -472,33 +574,67 @@ class TitleSubtitleManagementTab(QWidget):
         sort_order_text = self.subtitle_sort_order_input.text().strip() or "0"
         subtitle_code = self.subtitle_code_input.text().strip() or generate_subtitle_code()
         self.subtitle_code_input.setText(subtitle_code)
-        return SubtitleInput(title_id=title_id, subtitle_code=subtitle_code, subtitle_name=self.subtitle_name_input.text(), sort_order=int(sort_order_text), note=self.subtitle_note_input.text() or None)
+        return SubtitleInput(
+            title_id=title_id,
+            subtitle_code=subtitle_code,
+            subtitle_name=self.subtitle_name_input.text(),
+            sort_order=int(sort_order_text),
+            note=self.subtitle_note_input.text() or None,
+        )
 
     def _refresh_name_candidates(self) -> None:
         try:
-            self._name_rows = _call_with_optional_role(self._query_service.search_names, include_deleted=False, role=self._role_context.role)
+            self._name_rows = _call_with_optional_role(
+                self._query_service.search_names,
+                include_deleted=False,
+                role=self._role_context.role,
+            )
         except Exception:  # noqa: BLE001
             self._name_rows = []
         self.title_link_names_list.clear()
+        self.title_link_name_combo.blockSignals(True)
+        self.title_link_name_combo.clear()
+        self.title_link_name_combo.addItem("関連付けなし", None)
         for row in self._name_rows:
-            item = QListWidgetItem(f"{row.raw_name} (公開ID={short_public_id(row.public_id)})")
+            label = f"{row.raw_name} / 公開ID={short_public_id(row.public_id)}"
+            self.title_link_name_combo.addItem(label, row.id)
+            item = QListWidgetItem(label)
             item.setData(0x0100, row.id)
             item.setToolTip(f"内部ID={row.id} / 公開ID={row.public_id or '未採番'}")
             self.title_link_names_list.addItem(item)
+        self.title_link_name_combo.blockSignals(False)
 
     def _selected_name_ids_for_create(self) -> list[int]:
-        return [int(item.data(0x0100)) for item in self.title_link_names_list.selectedItems()]
+        selected_id = self.title_link_name_combo.currentData()
+        if selected_id is None:
+            return []
+        return [int(selected_id)]
 
     def _refresh_linked_names(self, title_id: int) -> None:
+        text = self._linked_names_text(title_id)
+        self.linked_names_label.setText(f"関連する名前: {text or 'なし'}")
+
+    def _linked_names_text(self, title_id: int) -> str:
         try:
-            rows = _call_with_optional_role(self._query_service.list_names_for_title, title_id, role=self._role_context.role, include_deleted=False)
+            rows = _call_with_optional_role(
+                self._query_service.list_names_for_title,
+                title_id,
+                role=self._role_context.role,
+                include_deleted=False,
+            )
         except Exception:  # noqa: BLE001
-            self.linked_names_label.setText("紐づき名前: 取得失敗")
-            return
+            return "取得失敗"
         if not rows:
-            self.linked_names_label.setText("紐づき名前: なし")
-            return
-        self.linked_names_label.setText(f"紐づき名前: {', '.join(row.raw_name for row in rows)}")
+            return ""
+        return ", ".join(row.raw_name for row in rows)
+
+    def _selected_title_name(self) -> str:
+        if self._selected_title is None:
+            return ""
+        for row in self._titles:
+            if row.id == self._selected_title.id:
+                return row.title_name
+        return ""
 
     def _require_operator_id(self) -> str | None:
         operator_id = self.operator_input.text().strip()
@@ -535,7 +671,9 @@ class TitleSubtitleManagementTab(QWidget):
             self.selected_title_label.setText("選択中タイトル: 未選択")
             return
         status = "削除済み" if title.deleted_at else "有効"
-        self.selected_title_label.setText(f"選択中タイトル: 公開ID={short_public_id(title.public_id)} / 内部ID={title.id} / {title.title_name} ({status})")
+        self.selected_title_label.setText(
+            f"公開ID={short_public_id(title.public_id)} / {title.title_name} ({status})"
+        )
 
     def _update_action_states(self) -> None:
         can_write = can_create_or_update(self._role_context.role)
@@ -547,17 +685,22 @@ class TitleSubtitleManagementTab(QWidget):
         self.title_create_button.setEnabled(can_write)
         self.title_update_button.setEnabled(can_write and has_title and not title_deleted)
         self.title_delete_button.setEnabled(can_destructive and has_title and not title_deleted)
-        self.title_restore_button.setEnabled(can_destructive and has_title and title_deleted)
-        self.title_hard_delete_button.setEnabled(can_destructive and has_title and title_deleted)
+        self.title_restore_button.setEnabled(False)
+        self.title_hard_delete_button.setEnabled(False)
         self.subtitle_refresh_button.setEnabled(has_title)
         self.subtitle_create_button.setEnabled(can_write and has_title and not title_deleted)
         self.subtitle_update_button.setEnabled(can_write and has_title and has_subtitle and not title_deleted and not subtitle_deleted)
         self.subtitle_delete_button.setEnabled(can_destructive and has_title and has_subtitle and not title_deleted and not subtitle_deleted)
-        self.subtitle_restore_button.setEnabled(can_destructive and has_title and has_subtitle and not title_deleted and subtitle_deleted)
-        self.subtitle_hard_delete_button.setEnabled(can_destructive and has_title and has_subtitle and not title_deleted and subtitle_deleted)
+        self.subtitle_restore_button.setEnabled(False)
+        self.subtitle_hard_delete_button.setEnabled(False)
         if not has_title:
             self.subtitle_hint_label.setText("タイトルを選択してください")
         elif title_deleted:
             self.subtitle_hint_label.setText("削除済みタイトルが選択されています（サブタイトル操作は無効）")
         else:
             self.subtitle_hint_label.setText("選択中タイトル配下のサブタイトルを操作できます")
+
+
+def _title_combo_label(row: TitleDetail) -> str:
+    status = "削除済み" if row.deleted_at else "有効"
+    return f"{row.title_name} / 公開ID={short_public_id(row.public_id)} / {status}"
