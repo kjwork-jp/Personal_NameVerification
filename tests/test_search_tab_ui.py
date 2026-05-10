@@ -34,8 +34,10 @@ class StubQueryService:
                 normalized_name="alice",
                 note=None,
                 deleted_at=None,
-                linked_count=1,
+                linked_count=3,
                 title_ids=(1,),
+                title_related_count=1,
+                subtitle_related_count=2,
             )
         ]
 
@@ -85,5 +87,9 @@ def test_search_tab_instantiation_and_render() -> None:
     tab._on_search_clicked()
 
     assert tab.results_table.rowCount() == 1
-    assert tab.results_table.item(0, 1).text() == "Alice"
+    assert tab.results_table.item(0, 1).text() == "未採番"
+    assert tab.results_table.item(0, 2).text() == "Alice"
+    assert tab.results_table.item(0, 4).text() == "1"
+    assert tab.results_table.item(0, 5).text() == "2"
+    assert tab.results_table.item(0, 6).text() == "3"
     assert tab.related_table.rowCount() == 1

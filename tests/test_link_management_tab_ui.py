@@ -30,7 +30,9 @@ class StubCoreService:
         operator_id: str,
         role: str = "admin",
     ) -> int:
-        self.calls.append(f"link:{name_id}:{subtitle_id}:{relation_type}:{operator_id}:{role}")
+        self.calls.append(
+            f"link:{name_id}:{subtitle_id}:{relation_type}:{operator_id}:{role}"
+        )
         return 1
 
     def unlink_name_from_subtitle(
@@ -40,6 +42,9 @@ class StubCoreService:
 
 
 class StubQueryService:
+    def __init__(self, *, include_existing_link: bool = False) -> None:
+        self.include_existing_link = include_existing_link
+
     def search_names(self, *args: object, **kwargs: object) -> list[NameSearchRow]:
         _ = (args, kwargs)
         return [
@@ -93,6 +98,8 @@ class StubQueryService:
         self, name_id: int, role: str = "admin", *, include_deleted: bool = False
     ) -> list[RelatedRow]:
         _ = (name_id, role, include_deleted)
+        if not self.include_existing_link:
+            return []
         return [
             RelatedRow(
                 link_id=500,
@@ -115,7 +122,22 @@ def _app() -> QApplication:
     return app
 
 
-def test_link_management_tab_link_and_unlink(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_link_management_tab_registers_primary_relation() -> None:
+    _app()
+    core = StubCoreService()
+    query = StubQueryService(include_existing_link=False)
+    tab = LinkManagementTab(core_service=core, query_service=query)
+
+    tab.operator_input.setText("op-1")
+    tab._create_link()
+
+    assert "link:1:100:primary:op-1:admin" in core.calls
+    assert not hasattr(tab, "relation_type_combo")
+
+
+def test_link_management_tab_unlinks_existing_relation(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     _app()
     monkeypatch.setattr(
         link_tab_module,
@@ -123,24 +145,23 @@ def test_link_management_tab_link_and_unlink(monkeypatch: pytest.MonkeyPatch) ->
         lambda *args, **kwargs: True,
     )
     core = StubCoreService()
-    query = StubQueryService()
+    query = StubQueryService(include_existing_link=True)
     tab = LinkManagementTab(core_service=core, query_service=query)
 
     tab.operator_input.setText("op-1")
-    tab.relation_type_combo.setCurrentIndex(1)
-    tab._create_link()
     tab._unlink_link()
 
-    assert "link:1:100:primary:op-1:admin" in core.calls
     assert "unlink:500:op-1:admin" in core.calls
 
 
-def test_link_management_tab_requires_operator_and_relation_type() -> None:
+def test_link_management_tab_requires_operator() -> None:
     _app()
-    tab = LinkManagementTab(core_service=StubCoreService(), query_service=StubQueryService())
+    tab = LinkManagementTab(
+        core_service=StubCoreService(),
+        query_service=StubQueryService(include_existing_link=False),
+    )
 
     tab.operator_input.setText("")
-    tab.relation_type_combo.setCurrentIndex(0)
     tab._create_link()
     assert "操作者" in tab.message_label.text()
 
@@ -153,7 +174,10 @@ def test_link_management_cancel_unlink(monkeypatch: pytest.MonkeyPatch) -> None:
         lambda *args, **kwargs: False,
     )
     core = StubCoreService()
-    tab = LinkManagementTab(core_service=core, query_service=StubQueryService())
+    tab = LinkManagementTab(
+        core_service=core,
+        query_service=StubQueryService(include_existing_link=True),
+    )
 
     tab.operator_input.setText("op-1")
     tab._unlink_link()
@@ -187,49 +211,8 @@ def test_link_management_role_guards() -> None:
     )
     assert admin.link_button.isEnabled()
     assert admin.unlink_button.isEnabled()
-    assert "関係" in admin.relation_type_combo.toolTip()
-
-
-def test_link_management_tab_requires_relation_type_selection() -> None:
-    _app()
-    tab = LinkManagementTab(core_service=StubCoreService(), query_service=StubQueryService())
-
-    tab.operator_input.setText("op-1")
-    tab.relation_type_combo.setCurrentIndex(0)
-    tab._create_link()
-
-    assert "関連の種類" in tab.message_label.text()
-
-
-def test_link_management_tab_accepts_custom_relation_type(monkeypatch: pytest.MonkeyPatch) -> None:
-    _app()
-    monkeypatch.setattr(
-        link_tab_module,
-        "confirm_destructive_action",
-        lambda *args, **kwargs: True,
-    )
-    core = StubCoreService()
-    tab = LinkManagementTab(core_service=core, query_service=StubQueryService())
-
-    tab.operator_input.setText("op-1")
-    tab.relation_type_combo.setCurrentIndex(tab.relation_type_combo.count() - 1)
-    tab.custom_relation_type_input.setText("custom-tag")
-    tab._create_link()
-
-    assert "link:1:100:custom-tag:op-1:admin" in core.calls
-
-
-def test_link_management_custom_relation_type_requires_text() -> None:
-    _app()
-    tab = LinkManagementTab(core_service=StubCoreService(), query_service=StubQueryService())
-
-    tab.operator_input.setText("op-1")
-    tab.relation_type_combo.setCurrentIndex(tab.relation_type_combo.count() - 1)
-    tab.custom_relation_type_input.setText("")
-    tab._create_link()
-
-    assert "補足説明" in tab.message_label.text()
-    assert "その他" in tab.custom_relation_type_input.toolTip()
+    assert "未関連" in admin.link_button.toolTip()
+    assert "既存関連" in admin.unlink_button.toolTip()
 
 
 def test_link_management_propagates_editor_role_to_service() -> None:
@@ -237,12 +220,11 @@ def test_link_management_propagates_editor_role_to_service() -> None:
     core = StubCoreService()
     tab = LinkManagementTab(
         core_service=core,
-        query_service=StubQueryService(),
+        query_service=StubQueryService(include_existing_link=False),
         role_context=RoleContext(role="editor"),
     )
 
     tab.operator_input.setText("op-2")
-    tab.relation_type_combo.setCurrentIndex(1)
     tab._create_link()
 
     assert "link:1:100:primary:op-2:editor" in core.calls

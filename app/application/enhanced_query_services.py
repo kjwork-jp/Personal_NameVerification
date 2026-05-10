@@ -40,7 +40,7 @@ class EnhancedQueryService(QueryService):
         if normalized_query is not None:
             if exact_match:
                 conditions.append(
-                    "(" 
+                    "("
                     "n.normalized_name = ? OR "
                     "EXISTS ("
                     "SELECT 1 FROM name_title_links ntq "
@@ -54,16 +54,28 @@ class EnhancedQueryService(QueryService):
                     "JOIN titles ttq ON ttq.id = sq.title_id "
                     "WHERE lq.name_id = n.id AND lq.deleted_at IS NULL "
                     "AND sq.deleted_at IS NULL "
-                    "AND (sq.subtitle_name = ? OR sq.subtitle_code = ? OR ttq.title_name = ?)"
+                    "AND ("
+                    "sq.subtitle_name = ? OR "
+                    "sq.subtitle_code = ? OR "
+                    "ttq.title_name = ?"
+                    ")"
                     ")"
                     ")"
                 )
-                params.extend([normalized_query, display_query, display_query, display_query, display_query])
+                params.extend(
+                    [
+                        normalized_query,
+                        display_query,
+                        display_query,
+                        display_query,
+                        display_query,
+                    ]
+                )
             else:
                 like_normalized = f"%{normalized_query}%"
                 like_display = f"%{display_query}%"
                 conditions.append(
-                    "(" 
+                    "("
                     "n.normalized_name LIKE ? OR "
                     "EXISTS ("
                     "SELECT 1 FROM name_title_links ntq "
@@ -77,11 +89,23 @@ class EnhancedQueryService(QueryService):
                     "JOIN titles ttq ON ttq.id = sq.title_id "
                     "WHERE lq.name_id = n.id AND lq.deleted_at IS NULL "
                     "AND sq.deleted_at IS NULL "
-                    "AND (sq.subtitle_name LIKE ? OR sq.subtitle_code LIKE ? OR ttq.title_name LIKE ?)"
+                    "AND ("
+                    "sq.subtitle_name LIKE ? OR "
+                    "sq.subtitle_code LIKE ? OR "
+                    "ttq.title_name LIKE ?"
+                    ")"
                     ")"
                     ")"
                 )
-                params.extend([like_normalized, like_display, like_display, like_display, like_display])
+                params.extend(
+                    [
+                        like_normalized,
+                        like_display,
+                        like_display,
+                        like_display,
+                        like_display,
+                    ]
+                )
 
         if title_id is not None:
             conditions.append(
@@ -89,10 +113,14 @@ class EnhancedQueryService(QueryService):
                 "EXISTS ("
                 "SELECT 1 FROM name_subtitle_links l2 "
                 "JOIN subtitles s2 ON s2.id = l2.subtitle_id "
-                "WHERE l2.name_id = n.id AND l2.deleted_at IS NULL AND s2.title_id = ?"
+                "WHERE l2.name_id = n.id "
+                "AND l2.deleted_at IS NULL "
+                "AND s2.title_id = ?"
                 ") OR EXISTS ("
                 "SELECT 1 FROM name_title_links nt2 "
-                "WHERE nt2.name_id = n.id AND nt2.deleted_at IS NULL AND nt2.title_id = ?"
+                "WHERE nt2.name_id = n.id "
+                "AND nt2.deleted_at IS NULL "
+                "AND nt2.title_id = ?"
                 ")"
                 ")"
             )
@@ -122,10 +150,14 @@ class EnhancedQueryService(QueryService):
                 n.normalized_name,
                 n.note,
                 n.deleted_at,
-                (SELECT COUNT(DISTINCT ntc.id) FROM name_title_links ntc
-                 WHERE ntc.name_id = n.id AND ntc.deleted_at IS NULL) AS title_related_count,
-                (SELECT COUNT(DISTINCT lsc.id) FROM name_subtitle_links lsc
-                 WHERE lsc.name_id = n.id AND lsc.deleted_at IS NULL) AS subtitle_related_count,
+                (SELECT COUNT(DISTINCT ntc.id)
+                 FROM name_title_links ntc
+                 WHERE ntc.name_id = n.id
+                   AND ntc.deleted_at IS NULL) AS title_related_count,
+                (SELECT COUNT(DISTINCT lsc.id)
+                 FROM name_subtitle_links lsc
+                 WHERE lsc.name_id = n.id
+                   AND lsc.deleted_at IS NULL) AS subtitle_related_count,
                 GROUP_CONCAT(DISTINCT s.title_id) AS title_ids
             FROM names n
             LEFT JOIN name_subtitle_links l
