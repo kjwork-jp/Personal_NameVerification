@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
 )
 
 from app.application.read_models import NameDetail, NameSearchRow, RelatedRow
+from app.ui.public_id_display import short_public_id
 from app.ui.role_context import RoleContext, UserRole
 from app.ui.ui_style import PageHeader, compact_layout
 
@@ -47,7 +48,7 @@ class SearchQueryService(Protocol):
 
 
 class SearchTab(QWidget):
-    """UI for search/read-only query operations."""
+    """UI for cross-entity search/read-only query operations."""
 
     def __init__(
         self, query_service: SearchQueryService, role_context: RoleContext | None = None
@@ -59,7 +60,9 @@ class SearchTab(QWidget):
         self._details_by_id: dict[int, NameDetail] = {}
 
         self.query_input = QLineEdit()
-        self.query_input.setPlaceholderText("名前で検索（例: 山田、Alice）")
+        self.query_input.setPlaceholderText(
+            "名前・タイトル・サブタイトル名・管理番号で検索"
+        )
         self.query_input.returnPressed.connect(self._on_search_clicked)
         self.match_mode = QComboBox()
         self.match_mode.addItems(["部分一致", "完全一致"])
@@ -73,21 +76,31 @@ class SearchTab(QWidget):
         self.error_label = QLabel("")
         self.error_label.setStyleSheet("color: #ff8a8a;")
 
-        self.results_table = QTableWidget(0, 7)
+        self.results_table = QTableWidget(0, 10)
         self.results_table.setHorizontalHeaderLabels(
-            ["内部ID", "名前", "検索用表記", "関連数", "状態", "更新日時", "備考"]
+            [
+                "内部ID",
+                "公開ID",
+                "名前",
+                "検索用表記",
+                "タイトル関連数",
+                "サブタイトル関連数",
+                "関連合計",
+                "状態",
+                "更新日時",
+                "備考",
+            ]
         )
         self.results_table.setColumnHidden(0, True)
         self.results_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.results_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.results_table.itemSelectionChanged.connect(self._on_selection_changed)
 
-        self.related_table = QTableWidget(0, 4)
+        self.related_table = QTableWidget(0, 5)
         self.related_table.setHorizontalHeaderLabels(
-            ["内部リンクID", "タイトル", "管理番号", "サブタイトル"]
+            ["内部リンクID", "リンク公開ID", "タイトル", "管理番号", "サブタイトル"]
         )
         self.related_table.setColumnHidden(0, True)
-        self.related_table.setColumnHidden(2, True)
         self.related_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
 
         filter_form = QFormLayout()
@@ -104,13 +117,15 @@ class SearchTab(QWidget):
 
         root_layout = QVBoxLayout(self)
         compact_layout(root_layout, margins=5, spacing=4)
-        root_layout.addWidget(PageHeader("検索", "名前・検索用表記・状態・備考を一覧で確認します。"))
+        root_layout.addWidget(
+            PageHeader("検索", "名前・タイトル・サブタイトルを横断検索します。")
+        )
         root_layout.addLayout(filter_form)
         root_layout.addLayout(top_controls)
         root_layout.addWidget(self.error_label)
-        root_layout.addWidget(QLabel("検索結果（詳細統合）"))
+        root_layout.addWidget(QLabel("検索結果（名前詳細・関連数を統合）"))
         root_layout.addWidget(self.results_table, 3)
-        root_layout.addWidget(QLabel("関連タイトル・サブタイトル"))
+        root_layout.addWidget(QLabel("選択中名前の関連タイトル・サブタイトル"))
         root_layout.addWidget(self.related_table, 2)
 
         self._on_search_clicked()
@@ -118,13 +133,12 @@ class SearchTab(QWidget):
     def _on_search_clicked(self) -> None:
         self.error_label.setText("")
         try:
-            has_links = self._parse_has_links()
             rows = self._query_service.search_names(
                 query=self.query_input.text(),
                 role=self._role_context.role,
                 exact_match=self.match_mode.currentText() == "完全一致",
                 title_id=None,
-                has_links=has_links,
+                has_links=self._parse_has_links(),
                 include_deleted=self.include_deleted_checkbox.isChecked(),
             )
         except Exception as exc:  # noqa: BLE001
@@ -163,13 +177,16 @@ class SearchTab(QWidget):
         for i, row in enumerate(rows):
             detail = self._get_detail(row.id)
             self.results_table.setItem(i, 0, QTableWidgetItem(str(row.id)))
-            self.results_table.setItem(i, 1, QTableWidgetItem(row.raw_name))
-            self.results_table.setItem(i, 2, QTableWidgetItem(row.normalized_name))
-            self.results_table.setItem(i, 3, QTableWidgetItem(str(row.linked_count)))
+            self.results_table.setItem(i, 1, QTableWidgetItem(short_public_id(row.public_id)))
+            self.results_table.setItem(i, 2, QTableWidgetItem(row.raw_name))
+            self.results_table.setItem(i, 3, QTableWidgetItem(row.normalized_name))
+            self.results_table.setItem(i, 4, QTableWidgetItem(str(row.title_related_count)))
+            self.results_table.setItem(i, 5, QTableWidgetItem(str(row.subtitle_related_count)))
+            self.results_table.setItem(i, 6, QTableWidgetItem(str(row.linked_count)))
             status = "削除済み" if row.deleted_at else "使用中"
-            self.results_table.setItem(i, 4, QTableWidgetItem(status))
-            self.results_table.setItem(i, 5, QTableWidgetItem(detail.updated_at if detail else ""))
-            self.results_table.setItem(i, 6, QTableWidgetItem(detail.note if detail and detail.note else ""))
+            self.results_table.setItem(i, 7, QTableWidgetItem(status))
+            self.results_table.setItem(i, 8, QTableWidgetItem(detail.updated_at if detail else ""))
+            self.results_table.setItem(i, 9, QTableWidgetItem(detail.note if detail and detail.note else ""))
 
         if rows:
             self.results_table.selectRow(0)
@@ -191,9 +208,10 @@ class SearchTab(QWidget):
         self.related_table.setRowCount(len(rows))
         for i, row in enumerate(rows):
             self.related_table.setItem(i, 0, QTableWidgetItem(str(row.link_id)))
-            self.related_table.setItem(i, 1, QTableWidgetItem(row.title_name))
-            self.related_table.setItem(i, 2, QTableWidgetItem(row.subtitle_code))
-            self.related_table.setItem(i, 3, QTableWidgetItem(row.subtitle_name))
+            self.related_table.setItem(i, 1, QTableWidgetItem(short_public_id(row.link_public_id)))
+            self.related_table.setItem(i, 2, QTableWidgetItem(row.title_name))
+            self.related_table.setItem(i, 3, QTableWidgetItem(row.subtitle_code))
+            self.related_table.setItem(i, 4, QTableWidgetItem(row.subtitle_name))
 
     def _parse_has_links(self) -> bool | None:
         text = self.has_links_filter.currentText()
