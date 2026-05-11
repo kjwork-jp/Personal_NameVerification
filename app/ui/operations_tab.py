@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
     QCompleter,
     QFileDialog,
     QFormLayout,
+    QGridLayout,
     QGroupBox,
     QHBoxLayout,
     QLabel,
@@ -32,6 +33,53 @@ from app.ui.role_context import RoleContext, UserRole
 MAX_RECENT_PATHS = 5
 HISTORY_PREFIX = "operations/recent_paths"
 DEFAULT_LOGS_PAGE_SIZE = 100
+
+_COMPACT_GROUP_STYLE = """
+QGroupBox {
+    margin-top: 7px;
+    padding-top: 7px;
+}
+QGroupBox::title {
+    subcontrol-origin: margin;
+    left: 8px;
+    padding: 0 3px;
+}
+"""
+
+_DESTRUCTIVE_GROUP_STYLE = """
+QGroupBox {
+    border: 1px solid #8a5a2b;
+    border-radius: 6px;
+    margin-top: 7px;
+    padding-top: 7px;
+}
+QGroupBox::title {
+    subcontrol-origin: margin;
+    left: 8px;
+    padding: 0 3px;
+    color: #ffcc66;
+}
+"""
+
+_DESTRUCTIVE_BUTTON_STYLE = """
+QPushButton {
+    background-color: #7a332d;
+    border: 1px solid #b35b4f;
+    color: #fff2ee;
+}
+QPushButton:disabled {
+    background-color: #4b5563;
+    border: 1px solid #4b5563;
+    color: #b8c0cc;
+}
+"""
+
+_SECONDARY_BUTTON_STYLE = """
+QPushButton {
+    padding-left: 8px;
+    padding-right: 8px;
+}
+"""
 
 
 class ExportBackupLike(Protocol):
@@ -186,6 +234,7 @@ class OperationsTab(QWidget):
         self.result_view.setReadOnly(True)
         self.operation_log_view = QTextEdit()
         self.operation_log_view.setReadOnly(True)
+        self._configure_compact_controls()
 
         self.csv_export_browse_button.clicked.connect(
             lambda: self._select_directory(
@@ -307,7 +356,15 @@ class OperationsTab(QWidget):
         )
 
         root = QVBoxLayout(self)
-        root.addWidget(
+        root.setContentsMargins(8, 8, 8, 8)
+        root.setSpacing(6)
+
+        operations_grid = QGridLayout()
+        operations_grid.setContentsMargins(0, 0, 0, 0)
+        operations_grid.setHorizontalSpacing(8)
+        operations_grid.setVerticalSpacing(6)
+
+        operations_grid.addWidget(
             self._build_group(
                 "Export",
                 [
@@ -335,9 +392,11 @@ class OperationsTab(QWidget):
                     self.export_json_button,
                     self.export_sql_dump_button,
                 ],
-            )
+            ),
+            0,
+            0,
         )
-        root.addWidget(
+        operations_grid.addWidget(
             self._build_group(
                 "Backup",
                 [
@@ -355,9 +414,11 @@ class OperationsTab(QWidget):
                     ),
                 ],
                 [self.create_backup_button],
-            )
+            ),
+            0,
+            1,
         )
-        root.addWidget(
+        operations_grid.addWidget(
             self._build_group(
                 "Restore（destructive）",
                 [
@@ -375,9 +436,12 @@ class OperationsTab(QWidget):
                     ),
                 ],
                 [self.restore_button],
-            )
+                destructive=True,
+            ),
+            1,
+            0,
         )
-        root.addWidget(
+        operations_grid.addWidget(
             self._build_group(
                 "Import（destructive）",
                 [
@@ -395,16 +459,33 @@ class OperationsTab(QWidget):
                     ),
                 ],
                 [self.import_csv_button, self.import_json_button],
-            )
+                destructive=True,
+            ),
+            1,
+            1,
         )
+        operations_grid.setColumnStretch(0, 1)
+        operations_grid.setColumnStretch(1, 1)
+        root.addLayout(operations_grid)
 
         root.addWidget(self.result_view)
-        root.addWidget(self.cancel_operation_button)
-        root.addWidget(self.clear_recent_paths_button)
+
+        utility_row = QHBoxLayout()
+        utility_row.setContentsMargins(0, 0, 0, 0)
+        utility_row.setSpacing(6)
+        utility_row.addWidget(self.cancel_operation_button)
+        utility_row.addWidget(self.clear_recent_paths_button)
+        utility_row.addStretch(1)
+        root.addLayout(utility_row)
 
         logs_group = QGroupBox("Operations 実行ログ（最新100件）")
+        logs_group.setStyleSheet(_COMPACT_GROUP_STYLE)
         logs_layout = QVBoxLayout(logs_group)
+        logs_layout.setContentsMargins(8, 8, 8, 8)
+        logs_layout.setSpacing(4)
         header = QHBoxLayout()
+        header.setContentsMargins(0, 0, 0, 0)
+        header.setSpacing(4)
         for widget in [
             self.reload_logs_button,
             self.export_logs_button,
@@ -419,6 +500,8 @@ class OperationsTab(QWidget):
         logs_layout.addLayout(header)
 
         controls = QHBoxLayout()
+        controls.setContentsMargins(0, 0, 0, 0)
+        controls.setSpacing(4)
         for widget in [
             self.include_archives_checkbox,
             QLabel("ソース"),
@@ -446,20 +529,75 @@ class OperationsTab(QWidget):
         self._apply_role_guards()
         self._reload_operation_logs()
 
+    def _configure_compact_controls(self) -> None:
+        for line_edit in [
+            self.csv_export_path_input,
+            self.json_export_path_input,
+            self.sql_dump_path_input,
+            self.db_path_input,
+            self.backup_output_path_input,
+            self.restore_backup_path_input,
+            self.restore_target_db_path_input,
+            self.import_csv_dir_input,
+            self.import_json_path_input,
+            self.log_message_search_input,
+        ]:
+            line_edit.setMinimumHeight(24)
+
+        for button in [
+            self.csv_export_browse_button,
+            self.json_export_browse_button,
+            self.sql_dump_browse_button,
+            self.db_path_browse_button,
+            self.backup_output_browse_button,
+            self.restore_backup_browse_button,
+            self.restore_target_browse_button,
+            self.import_csv_dir_browse_button,
+            self.import_json_browse_button,
+        ]:
+            button.setMaximumWidth(72)
+            button.setStyleSheet(_SECONDARY_BUTTON_STYLE)
+
+        for button in [
+            self.restore_button,
+            self.import_csv_button,
+            self.import_json_button,
+        ]:
+            button.setToolTip("destructive 操作です。実行前にバックアップ取得を確認してください。")
+            button.setStyleSheet(_DESTRUCTIVE_BUTTON_STYLE)
+
+        self.result_view.setMaximumHeight(72)
+        self.cancel_operation_button.setMaximumWidth(160)
+        self.clear_recent_paths_button.setMaximumWidth(160)
+        self.log_message_search_input.setMinimumWidth(160)
+
     def _build_group(
         self,
         title: str,
         fields: list[tuple[str, QLineEdit, QPushButton, str]],
         buttons: list[QPushButton],
+        *,
+        destructive: bool = False,
     ) -> QGroupBox:
         group = QGroupBox(title)
+        group.setStyleSheet(_DESTRUCTIVE_GROUP_STYLE if destructive else _COMPACT_GROUP_STYLE)
         layout = QVBoxLayout(group)
+        layout.setContentsMargins(8, 8, 8, 6)
+        layout.setSpacing(4)
         form = QFormLayout()
+        form.setContentsMargins(0, 0, 0, 0)
+        form.setHorizontalSpacing(6)
+        form.setVerticalSpacing(3)
+        form.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow)
         for label, line_edit, browse_button, field_key in fields:
             row = QHBoxLayout()
+            row.setContentsMargins(0, 0, 0, 0)
+            row.setSpacing(4)
             row.addWidget(line_edit)
             row.addWidget(browse_button)
             clear_button = QPushButton("履歴削除")
+            clear_button.setMaximumWidth(84)
+            clear_button.setStyleSheet(_SECONDARY_BUTTON_STYLE)
             clear_button.clicked.connect(
                 lambda *_args, key=field_key: self._clear_recent_path(key)
             )
@@ -469,7 +607,10 @@ class OperationsTab(QWidget):
         layout.addLayout(form)
 
         buttons_row = QHBoxLayout()
+        buttons_row.setContentsMargins(0, 0, 0, 0)
+        buttons_row.setSpacing(4)
         for button in buttons:
+            button.setMinimumHeight(24)
             buttons_row.addWidget(button)
         buttons_row.addStretch(1)
         layout.addLayout(buttons_row)
