@@ -20,8 +20,11 @@ from PySide6.QtWidgets import (
 
 from app.application.read_models import NameDetail, RelatedRow, SubtitleDetail, TitleDetail
 from app.ui.dialogs import confirm_destructive_action
+from app.ui.input_defaults import default_operator_id
 from app.ui.permissions import can_run_destructive_actions
+from app.ui.public_id_display import short_public_id
 from app.ui.role_context import RoleContext, UserRole
+from app.ui.ui_style import PageHeader, compact_layout
 
 
 class TrashReadService(Protocol):
@@ -93,9 +96,16 @@ class TrashWriteService(Protocol):
 
 
 @dataclass(frozen=True)
-class _Selection:
+class _TrashRow:
+    entity_key: str
+    entity_label: str
     entity_id: int
+    public_id: str | None
+    display_name: str
+    title_name: str
+    subtitle_code: str
     deleted_at: str | None
+    detail: str
 
 
 class TrashTab(QWidget):
@@ -111,25 +121,47 @@ class TrashTab(QWidget):
         self._core_service = core_service
         self._query_service = query_service
         self._role_context = role_context or RoleContext.admin()
-        self._names: list[NameDetail] = []
-        self._titles: list[TitleDetail] = []
-        self._subtitles: list[SubtitleDetail] = []
-        self._links: list[RelatedRow] = []
-        self._selected: _Selection | None = None
+        self._trash_rows: list[_TrashRow] = []
+        self._selected: _TrashRow | None = None
 
         self.entity_selector = QComboBox()
         self.entity_selector.addItems(
-            ["名前", "タイトル", "サブタイトル", "リンク", "Name", "Title", "Subtitle", "Link"]
+            [
+                "すべて",
+                "名前",
+                "タイトル",
+                "サブタイトル",
+                "リンク",
+                "All",
+                "Name",
+                "Title",
+                "Subtitle",
+                "Link",
+            ]
         )
         self.entity_selector.currentTextChanged.connect(self._reload)
 
-        self.operator_input = QLineEdit()
+        self.operator_input = QLineEdit(default_operator_id())
         self.operator_input.setPlaceholderText("操作者ID")
-        self.operator_input.setToolTip("操作者ID が必要です")
+        self.operator_input.setToolTip("復元/完全削除の変更履歴に記録する操作者です。")
         self.message_label = QLabel("")
 
-        self.list_table = QTableWidget(0, 3)
-        self.list_table.setHorizontalHeaderLabels(["ID", "表示", "deleted_at"])
+        self.list_table = QTableWidget(0, 8)
+        self.list_table.setHorizontalHeaderLabels(
+            [
+                "内部ID",
+                "分類",
+                "公開ID",
+                "表示名",
+                "タイトル",
+                "管理番号",
+                "削除日時",
+                "詳細",
+            ]
+        )
+        self.list_table.setColumnHidden(0, True)
+        self.list_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self.list_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.list_table.itemSelectionChanged.connect(self._on_selected)
         self.detail_label = QLabel("詳細: 未選択")
 
@@ -141,19 +173,23 @@ class TrashTab(QWidget):
         self.hard_delete_button.clicked.connect(self._hard_delete_selected)
 
         form = QFormLayout()
+        compact_layout(form, margins=2, spacing=3)
         form.addRow("対象", self.entity_selector)
         form.addRow("操作者ID", self.operator_input)
 
         actions = QHBoxLayout()
+        compact_layout(actions, margins=0, spacing=4)
         actions.addWidget(self.reload_button)
         actions.addWidget(self.restore_button)
         actions.addWidget(self.hard_delete_button)
 
         root = QVBoxLayout(self)
+        compact_layout(root, margins=5, spacing=4)
+        root.addWidget(PageHeader("削除データ", "復元と完全削除をここに集約します。"))
         root.addLayout(form)
         root.addLayout(actions)
         root.addWidget(self.message_label)
-        root.addWidget(self.list_table)
+        root.addWidget(self.list_table, 1)
         root.addWidget(self.detail_label)
 
         self._apply_role_guards()
@@ -161,6 +197,8 @@ class TrashTab(QWidget):
 
     def _entity_key(self) -> str:
         return {
+            "すべて": "all",
+            "All": "all",
             "名前": "name",
             "Name": "name",
             "タイトル": "title",
@@ -169,7 +207,7 @@ class TrashTab(QWidget):
             "Subtitle": "subtitle",
             "リンク": "link",
             "Link": "link",
-        }.get(self.entity_selector.currentText(), "name")
+        }.get(self.entity_selector.currentText(), "all")
 
     def _apply_role_guards(self) -> None:
         enabled = can_run_destructive_actions(self._role_context.role)
@@ -188,100 +226,77 @@ class TrashTab(QWidget):
         self._selected = None
         self.detail_label.setText("詳細: 未選択")
         try:
-            if key == "name":
-                self._names = self._query_service.list_deleted_names(role=self._role_context.role)
-                self._fill_name_rows(self._names)
-            elif key == "title":
-                self._titles = self._query_service.list_deleted_titles(role=self._role_context.role)
-                self._fill_title_rows(self._titles)
-            elif key == "subtitle":
-                self._subtitles = self._query_service.list_deleted_subtitles(
-                    role=self._role_context.role
+            rows: list[_TrashRow] = []
+            if key in {"all", "name"}:
+                rows.extend(
+                    _row_from_name(row)
+                    for row in self._query_service.list_deleted_names(
+                        role=self._role_context.role
+                    )
                 )
-                self._fill_subtitle_rows(self._subtitles)
-            else:
-                self._links = self._query_service.list_deleted_links(role=self._role_context.role)
-                self._fill_link_rows(self._links)
+            if key in {"all", "title"}:
+                rows.extend(
+                    _row_from_title(row)
+                    for row in self._query_service.list_deleted_titles(
+                        role=self._role_context.role
+                    )
+                )
+            if key in {"all", "subtitle"}:
+                rows.extend(
+                    _row_from_subtitle(row)
+                    for row in self._query_service.list_deleted_subtitles(
+                        role=self._role_context.role
+                    )
+                )
+            if key in {"all", "link"}:
+                rows.extend(
+                    _row_from_link(row)
+                    for row in self._query_service.list_deleted_links(
+                        role=self._role_context.role
+                    )
+                )
         except Exception as exc:  # noqa: BLE001
+            self._trash_rows = []
+            self.list_table.setRowCount(0)
             self._set_message(f"一覧取得に失敗しました: {exc}", is_error=True)
             return
 
+        self._trash_rows = sorted(
+            rows,
+            key=lambda row: (row.deleted_at or "", row.entity_label, row.entity_id),
+            reverse=True,
+        )
+        self._render_rows()
         if self.list_table.rowCount() > 0:
             self.list_table.selectRow(0)
             self._on_selected()
+            self._set_message(f"削除済みデータを {self.list_table.rowCount()} 件表示しました")
         else:
             self._set_message("削除済みデータはありません")
 
-    def _fill_name_rows(self, names: list[NameDetail]) -> None:
-        self.list_table.setRowCount(len(names))
-        for i, row in enumerate(names):
-            self.list_table.setItem(i, 0, QTableWidgetItem(str(row.id)))
-            self.list_table.setItem(i, 1, QTableWidgetItem(row.raw_name))
-            self.list_table.setItem(i, 2, QTableWidgetItem(row.deleted_at or ""))
-
-    def _fill_title_rows(self, titles: list[TitleDetail]) -> None:
-        self.list_table.setRowCount(len(titles))
-        for i, row in enumerate(titles):
-            self.list_table.setItem(i, 0, QTableWidgetItem(str(row.id)))
-            self.list_table.setItem(i, 1, QTableWidgetItem(row.title_name))
-            self.list_table.setItem(i, 2, QTableWidgetItem(row.deleted_at or ""))
-
-    def _fill_subtitle_rows(self, subtitles: list[SubtitleDetail]) -> None:
-        self.list_table.setRowCount(len(subtitles))
-        for i, row in enumerate(subtitles):
-            label = f"{row.subtitle_code} {row.subtitle_name}"
-            self.list_table.setItem(i, 0, QTableWidgetItem(str(row.id)))
-            self.list_table.setItem(i, 1, QTableWidgetItem(label))
-            self.list_table.setItem(i, 2, QTableWidgetItem(row.deleted_at or ""))
-
-    def _fill_link_rows(self, links: list[RelatedRow]) -> None:
-        self.list_table.setRowCount(len(links))
-        for i, row in enumerate(links):
-            label = (
-                f"name={row.name_id} / {row.title_name}:{row.subtitle_code} "
-                f"({row.relation_type})"
-            )
-            self.list_table.setItem(i, 0, QTableWidgetItem(str(row.link_id)))
-            self.list_table.setItem(i, 1, QTableWidgetItem(label))
-            self.list_table.setItem(i, 2, QTableWidgetItem(row.link_deleted_at or ""))
+    def _render_rows(self) -> None:
+        self.list_table.setRowCount(len(self._trash_rows))
+        for i, row in enumerate(self._trash_rows):
+            self.list_table.setItem(i, 0, QTableWidgetItem(str(row.entity_id)))
+            self.list_table.setItem(i, 1, QTableWidgetItem(row.entity_label))
+            self.list_table.setItem(i, 2, QTableWidgetItem(short_public_id(row.public_id)))
+            self.list_table.setItem(i, 3, QTableWidgetItem(row.display_name))
+            self.list_table.setItem(i, 4, QTableWidgetItem(row.title_name))
+            self.list_table.setItem(i, 5, QTableWidgetItem(row.subtitle_code))
+            self.list_table.setItem(i, 6, QTableWidgetItem(row.deleted_at or ""))
+            self.list_table.setItem(i, 7, QTableWidgetItem(row.detail))
 
     def _on_selected(self) -> None:
         row_index = self.list_table.currentRow()
-        if row_index < 0:
+        if row_index < 0 or row_index >= len(self._trash_rows):
             self._selected = None
             self.detail_label.setText("詳細: 未選択")
             return
-
-        key = self._entity_key()
-        if key == "name" and row_index < len(self._names):
-            item = self._names[row_index]
-            self._selected = _Selection(item.id, item.deleted_at)
-            detail = f"詳細: Name id={item.id} raw={item.raw_name} deleted_at={item.deleted_at}"
-        elif key == "title" and row_index < len(self._titles):
-            item = self._titles[row_index]
-            self._selected = _Selection(item.id, item.deleted_at)
-            detail = (
-                f"詳細: Title id={item.id} name={item.title_name} "
-                f"deleted_at={item.deleted_at}"
-            )
-        elif key == "subtitle" and row_index < len(self._subtitles):
-            item = self._subtitles[row_index]
-            self._selected = _Selection(item.id, item.deleted_at)
-            detail = (
-                f"詳細: Subtitle id={item.id} code={item.subtitle_code} "
-                f"deleted_at={item.deleted_at}"
-            )
-        elif key == "link" and row_index < len(self._links):
-            item = self._links[row_index]
-            self._selected = _Selection(item.link_id, item.link_deleted_at)
-            detail = (
-                f"詳細: Link id={item.link_id} name_id={item.name_id} "
-                f"subtitle_id={item.subtitle_id} deleted_at={item.link_deleted_at}"
-            )
-        else:
-            self._selected = None
-            detail = "詳細: 未選択"
-        self.detail_label.setText(detail)
+        self._selected = self._trash_rows[row_index]
+        self.detail_label.setText(
+            f"詳細: {self._selected.entity_label} / "
+            f"ID={self._selected.entity_id} / {self._selected.detail}"
+        )
 
     def _restore_selected(self) -> None:
         if not can_run_destructive_actions(self._role_context.role):
@@ -294,7 +309,7 @@ class TrashTab(QWidget):
         if not confirm_destructive_action(
             self,
             "復元の確認",
-            f"ID={selected.entity_id} を復元します。よろしいですか？",
+            f"{selected.entity_label} ID={selected.entity_id} を復元します。よろしいですか？",
         ):
             self._set_message("復元をキャンセルしました")
             return
@@ -303,13 +318,14 @@ class TrashTab(QWidget):
             "title": "restore_title",
             "subtitle": "restore_subtitle",
             "link": "restore_link",
-        }[self._entity_key()]
+        }[selected.entity_key]
         getattr(self._core_service, method)(
             selected.entity_id,
             operator_id,
             role=self._role_context.role,
         )
         self._set_message("復元しました")
+        self._reload()
 
     def _hard_delete_selected(self) -> None:
         if not can_run_destructive_actions(self._role_context.role):
@@ -322,7 +338,7 @@ class TrashTab(QWidget):
         if not confirm_destructive_action(
             self,
             "完全削除の確認",
-            f"ID={selected.entity_id} を完全削除します。この操作は元に戻せません。",
+            f"{selected.entity_label} ID={selected.entity_id} を完全削除します。",
         ):
             self._set_message("完全削除をキャンセルしました")
             return
@@ -331,13 +347,14 @@ class TrashTab(QWidget):
             "title": "hard_delete_title",
             "subtitle": "hard_delete_subtitle",
             "link": "hard_delete_link",
-        }[self._entity_key()]
+        }[selected.entity_key]
         getattr(self._core_service, method)(
             selected.entity_id,
             operator_id,
             role=self._role_context.role,
         )
         self._set_message("完全削除しました")
+        self._reload()
 
     def _require_operator_id(self) -> str | None:
         operator_id = self.operator_input.text().strip()
@@ -346,7 +363,7 @@ class TrashTab(QWidget):
             return None
         return operator_id
 
-    def _require_deleted_selection(self) -> _Selection | None:
+    def _require_deleted_selection(self) -> _TrashRow | None:
         if self._selected is None:
             self._on_selected()
         if self._selected is None:
@@ -361,3 +378,62 @@ class TrashTab(QWidget):
         color = "#b00020" if is_error else "#1b5e20"
         self.message_label.setStyleSheet(f"color: {color};")
         self.message_label.setText(message)
+
+
+def _row_from_name(row: NameDetail) -> _TrashRow:
+    return _TrashRow(
+        entity_key="name",
+        entity_label="名前",
+        entity_id=row.id,
+        public_id=row.public_id,
+        display_name=row.raw_name,
+        title_name="",
+        subtitle_code="",
+        deleted_at=row.deleted_at,
+        detail=f"検索用表記={row.normalized_name} / 備考={row.note or ''}",
+    )
+
+
+def _row_from_title(row: TitleDetail) -> _TrashRow:
+    return _TrashRow(
+        entity_key="title",
+        entity_label="タイトル",
+        entity_id=row.id,
+        public_id=row.public_id,
+        display_name=row.title_name,
+        title_name=row.title_name,
+        subtitle_code="",
+        deleted_at=row.deleted_at,
+        detail=f"備考={row.note or ''}",
+    )
+
+
+def _row_from_subtitle(row: SubtitleDetail) -> _TrashRow:
+    return _TrashRow(
+        entity_key="subtitle",
+        entity_label="サブタイトル",
+        entity_id=row.id,
+        public_id=row.public_id,
+        display_name=row.subtitle_name,
+        title_name=f"title_id={row.title_id}",
+        subtitle_code=row.subtitle_code,
+        deleted_at=row.deleted_at,
+        detail=f"表示順={row.sort_order} / 備考={row.note or ''}",
+    )
+
+
+def _row_from_link(row: RelatedRow) -> _TrashRow:
+    return _TrashRow(
+        entity_key="link",
+        entity_label="リンク",
+        entity_id=row.link_id,
+        public_id=row.link_public_id,
+        display_name=f"name_id={row.name_id}",
+        title_name=row.title_name,
+        subtitle_code=row.subtitle_code,
+        deleted_at=row.link_deleted_at,
+        detail=(
+            f"subtitle_id={row.subtitle_id} / relation_type={row.relation_type} / "
+            f"サブタイトル={row.subtitle_name}"
+        ),
+    )
