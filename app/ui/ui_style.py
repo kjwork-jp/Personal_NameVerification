@@ -2,8 +2,12 @@
 
 from __future__ import annotations
 
-from PySide6.QtWidgets import QLabel, QLayout, QVBoxLayout, QWidget
-
+from PySide6.QtWidgets import (
+    QLabel,
+    QLayout,
+    QVBoxLayout,
+    QWidget,
+)
 
 _STATUS_COLORS = {
     "info": ("#7ee787", "#26382f", "#3d7a55"),
