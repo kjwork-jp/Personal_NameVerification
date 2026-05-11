@@ -11,8 +11,8 @@ def main() -> int:
     """Launch the minimal PySide6 application shell."""
     from PySide6.QtWidgets import QApplication, QDialog
 
+    from app.application.auto_log_export import AutoExportingCoreService
     from app.application.backup_restore_services import BackupRestoreService
-    from app.application.core_services import CoreService
     from app.application.enhanced_query_services import EnhancedQueryService
     from app.application.export_backup_services import ExportBackupService
     from app.application.import_services import ImportService
@@ -23,7 +23,7 @@ def main() -> int:
     database_path = Path(os.environ.get("NAMEVERIFICATION_DB_PATH", "nameverification.db"))
     connection = initialize_database(database_path)
     query_service = EnhancedQueryService(connection)
-    core_service = CoreService(connection)
+    core_service = AutoExportingCoreService(connection)
 
     app = QApplication(sys.argv)
     login = LoginDialog()
