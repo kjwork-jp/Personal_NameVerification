@@ -28,7 +28,7 @@ from app.ui.input_defaults import default_operator_id, friendly_error_message, g
 from app.ui.permissions import can_create_or_update, can_run_destructive_actions
 from app.ui.public_id_display import short_public_id
 from app.ui.role_context import RoleContext, UserRole
-from app.ui.ui_style import compact_layout
+from app.ui.ui_style import compact_layout, set_status_message
 
 
 class TitleSubtitleWriteService(Protocol):
@@ -217,18 +217,18 @@ class TitleSubtitleManagementTab(QWidget):
         self.subtitle_hard_delete_button.clicked.connect(self._hard_delete_subtitle)
 
         top_form = QFormLayout()
-        compact_layout(top_form, margins=2, spacing=3)
+        compact_layout(top_form, margins=0, spacing=2)
         top_form.addRow("操作者ID", self.operator_input)
 
         title_form = QFormLayout()
-        compact_layout(title_form, margins=2, spacing=3)
+        compact_layout(title_form, margins=0, spacing=2)
         title_form.addRow("タイトル選択", self.title_selector_combo)
         title_form.addRow("タイトル名", self.title_name_input)
         title_form.addRow("備考", self.title_note_input)
         title_form.addRow("関連付ける名前", self.title_link_name_combo)
 
         subtitle_form = QFormLayout()
-        compact_layout(subtitle_form, margins=2, spacing=3)
+        compact_layout(subtitle_form, margins=0, spacing=2)
         subtitle_form.addRow("タイトル選択", self.selected_title_label)
         subtitle_form.addRow("管理番号", self.subtitle_code_input)
         subtitle_form.addRow("サブタイトル名", self.subtitle_name_input)
@@ -256,33 +256,40 @@ class TitleSubtitleManagementTab(QWidget):
             subtitle_actions.addWidget(button)
 
         title_panel = QWidget()
+        self.title_panel = title_panel
         title_layout = QVBoxLayout(title_panel)
-        compact_layout(title_layout, margins=3, spacing=4)
-        title_layout.addWidget(QLabel("タイトル情報"))
+        compact_layout(title_layout, margins=2, spacing=3)
+        self.title_panel_label = QLabel("タイトル情報")
+        title_layout.addWidget(self.title_panel_label)
         title_layout.addLayout(title_form)
         title_layout.addLayout(title_actions)
         title_layout.addWidget(self.linked_names_label)
         title_layout.addWidget(self.titles_table, 2)
 
         subtitle_panel = QWidget()
+        self.subtitle_panel = subtitle_panel
         subtitle_layout = QVBoxLayout(subtitle_panel)
-        compact_layout(subtitle_layout, margins=3, spacing=4)
-        subtitle_layout.addWidget(QLabel("サブタイトル情報"))
+        compact_layout(subtitle_layout, margins=2, spacing=3)
+        self.subtitle_panel_label = QLabel("サブタイトル情報")
+        subtitle_layout.addWidget(self.subtitle_panel_label)
         subtitle_layout.addWidget(self.subtitle_hint_label)
         subtitle_layout.addLayout(subtitle_form)
         subtitle_layout.addLayout(subtitle_actions)
         subtitle_layout.addWidget(self.subtitles_table, 2)
 
         splitter = QSplitter()
+        self.splitter = splitter
         splitter.addWidget(title_panel)
         splitter.addWidget(subtitle_panel)
+        splitter.setSizes([560, 610])
 
         root = QVBoxLayout(self)
-        compact_layout(root, margins=3, spacing=4)
+        compact_layout(root, margins=2, spacing=3)
         root.addLayout(top_form)
         root.addWidget(self.message_label)
         root.addWidget(splitter, 1)
 
+        self._configure_table_columns()
         self._apply_role_guards()
         self._refresh_titles()
 
@@ -656,9 +663,11 @@ class TitleSubtitleManagementTab(QWidget):
         return self._selected_subtitle
 
     def _set_message(self, message: str, *, is_error: bool = False) -> None:
-        color = "#b00020" if is_error else "#0b6b0b"
-        self.message_label.setStyleSheet(f"color: {color};")
-        self.message_label.setText(message)
+        set_status_message(
+            self.message_label,
+            message,
+            level="error" if is_error else "success",
+        )
 
     def _clear_subtitle_form(self) -> None:
         self.subtitle_code_input.clear()
@@ -699,6 +708,22 @@ class TitleSubtitleManagementTab(QWidget):
             self.subtitle_hint_label.setText("削除済みタイトルが選択されています（サブタイトル操作は無効）")
         else:
             self.subtitle_hint_label.setText("選択中タイトル配下のサブタイトルを操作できます")
+
+    def _configure_table_columns(self) -> None:
+        self.titles_table.setColumnWidth(1, 82)
+        self.titles_table.setColumnWidth(2, 150)
+        self.titles_table.setColumnWidth(3, 58)
+        self.titles_table.setColumnWidth(4, 135)
+        self.titles_table.setColumnWidth(5, 105)
+        self.titles_table.setColumnWidth(6, 155)
+        self.subtitles_table.setColumnWidth(1, 82)
+        self.subtitles_table.setColumnWidth(3, 125)
+        self.subtitles_table.setColumnWidth(4, 90)
+        self.subtitles_table.setColumnWidth(5, 145)
+        self.subtitles_table.setColumnWidth(6, 58)
+        self.subtitles_table.setColumnWidth(7, 60)
+        self.subtitles_table.setColumnWidth(8, 135)
+        self.subtitles_table.setColumnWidth(9, 105)
 
 
 def _title_combo_label(row: TitleDetail) -> str:
