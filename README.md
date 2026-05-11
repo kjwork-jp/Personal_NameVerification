@@ -1,93 +1,163 @@
 # NameVerification v3
 
-NameVerification v3 is a **PySide6 desktop application** for local/offline name verification and management.
+NameVerification v3 は、名前・タイトル・サブタイトル・関連付けをローカルで管理する **PySide6 / SQLite デスクトップアプリ**です。
 
-This repository is **not docs-only**: it already contains implementation code, SQLite schema, and automated tests.
-
-## Current implementation status
-
-Implemented layers:
-- `app/domain`: normalization rules and domain errors
-- `app/application`: `CoreService` / `QueryService` / read models / minimal authorization helpers
-- `app/infrastructure`: SQLite schema application helpers
-- `app/ui`: PySide6 UI tabs and role-based UI guards
-- `db/`: schema and migration SQL
-- `tests/`: unit + UI tests
+このリポジトリはドキュメントだけではなく、SQLite schema、アプリケーションサービス、PySide6 UI、テスト、Windows EXE build 手順を含みます。
 
 ## Runtime / stack
 
 - Python 3.12+
-- PySide6 (desktop UI)
-- SQLite (local DB)
+- PySide6
+- SQLite
+- pytest / ruff / black / mypy
+- PyInstaller
 
 ## Entry point
-
-- `app/pyside6_main.py`
-
-## Main window tabs
-
-- 検索/照合
-- 名前管理
-- タイトル/サブタイトル管理
-- リンク管理
-- ゴミ箱
-- 監査ログ
-- 運用操作
-
-## Setup
-
-```bash
-python -m venv .venv
-source .venv/bin/activate  # Windows: .venv\\Scripts\\activate
-pip install -e .
-```
-
-## Run application
 
 ```bash
 python -m app.pyside6_main
 ```
 
-## Test / checks
+Windows PowerShell:
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+python -m app.pyside6_main
+```
+
+## Local login
+
+起動時にローカルログイン画面で操作者とロールを選択します。
+
+- これは外部認証ではありません。
+- 操作者は `change_logs` と自動JSONLログへ記録するためのローカル識別子です。
+- ロールは `viewer` / `editor` / `admin` を想定します。
+- 操作者を固定したい場合は `NAMEVERIFICATION_OPERATOR_ID` を起動前に設定します。
+
+```powershell
+$env:NAMEVERIFICATION_OPERATOR_ID = "operator-local"
+```
+
+## Database path
+
+既定ではカレントディレクトリの `nameverification.db` を使用します。
+保存先を固定したい場合は `NAMEVERIFICATION_DB_PATH` を起動前に設定します。
+
+```powershell
+$env:NAMEVERIFICATION_DB_PATH = "C:\\path\\to\\nameverification.db"
+python -m app.pyside6_main
+```
+
+EXE起動時も同じ環境変数でDB保存先を切り替えられます。
+
+## Automatic change log JSONL export
+
+DB内の `change_logs` が正の操作履歴です。加えて、運用補助として変更履歴を JSONL へ自動出力します。
+
+既定値:
+
+```text
+logs/change_logs.jsonl
+```
+
+設定:
+
+```powershell
+$env:NAMEVERIFICATION_CHANGE_LOG_JSONL_PATH = "logs/change_logs.jsonl"
+$env:NAMEVERIFICATION_CHANGE_LOG_JSONL_MAX_BYTES = "5242880"
+$env:NAMEVERIFICATION_CHANGE_LOG_JSONL_ENABLED = "1"
+```
+
+挙動:
+
+- DB更新ごとに `timestamp / entity_type / entity_id / action / operator_id / before_json / after_json` をJSONLへ追記します。
+- 出力先の親ディレクトリは自動作成します。
+- ファイルサイズが上限を超えた場合、既存ログをタイムスタンプ付きファイルへローテーションします。
+- JSONL出力に失敗してもDB更新は継続します。JSONLは監査補助であり、DBの `change_logs` が正です。
+
+## Main window tabs
+
+| タブ | 用途 |
+|---|---|
+| 検索 | 名前・タイトル・サブタイトルを横断検索し、関連数と関連明細を確認する |
+| 名前を管理 | 名前の登録・更新、タイトル/サブタイトル関連数確認、ゴミ箱投入を行う |
+| タイトルを管理 | タイトル登録・更新、登録時の名前1件関連付け、ゴミ箱投入を行う |
+| サブタイトルを管理 | タイトルを選択し、管理番号・サブタイトル名・表示順を登録/更新する |
+| 関連付け | 名前とサブタイトルの例外的な関連登録/解除を行う。関連種類は内部で `primary` 固定 |
+| 削除データ | 名前・タイトル・サブタイトル・リンクの復元/完全削除を集約する |
+| 操作履歴 | DB内 `change_logs` を検索し、変更前/変更後/差分を項目名付きで確認する |
+| データ入出力 | CSV/JSON/SQL出力、バックアップ、Restore、Import、Operations JSONLログ確認を行う |
+| ヘルプ/設定 | DB保存先、環境変数、操作者、自動JSONLログ、基本操作を確認する |
+
+## Data operations
+
+データ入出力タブでは以下を扱います。
+
+| 区分 | 操作 | 権限目安 | 注意 |
+|---|---|---|---|
+| Export | CSV / JSON / SQL dump | editor / admin | 読み取り系 |
+| Backup | SQLite DBバックアップ作成 | editor / admin | 運用前後に取得推奨 |
+| Restore | バックアップからDB復元 | admin | destructive。対象DBを置換する |
+| Import | CSV / JSON取込 | admin | destructive。事前バックアップ必須 |
+| Operations log | データ入出力タブの実行ログ確認/出力 | admin中心 | `operations_events.jsonl` を参照 |
+
+Restore / Import は destructive 操作です。実行前にバックアップを取得してください。
+
+## Setup
 
 ```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -e .[dev]
+```
+
+Windows PowerShell:
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -e .[dev]
+```
+
+## Test / checks
+
+```powershell
 pytest -q
 ruff check .
 black --check .
 mypy app
 ```
 
-## Export / backup create foundation (service layer)
+## Windows EXE build / smoke test
 
-The application/infrastructure layers now provide file output helpers for:
-- CSV export (`names`, `titles`, `subtitles`, `name_subtitle_links`, `name_title_links`, `change_logs`)
-- JSON export (same table set)
-- SQL dump export (SQLite `iterdump`)
-- backup file create (SQLite file copy)
-- backup restore foundation (backup file -> target DB file replacement)
-- CSV / JSON import foundation (empty SQLite DB only, admin only)
+```powershell
+.\scripts\build_exe_windows.ps1
+.\scripts\smoke_test_exe_windows.ps1
+```
 
-Import scope note: SQL import is out of scope; DB-wide replacement is handled by restore foundation.
+成功時は以下が生成されます。
 
-Restore RBAC: restore is destructive and allowed for `admin` only (`viewer` / `editor` are rejected).
+```text
+dist/NameVerification.exe
+tmp/exe_smoke/nameverification_smoke.db
+```
 
-Restore safety note: close active SQLite connections for the target DB before running restore.
+## Sample data generation
 
-Current RBAC: export/backup create operations are allowed for `editor` / `admin`, and rejected for `viewer`.
+100万件級の生成物はリポジトリへ置かず、必要時にスクリプトで再生成します。
 
-運用操作タブは export/import/backup/restore の最小導線を提供します。
-- 参照ボタンでネイティブのファイル/フォルダ選択ダイアログを開けます。
-- Recent path history is persisted per input (max 5, deduplicated, latest-first) and offered via completer.
-- Operation execution results are appended to local JSONL (`operations_events.jsonl`) under AppDataLocation with `timestamp/action/role/status/message/path` fields (best-effort write).
-- Operation execution uses async worker foundation (QThreadPool/QRunnable), with busy-state guard, duplicate-start prevention, and minimum cancel-request UI.
-- Local housekeeping controls: log size-based rotation + TTL pruning for archived JSONL logs, field単位/全体の recent path history クリア。
-- Operations tab includes a minimal log viewer UI (reload + latest 100 lines, broken lines are skipped) and visible-lines export.
-- Log viewer supports archive toggle, source selector（current/all/archive file）, status/action filters, message partial-match / regex search, and sort toggle（最新順/古い順）.
-- Log viewer supports paging（Prev/Next, current page label）after filter/search/sort application.
-- Source helper label shows current/all/archive mode and archive summary (count / filenames tooltip).
-- Regex mode can use flags from UI (`Ignore case` / `Multiline` / `Dotall`).
-- Log viewer `表示件数` selector controls per-page size and read limit basis.
+```powershell
+python .\scripts\generate_sample_data.py --help
+```
 
+## Implemented layers
+
+- `app/domain`: normalization rules and domain errors
+- `app/application`: `CoreService` / `EnhancedQueryService` / read models / authorization helpers / automatic JSONL change log export
+- `app/infrastructure`: SQLite schema application helpers
+- `app/ui`: PySide6 UI tabs and role-based UI guards
+- `db/`: schema and migration SQL
+- `tests/`: unit + UI tests
 
 ## Operations handoff docs
 
@@ -104,5 +174,6 @@ Current RBAC: export/backup create operations are allowed for `editor` / `admin`
 
 ## Notes
 
-- The app uses a local SQLite database and is intended for single-site local operation.
+- このアプリはローカルSQLiteを使う単体運用前提です。
+- 大量データ検証では、実データをリポジトリへ置かず生成スクリプトを使います。
 - README/docs wording may be refined over time; functional behavior should be validated against code + tests.
