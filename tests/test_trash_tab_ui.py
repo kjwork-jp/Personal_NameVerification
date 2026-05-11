@@ -48,11 +48,11 @@ class StubCoreService:
 
 
 class StubQueryService:
-    def list_deleted_names(self, role: str = "admin") -> list[NameDetail]:
-        _ = role
-        return [
+    def __init__(self) -> None:
+        self.names = [
             NameDetail(
                 id=1,
+                public_id=None,
                 raw_name="Alice",
                 normalized_name="alice",
                 note=None,
@@ -62,12 +62,10 @@ class StubQueryService:
                 updated_at="2026-01-01T00:00:00Z",
             )
         ]
-
-    def list_deleted_titles(self, role: str = "admin") -> list[TitleDetail]:
-        _ = role
-        return [
+        self.titles = [
             TitleDetail(
                 id=10,
+                public_id=None,
                 title_name="T1",
                 note=None,
                 icon_path=None,
@@ -76,12 +74,10 @@ class StubQueryService:
                 updated_at="2026-01-01T00:00:00Z",
             )
         ]
-
-    def list_deleted_subtitles(self, role: str = "admin") -> list[SubtitleDetail]:
-        _ = role
-        return [
+        self.subtitles = [
             SubtitleDetail(
                 id=100,
+                public_id=None,
                 title_id=10,
                 subtitle_code="S1",
                 subtitle_name="Sub1",
@@ -93,10 +89,7 @@ class StubQueryService:
                 updated_at="2026-01-01T00:00:00Z",
             )
         ]
-
-    def list_deleted_links(self, role: str = "admin") -> list[RelatedRow]:
-        _ = role
-        return [
+        self.links = [
             RelatedRow(
                 link_id=500,
                 name_id=1,
@@ -110,13 +103,30 @@ class StubQueryService:
             )
         ]
 
-
-class ActiveOnlyQueryService(StubQueryService):
     def list_deleted_names(self, role: str = "admin") -> list[NameDetail]:
         _ = role
-        return [
+        return self.names
+
+    def list_deleted_titles(self, role: str = "admin") -> list[TitleDetail]:
+        _ = role
+        return self.titles
+
+    def list_deleted_subtitles(self, role: str = "admin") -> list[SubtitleDetail]:
+        _ = role
+        return self.subtitles
+
+    def list_deleted_links(self, role: str = "admin") -> list[RelatedRow]:
+        _ = role
+        return self.links
+
+
+class ActiveOnlyQueryService(StubQueryService):
+    def __init__(self) -> None:
+        super().__init__()
+        self.names = [
             NameDetail(
                 id=1,
+                public_id=None,
                 raw_name="Alice",
                 normalized_name="alice",
                 note=None,
@@ -126,6 +136,14 @@ class ActiveOnlyQueryService(StubQueryService):
                 updated_at="2026-01-01T00:00:00Z",
             )
         ]
+        self.titles = []
+        self.subtitles = []
+        self.links = []
+
+
+class MutatingQueryService(StubQueryService):
+    def remove_first_name(self) -> None:
+        self.names = []
 
 
 def _app() -> QApplication:
@@ -146,22 +164,22 @@ def test_trash_tab_restore_and_hard_delete_for_all_entities(
     tab = TrashTab(core_service=core, query_service=StubQueryService())
     tab.operator_input.setText("op-1")
 
-    # Name
+    assert tab.list_table.columnCount() == 8
+    assert tab.list_table.rowCount() == 4
+    assert tab.list_table.item(0, 1).text() in {"名前", "タイトル", "サブタイトル", "リンク"}
+
     tab.entity_selector.setCurrentText("Name")
     tab._restore_selected()
     tab._hard_delete_selected()
 
-    # Title
     tab.entity_selector.setCurrentText("Title")
     tab._restore_selected()
     tab._hard_delete_selected()
 
-    # Subtitle
     tab.entity_selector.setCurrentText("Subtitle")
     tab._restore_selected()
     tab._hard_delete_selected()
 
-    # Link
     tab.entity_selector.setCurrentText("Link")
     tab._restore_selected()
     tab._hard_delete_selected()
@@ -240,4 +258,23 @@ def test_trash_tab_role_guards() -> None:
     )
     assert admin.restore_button.isEnabled()
     assert admin.hard_delete_button.isEnabled()
-    assert "操作者ID" in admin.operator_input.toolTip()
+    assert "変更履歴" in admin.operator_input.toolTip()
+
+
+def test_trash_tab_reloads_after_restore(monkeypatch: pytest.MonkeyPatch) -> None:
+    _app()
+    monkeypatch.setattr(
+        trash_tab_module, "confirm_destructive_action", lambda *args, **kwargs: True
+    )
+    query = MutatingQueryService()
+    core = StubCoreService()
+    tab = TrashTab(core_service=core, query_service=query)
+    tab.entity_selector.setCurrentText("Name")
+    tab.operator_input.setText("op-1")
+    query.remove_first_name()
+
+    tab._restore_selected()
+
+    assert "restore_name:1:op-1:admin" in core.calls
+    assert tab.list_table.rowCount() == 0
+    assert "削除済みデータはありません" in tab.message_label.text()
