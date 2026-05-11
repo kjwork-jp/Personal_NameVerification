@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
-from typing import Protocol
+from typing import Any, Protocol
 
 from PySide6.QtWidgets import (
     QFormLayout,
@@ -22,7 +23,7 @@ from PySide6.QtWidgets import (
 from app.application.read_models import ChangeLogRow
 from app.ui.public_id_display import short_public_id
 from app.ui.role_context import RoleContext, UserRole
-from app.ui.ui_style import PageHeader
+from app.ui.ui_style import PageHeader, compact_layout, set_status_message
 
 
 class AuditLogReadService(Protocol):
@@ -89,6 +90,8 @@ class AuditLogTab(QWidget):
         )
         self.logs_table.setColumnHidden(0, True)
         self.logs_table.setColumnHidden(3, True)
+        self.logs_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self.logs_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.logs_table.itemSelectionChanged.connect(self._on_selected)
 
         self.detail_summary_label = QLabel("選択中の操作: 未選択")
@@ -101,7 +104,12 @@ class AuditLogTab(QWidget):
         self.after_json_view.setReadOnly(True)
         self.after_json_view.setPlaceholderText("変更後の内容")
 
+        self.diff_view = QTextEdit()
+        self.diff_view.setReadOnly(True)
+        self.diff_view.setPlaceholderText("変更差分")
+
         form = QFormLayout()
+        compact_layout(form, margins=2, spacing=3)
         form.addRow("データの種類", self.entity_type_input)
         form.addRow("実行した操作", self.action_input)
         form.addRow("操作者", self.operator_id_input)
@@ -110,32 +118,38 @@ class AuditLogTab(QWidget):
         form.addRow("表示件数", self.limit_input)
 
         actions = QHBoxLayout()
+        compact_layout(actions, margins=0, spacing=4)
         actions.addWidget(self.reload_button)
 
         detail_panel = QWidget()
         detail_layout = QVBoxLayout(detail_panel)
+        compact_layout(detail_layout, margins=3, spacing=4)
         detail_layout.addWidget(self.detail_summary_label)
+        detail_layout.addWidget(QLabel("変更差分"))
+        detail_layout.addWidget(self.diff_view, 2)
         detail_layout.addWidget(QLabel("変更前の内容"))
-        detail_layout.addWidget(self.before_json_view)
+        detail_layout.addWidget(self.before_json_view, 1)
         detail_layout.addWidget(QLabel("変更後の内容"))
-        detail_layout.addWidget(self.after_json_view)
+        detail_layout.addWidget(self.after_json_view, 1)
 
         splitter = QSplitter()
         splitter.addWidget(self.logs_table)
         splitter.addWidget(detail_panel)
+        splitter.setSizes([520, 620])
 
         root = QVBoxLayout(self)
+        compact_layout(root, margins=5, spacing=4)
         root.addWidget(
             PageHeader(
                 "操作履歴",
                 "登録・更新・削除など、誰がいつ何を変更したかを確認する画面です。"
-                "トラブル時の確認や、変更内容の追跡に使います。",
+                "変更内容は項目名付きで表示します。",
             )
         )
         root.addLayout(form)
         root.addLayout(actions)
         root.addWidget(self.message_label)
-        root.addWidget(splitter)
+        root.addWidget(splitter, 1)
 
         self._reload()
 
@@ -172,13 +186,14 @@ class AuditLogTab(QWidget):
         self.detail_summary_label.setText("選択中の操作: 未選択")
         self.before_json_view.clear()
         self.after_json_view.clear()
+        self.diff_view.clear()
 
         if self._rows:
             self.logs_table.selectRow(0)
             self._on_selected()
             self._set_message(f"{len(self._rows)} 件を表示")
         else:
-            self._set_message("表示対象の操作履歴がありません")
+            self._set_message("表示対象の操作履歴がありません", level="warning")
 
     def _collect_filters(self) -> _FilterValues:
         limit_raw = self.limit_input.text().strip() or "200"
@@ -201,23 +216,77 @@ class AuditLogTab(QWidget):
             self.detail_summary_label.setText("選択中の操作: 未選択")
             self.before_json_view.clear()
             self.after_json_view.clear()
+            self.diff_view.clear()
             return
 
         row = self._rows[idx]
+        before = _parse_json_object(row.before_json)
+        after = _parse_json_object(row.after_json)
         self.detail_summary_label.setText(
             f"操作: {row.action} / データ種類: {row.entity_type} / "
             f"公開ID: {row.public_id or '未採番'} / 内部対象ID: {row.entity_id} / "
             f"操作者: {row.operator_id} / 実行日時: {row.created_at}"
         )
-        self.before_json_view.setPlainText(row.before_json or "")
-        self.after_json_view.setPlainText(row.after_json or "")
+        self.before_json_view.setPlainText(_format_json_like(row.before_json, before))
+        self.after_json_view.setPlainText(_format_json_like(row.after_json, after))
+        self.diff_view.setPlainText(_format_diff(before, after))
 
-    def _set_message(self, message: str, *, is_error: bool = False) -> None:
-        color = "#ff8a8a" if is_error else "#7ee787"
-        self.message_label.setStyleSheet(f"color: {color};")
-        self.message_label.setText(message)
+    def _set_message(
+        self, message: str, *, is_error: bool = False, level: str | None = None
+    ) -> None:
+        if level is None:
+            level = "error" if is_error else "success"
+        set_status_message(self.message_label, message, level=level)
 
 
 def _optional(value: str) -> str | None:
     stripped = value.strip()
     return stripped if stripped else None
+
+
+def _parse_json_object(value: str | None) -> dict[str, Any] | None:
+    if not value:
+        return None
+    try:
+        parsed = json.loads(value)
+    except json.JSONDecodeError:
+        return None
+    return parsed if isinstance(parsed, dict) else None
+
+
+def _format_json_like(raw_value: str | None, parsed: dict[str, Any] | None) -> str:
+    if not raw_value:
+        return "（なし）"
+    if parsed is None:
+        return raw_value
+    return "\n".join(f"{key}: {_format_value(parsed[key])}" for key in sorted(parsed))
+
+
+def _format_diff(
+    before: dict[str, Any] | None,
+    after: dict[str, Any] | None,
+) -> str:
+    if before is None and after is None:
+        return "変更差分を解析できません。変更前/変更後の内容を確認してください。"
+    before = before or {}
+    after = after or {}
+    keys = sorted(set(before) | set(after))
+    if not keys:
+        return "差分はありません。"
+    lines: list[str] = []
+    for key in keys:
+        before_value = before.get(key, "（なし）")
+        after_value = after.get(key, "（なし）")
+        marker = "=" if before_value == after_value else "→"
+        lines.append(
+            f"{key}: {_format_value(before_value)} {marker} {_format_value(after_value)}"
+        )
+    return "\n".join(lines)
+
+
+def _format_value(value: Any) -> str:
+    if value is None:
+        return "null"
+    if isinstance(value, str):
+        return value
+    return json.dumps(value, ensure_ascii=False, sort_keys=True)
