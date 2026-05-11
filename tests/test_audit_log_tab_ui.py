@@ -49,8 +49,25 @@ class StubQueryService:
                 entity_id=10,
                 action="update",
                 operator_id="op-1",
-                before_json='{"raw_name":"A"}',
-                after_json='{"raw_name":"B"}',
+                before_json='{"raw_name":"A","note":null}',
+                after_json='{"raw_name":"B","note":"memo"}',
+                created_at="2026-01-01T00:00:00Z",
+            )
+        ]
+
+
+class RawJsonQueryService(StubQueryService):
+    def list_change_logs(self, **kwargs: object) -> list[ChangeLogRow]:
+        _ = kwargs
+        return [
+            ChangeLogRow(
+                id=2,
+                entity_type="names",
+                entity_id=11,
+                action="update",
+                operator_id="op-1",
+                before_json="not-json",
+                after_json="also-not-json",
                 created_at="2026-01-01T00:00:00Z",
             )
         ]
@@ -93,10 +110,26 @@ def test_audit_log_tab_reload_with_filters_and_detail() -> None:
         "limit": 50,
     }
     assert tab.logs_table.rowCount() == 1
-    assert tab.before_json_view.toPlainText() == '{"raw_name":"A"}'
-    assert tab.after_json_view.toPlainText() == '{"raw_name":"B"}'
+    assert "raw_name: A" in tab.before_json_view.toPlainText()
+    assert "note: null" in tab.before_json_view.toPlainText()
+    assert "raw_name: B" in tab.after_json_view.toPlainText()
+    assert "note: memo" in tab.after_json_view.toPlainText()
+    assert "raw_name: A → B" in tab.diff_view.toPlainText()
+    assert "note: null → memo" in tab.diff_view.toPlainText()
     assert tab.before_json_view.isReadOnly()
     assert tab.after_json_view.isReadOnly()
+    assert tab.diff_view.isReadOnly()
+
+
+def test_audit_log_tab_raw_fallback_for_invalid_json() -> None:
+    _app()
+    tab = AuditLogTab(query_service=RawJsonQueryService())
+
+    tab._reload()
+
+    assert tab.before_json_view.toPlainText() == "not-json"
+    assert tab.after_json_view.toPlainText() == "also-not-json"
+    assert "解析できません" in tab.diff_view.toPlainText()
 
 
 def test_audit_log_tab_invalid_limit_shows_error() -> None:
