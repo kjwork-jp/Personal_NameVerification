@@ -5,6 +5,14 @@ from __future__ import annotations
 from PySide6.QtWidgets import QLabel, QLayout, QVBoxLayout, QWidget
 
 
+_STATUS_COLORS = {
+    "info": ("#7ee787", "#26382f", "#3d7a55"),
+    "success": ("#7ee787", "#26382f", "#3d7a55"),
+    "warning": ("#ffd166", "#3b3325", "#8a6d2d"),
+    "error": ("#ff8a8a", "#3b292d", "#8a3d45"),
+}
+
+
 def apply_friendly_theme(widget: QWidget) -> None:
     """Apply a compact, softer application-wide theme."""
 
@@ -108,6 +116,25 @@ def compact_layout(layout: QLayout, *, margins: int = 4, spacing: int = 4) -> No
 
     layout.setContentsMargins(margins, margins, margins, margins)
     layout.setSpacing(spacing)
+
+
+def set_status_message(label: QLabel, message: str, *, level: str = "info") -> None:
+    """Set a framed status message using a shared visual language."""
+
+    text_color, background_color, border_color = _STATUS_COLORS.get(
+        level, _STATUS_COLORS["info"]
+    )
+    label.setText(message)
+    label.setWordWrap(True)
+    label.setStyleSheet(
+        "QLabel {"
+        f"color: {text_color};"
+        f"background: {background_color};"
+        f"border: 1px solid {border_color};"
+        "border-radius: 6px;"
+        "padding: 4px 6px;"
+        "}"
+    )
 
 
 class PageHeader(QWidget):
