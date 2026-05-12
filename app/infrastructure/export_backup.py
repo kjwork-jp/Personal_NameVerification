@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import csv
 import json
-import shutil
 import sqlite3
 from pathlib import Path
 
@@ -79,13 +78,38 @@ def export_sql_dump(connection: sqlite3.Connection, output_path: Path) -> Path:
 
 
 def create_backup_file(db_path: Path, backup_path: Path) -> Path:
-    """Copy sqlite DB file as backup."""
+    """Create a consistent SQLite backup file.
+
+    Use SQLite's online backup API instead of copying the database file directly.
+    This avoids incomplete backups when the source DB has an open connection or
+    uses journal/WAL sidecar files.
+    """
     source = db_path.resolve()
     if not source.exists() or not source.is_file():
         raise ValidationError(f"database file does not exist: {source}")
 
     target = _validated_output_file_path(backup_path)
-    shutil.copy2(source, target)
+    if source == target:
+        raise ValidationError("database source and backup target must be different files")
+
+    temp_target = target.with_suffix(f"{target.suffix}.backup_tmp")
+    if temp_target.exists():
+        temp_target.unlink()
+
+    try:
+        source_connection = sqlite3.connect(f"file:{source}?mode=ro", uri=True)
+        target_connection = sqlite3.connect(temp_target)
+        try:
+            source_connection.backup(target_connection)
+            target_connection.commit()
+        finally:
+            target_connection.close()
+            source_connection.close()
+        temp_target.replace(target)
+    finally:
+        if temp_target.exists():
+            temp_target.unlink()
+
     return target
 
 
