@@ -76,7 +76,10 @@ def test_import_services_use_thread_local_sqlite_connection(tmp_path: Path) -> N
 
     json_counts = _run_in_worker(lambda: json_import_service.import_json(json_path))
     assert json_counts["titles"] == 1
-    assert json_target_connection.execute("SELECT title_name FROM titles").fetchone()[0] == "Title A"
+    title_name = json_target_connection.execute(
+        "SELECT title_name FROM titles"
+    ).fetchone()[0]
+    assert title_name == "Title A"
     json_target_connection.close()
 
 
