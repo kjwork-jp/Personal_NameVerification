@@ -91,12 +91,14 @@ def test_audit_log_tab_reload_with_filters_and_detail() -> None:
     query = StubQueryService()
     tab = AuditLogTab(query_service=query)
 
-    tab.entity_type_input.setText("names")
-    tab.action_input.setText("update")
+    tab.entity_type_input.setCurrentText("names")
+    tab.action_input.setCurrentText("update")
     tab.operator_id_input.setText("op-1")
-    tab.created_from_input.setText("2026-01-01T00:00:00Z")
-    tab.created_to_input.setText("2026-01-31T23:59:59Z")
-    tab.limit_input.setText("50")
+    tab.created_from_enabled.setChecked(True)
+    tab.created_from_input.setDateTimeFromText("2026-01-01 00:00:00")
+    tab.created_to_enabled.setChecked(True)
+    tab.created_to_input.setDateTimeFromText("2026-01-31 23:59:59")
+    tab.limit_input.setValue(50)
 
     tab._reload()
 
@@ -105,8 +107,8 @@ def test_audit_log_tab_reload_with_filters_and_detail() -> None:
         "entity_type": "names",
         "action": "update",
         "operator_id": "op-1",
-        "created_from": "2026-01-01T00:00:00Z",
-        "created_to": "2026-01-31T23:59:59Z",
+        "created_from": "2025-12-31T15:00:00Z",
+        "created_to": "2026-01-31T14:59:59Z",
         "limit": 50,
     }
     assert tab.logs_table.rowCount() == 1
@@ -121,6 +123,19 @@ def test_audit_log_tab_reload_with_filters_and_detail() -> None:
     assert tab.diff_view.isReadOnly()
 
 
+def test_audit_log_tab_all_filters_are_none_by_default() -> None:
+    _app()
+    query = StubQueryService()
+    tab = AuditLogTab(query_service=query)
+
+    tab._reload()
+
+    assert query.calls[-1]["entity_type"] is None
+    assert query.calls[-1]["action"] is None
+    assert query.calls[-1]["created_from"] is None
+    assert query.calls[-1]["created_to"] is None
+
+
 def test_audit_log_tab_raw_fallback_for_invalid_json() -> None:
     _app()
     tab = AuditLogTab(query_service=RawJsonQueryService())
@@ -132,14 +147,14 @@ def test_audit_log_tab_raw_fallback_for_invalid_json() -> None:
     assert "解析できません" in tab.diff_view.toPlainText()
 
 
-def test_audit_log_tab_invalid_limit_shows_error() -> None:
+def test_audit_log_tab_limit_is_spinbox() -> None:
     _app()
     tab = AuditLogTab(query_service=StubQueryService())
-    tab.limit_input.setText("0")
+    tab.limit_input.setValue(0)
 
     tab._reload()
 
-    assert "入力エラー" in tab.message_label.text()
+    assert tab.limit_input.value() == 1
 
 
 def test_audit_log_tab_query_error_shows_error() -> None:
