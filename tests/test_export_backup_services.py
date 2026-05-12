@@ -125,17 +125,20 @@ def test_export_backup_rejects_viewer(
     conn.close()
 
 
-def test_export_backup_invalid_output_path_handling(
+def test_export_backup_output_path_handling(
     tmp_path: Path, service_with_data: tuple[sqlite3.Connection, ExportBackupService]
 ) -> None:
     _, service = service_with_data
 
     missing_dir = tmp_path / "missing"
-    with pytest.raises(ValidationError):
-        service.export_csv(missing_dir, role="editor")
+    csv_outputs = service.export_csv(missing_dir, role="editor")
+    assert missing_dir.exists()
+    assert csv_outputs["names"] == missing_dir / "names.csv"
 
-    with pytest.raises(ValidationError):
-        service.export_json(missing_dir / "export.json", role="editor")
+    missing_parent_json = tmp_path / "new_parent" / "export.json"
+    exported_json = service.export_json(missing_parent_json, role="editor")
+    assert exported_json == missing_parent_json
+    assert missing_parent_json.exists()
 
     invalid_dump_target = tmp_path / "as_dir"
     invalid_dump_target.mkdir()
