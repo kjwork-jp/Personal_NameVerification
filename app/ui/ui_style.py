@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
+    QComboBox,
+    QCompleter,
     QLabel,
     QLayout,
     QVBoxLayout,
@@ -139,6 +142,28 @@ def set_status_message(label: QLabel, message: str, *, level: str = "info") -> N
         "padding: 4px 6px;"
         "}"
     )
+
+
+def make_combo_searchable(combo: QComboBox) -> None:
+    """Make a combo box searchable without inserting arbitrary typed values."""
+
+    combo.setEditable(True)
+    combo.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
+    combo.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+    completer = combo.completer()
+    if completer is None:
+        completer = QCompleter(combo.model(), combo)
+        combo.setCompleter(completer)
+    completer.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
+    completer.setFilterMode(Qt.MatchFlag.MatchContains)
+    completer.setCompletionMode(QCompleter.CompletionMode.PopupCompletion)
+
+
+def apply_searchable_comboboxes(root: QWidget) -> None:
+    """Apply searchable behavior to every combo box under root."""
+
+    for combo in root.findChildren(QComboBox):
+        make_combo_searchable(combo)
 
 
 class PageHeader(QWidget):
