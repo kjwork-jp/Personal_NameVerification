@@ -2,9 +2,7 @@
 
 from __future__ import annotations
 
-import os
 import sys
-from pathlib import Path
 
 
 def main() -> int:
@@ -16,14 +14,24 @@ def main() -> int:
     from app.application.enhanced_query_services import EnhancedQueryService
     from app.application.export_backup_services import ExportBackupService
     from app.application.import_services import ImportService
+    from app.application.runtime_paths import (
+        ensure_runtime_parent_dirs,
+        resolve_change_log_jsonl_path,
+        resolve_database_path,
+        resolve_package_root,
+    )
     from app.infrastructure.db import initialize_database
     from app.ui.login_dialog import LoginDialog
     from app.ui.main_window import MainWindow
 
-    database_path = Path(os.environ.get("NAMEVERIFICATION_DB_PATH", "nameverification.db"))
+    package_root = resolve_package_root()
+    database_path = resolve_database_path(package_root=package_root)
+    change_log_jsonl_path = resolve_change_log_jsonl_path(package_root=package_root)
+    ensure_runtime_parent_dirs(database_path, change_log_jsonl_path)
+
     connection = initialize_database(database_path)
     query_service = EnhancedQueryService(connection)
-    core_service = AutoExportingCoreService(connection)
+    core_service = AutoExportingCoreService(connection, log_path=change_log_jsonl_path)
 
     app = QApplication(sys.argv)
     login = LoginDialog()
