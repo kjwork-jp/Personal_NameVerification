@@ -10,8 +10,10 @@ from app.application.read_models import ChangeLogRow
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
+qt_core = pytest.importorskip("PySide6.QtCore", exc_type=ImportError)
 qt_widgets = pytest.importorskip("PySide6.QtWidgets", exc_type=ImportError)
 QApplication = qt_widgets.QApplication
+QDateTime = qt_core.QDateTime
 
 from app.ui.audit_log_tab import AuditLogTab  # noqa: E402
 
@@ -86,6 +88,10 @@ def _app() -> QApplication:
     return app
 
 
+def _datetime(value: str) -> QDateTime:
+    return QDateTime.fromString(value, "yyyy-MM-dd HH:mm:ss")
+
+
 def test_audit_log_tab_reload_with_filters_and_detail() -> None:
     _app()
     query = StubQueryService()
@@ -95,9 +101,9 @@ def test_audit_log_tab_reload_with_filters_and_detail() -> None:
     tab.action_input.setCurrentText("update")
     tab.operator_id_input.setText("op-1")
     tab.created_from_enabled.setChecked(True)
-    tab.created_from_input.setDateTimeFromText("2026-01-01 00:00:00")
+    tab.created_from_input.setDateTime(_datetime("2026-01-01 00:00:00"))
     tab.created_to_enabled.setChecked(True)
-    tab.created_to_input.setDateTimeFromText("2026-01-31 23:59:59")
+    tab.created_to_input.setDateTime(_datetime("2026-01-31 23:59:59"))
     tab.limit_input.setValue(50)
 
     tab._reload()
