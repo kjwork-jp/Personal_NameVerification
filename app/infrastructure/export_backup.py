@@ -27,8 +27,9 @@ def export_tables_to_csv(
 ) -> dict[str, Path]:
     """Export each table into a dedicated CSV file under output_dir."""
     output_dir = output_dir.resolve()
-    if not output_dir.exists() or not output_dir.is_dir():
-        raise ValidationError(f"output directory does not exist: {output_dir}")
+    output_dir.mkdir(parents=True, exist_ok=True)
+    if not output_dir.is_dir():
+        raise ValidationError(f"output path is not a directory: {output_dir}")
 
     exported: dict[str, Path] = {}
     for table_name in table_names:
@@ -119,8 +120,9 @@ def _validated_output_file_path(path: Path) -> Path:
         raise ValidationError(f"output path points to a directory: {resolved}")
 
     parent = resolved.parent
-    if not parent.exists() or not parent.is_dir():
-        raise ValidationError(f"output directory does not exist: {parent}")
+    parent.mkdir(parents=True, exist_ok=True)
+    if not parent.is_dir():
+        raise ValidationError(f"output parent path is not a directory: {parent}")
 
     return resolved
 
