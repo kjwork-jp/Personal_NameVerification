@@ -38,23 +38,55 @@ python -m app.pyside6_main
 $env:NAMEVERIFICATION_OPERATOR_ID = "operator-local"
 ```
 
+## Portable release layout
+
+EXE配布版では、`NameVerification.exe` を以下のように配置すると、EXE直起動でもパッケージ配下の相対パスを既定値として使います。
+
+```text
+v0.1.0-rc2/
+├─ 10_app/
+│  └─ NameVerification.exe
+├─ 30_prod_db/
+└─ 40_logs/
+```
+
+この配置で `NAMEVERIFICATION_DB_PATH` を指定しない場合、DBは以下に作成されます。
+
+```text
+v0.1.0-rc2/30_prod_db/nameverification.db
+```
+
+この配置で `NAMEVERIFICATION_CHANGE_LOG_JSONL_PATH` を指定しない場合、自動JSONLログは以下に出力されます。
+
+```text
+v0.1.0-rc2/40_logs/change_logs.jsonl
+```
+
+`NAMEVERIFICATION_PACKAGE_ROOT` を指定すると、EXE位置ではなくそのパスをパッケージルートとして扱います。
+
 ## Database path
 
-既定ではカレントディレクトリの `nameverification.db` を使用します。
-保存先を固定したい場合は `NAMEVERIFICATION_DB_PATH` を起動前に設定します。
+保存先を明示的に固定したい場合は `NAMEVERIFICATION_DB_PATH` を起動前に設定します。
+この環境変数は、portable release layout の既定値より優先されます。
 
 ```powershell
 $env:NAMEVERIFICATION_DB_PATH = "C:\\path\\to\\nameverification.db"
 python -m app.pyside6_main
 ```
 
-EXE起動時も同じ環境変数でDB保存先を切り替えられます。
+ソース実行時に環境変数を指定しない場合は、従来どおりカレントディレクトリの `nameverification.db` を使用します。
 
 ## Automatic change log JSONL export
 
 DB内の `change_logs` が正の操作履歴です。加えて、運用補助として変更履歴を JSONL へ自動出力します。
 
-既定値:
+portable release layout では既定値として以下を使います。
+
+```text
+v0.1.0-rc2/40_logs/change_logs.jsonl
+```
+
+ソース実行時の既定値:
 
 ```text
 logs/change_logs.jsonl
