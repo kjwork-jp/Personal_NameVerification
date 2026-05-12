@@ -6,12 +6,17 @@ import json
 from dataclasses import dataclass
 from typing import Any, Protocol
 
+from PySide6.QtCore import QDateTime, Qt
 from PySide6.QtWidgets import (
+    QCheckBox,
+    QComboBox,
+    QDateTimeEdit,
     QFormLayout,
     QHBoxLayout,
     QLabel,
     QLineEdit,
     QPushButton,
+    QSpinBox,
     QSplitter,
     QTableWidget,
     QTableWidgetItem,
@@ -23,7 +28,17 @@ from PySide6.QtWidgets import (
 from app.application.read_models import ChangeLogRow
 from app.ui.public_id_display import short_public_id
 from app.ui.role_context import RoleContext, UserRole
-from app.ui.ui_style import PageHeader, compact_layout, set_status_message
+from app.ui.ui_style import PageHeader, compact_layout, make_combo_searchable, set_status_message
+
+ENTITY_TYPE_OPTIONS = [
+    "all",
+    "names",
+    "titles",
+    "subtitles",
+    "name_title_links",
+    "name_subtitle_links",
+]
+ACTION_OPTIONS = ["all", "create", "update", "delete", "restore", "link", "unlink"]
 
 
 class AuditLogReadService(Protocol):
@@ -61,23 +76,43 @@ class AuditLogTab(QWidget):
         self._role_context = role_context or RoleContext.admin()
         self._rows: list[ChangeLogRow] = []
 
-        self.entity_type_input = QLineEdit()
-        self.entity_type_input.setPlaceholderText("例: names / titles / subtitles")
+        self.entity_type_input = QComboBox()
+        self.entity_type_input.addItems(ENTITY_TYPE_OPTIONS)
+        make_combo_searchable(self.entity_type_input)
 
-        self.action_input = QLineEdit()
-        self.action_input.setPlaceholderText("例: create / update / delete")
+        self.action_input = QComboBox()
+        self.action_input.addItems(ACTION_OPTIONS)
+        make_combo_searchable(self.action_input)
 
         self.operator_id_input = QLineEdit()
         self.operator_id_input.setPlaceholderText("操作者")
 
-        self.created_from_input = QLineEdit()
-        self.created_from_input.setPlaceholderText("開始日時（例: 2026-01-01T00:00:00Z）")
+        self.created_from_enabled = QCheckBox("開始日時を使う")
+        self.created_from_input = QDateTimeEdit()
+        self.created_from_input.setCalendarPopup(True)
+        self.created_from_input.setDisplayFormat("yyyy-MM-dd HH:mm:ss")
+        self.created_from_input.setDateTime(QDateTime.currentDateTime().addDays(-7))
+        self.created_from_input.setEnabled(False)
+        self.created_from_enabled.stateChanged.connect(
+            lambda *_: self.created_from_input.setEnabled(
+                self.created_from_enabled.isChecked()
+            )
+        )
 
-        self.created_to_input = QLineEdit()
-        self.created_to_input.setPlaceholderText("終了日時（例: 2026-01-31T23:59:59Z）")
+        self.created_to_enabled = QCheckBox("終了日時を使う")
+        self.created_to_input = QDateTimeEdit()
+        self.created_to_input.setCalendarPopup(True)
+        self.created_to_input.setDisplayFormat("yyyy-MM-dd HH:mm:ss")
+        self.created_to_input.setDateTime(QDateTime.currentDateTime())
+        self.created_to_input.setEnabled(False)
+        self.created_to_enabled.stateChanged.connect(
+            lambda *_: self.created_to_input.setEnabled(self.created_to_enabled.isChecked())
+        )
 
-        self.limit_input = QLineEdit("200")
-        self.limit_input.setPlaceholderText("表示件数")
+        self.limit_input = QSpinBox()
+        self.limit_input.setRange(1, 10000)
+        self.limit_input.setValue(200)
+        self.limit_input.setSingleStep(50)
 
         self.message_label = QLabel("")
 
@@ -113,8 +148,8 @@ class AuditLogTab(QWidget):
         form.addRow("データの種類", self.entity_type_input)
         form.addRow("実行した操作", self.action_input)
         form.addRow("操作者", self.operator_id_input)
-        form.addRow("開始日時", self.created_from_input)
-        form.addRow("終了日時", self.created_to_input)
+        form.addRow(self.created_from_enabled, self.created_from_input)
+        form.addRow(self.created_to_enabled, self.created_to_input)
         form.addRow("表示件数", self.limit_input)
 
         actions = QHBoxLayout()
@@ -143,7 +178,7 @@ class AuditLogTab(QWidget):
             PageHeader(
                 "操作履歴",
                 "登録・更新・削除など、誰がいつ何を変更したかを確認する画面です。"
-                "変更内容は項目名付きで表示します。",
+                "データの種類・操作は検索可能なプルダウン、日時はカレンダーで絞り込めます。",
             )
         )
         root.addLayout(form)
@@ -196,18 +231,19 @@ class AuditLogTab(QWidget):
             self._set_message("表示対象の操作履歴がありません", level="warning")
 
     def _collect_filters(self) -> _FilterValues:
-        limit_raw = self.limit_input.text().strip() or "200"
-        limit = int(limit_raw)
-        if limit <= 0:
-            raise ValueError("表示件数は 1 以上で入力してください")
-
         return _FilterValues(
-            entity_type=_optional(self.entity_type_input.text()),
-            action=_optional(self.action_input.text()),
+            entity_type=_combo_optional(self.entity_type_input),
+            action=_combo_optional(self.action_input),
             operator_id=_optional(self.operator_id_input.text()),
-            created_from=_optional(self.created_from_input.text()),
-            created_to=_optional(self.created_to_input.text()),
-            limit=limit,
+            created_from=_optional_datetime(
+                self.created_from_input,
+                enabled=self.created_from_enabled.isChecked(),
+            ),
+            created_to=_optional_datetime(
+                self.created_to_input,
+                enabled=self.created_to_enabled.isChecked(),
+            ),
+            limit=self.limit_input.value(),
         )
 
     def _on_selected(self) -> None:
@@ -242,6 +278,17 @@ class AuditLogTab(QWidget):
 def _optional(value: str) -> str | None:
     stripped = value.strip()
     return stripped if stripped else None
+
+
+def _combo_optional(combo: QComboBox) -> str | None:
+    value = combo.currentText().strip()
+    return None if not value or value == "all" else value
+
+
+def _optional_datetime(widget: QDateTimeEdit, *, enabled: bool) -> str | None:
+    if not enabled:
+        return None
+    return widget.dateTime().toUTC().toString("yyyy-MM-ddTHH:mm:ssZ")
 
 
 def _parse_json_object(value: str | None) -> dict[str, Any] | None:
