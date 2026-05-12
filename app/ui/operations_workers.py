@@ -43,11 +43,18 @@ class _OperationRunnable(QRunnable):
 
 
 class ThreadPoolOperationExecutor:
-    """QThreadPool + QRunnable based executor."""
+    """QThreadPool + QRunnable based executor.
+
+    Keep submitted QRunnable objects strongly referenced until their finished
+    signal is emitted. Without this, long-running file I/O can complete on the
+    worker thread while the Python wrapper/signals are garbage-collected before
+    queued UI callbacks run. That leaves OperationsTab stuck in "running" state.
+    """
 
     def __init__(self, thread_pool: QThreadPool | None = None) -> None:
         self._thread_pool = thread_pool or QThreadPool.globalInstance()
         self._cancel_requested = False
+        self._active_runnables: list[_OperationRunnable] = []
 
     def submit(
         self,
@@ -58,13 +65,21 @@ class ThreadPoolOperationExecutor:
     ) -> None:
         self._cancel_requested = False
         runnable = _OperationRunnable(work)
+        self._active_runnables.append(runnable)
         runnable.signals.success.connect(on_success)
         runnable.signals.error.connect(on_error)
         runnable.signals.finished.connect(on_finished)
+        runnable.signals.finished.connect(lambda: self._discard_runnable(runnable))
         self._thread_pool.start(runnable)
 
     def request_cancel(self) -> None:
         self._cancel_requested = True
+
+    def _discard_runnable(self, runnable: _OperationRunnable) -> None:
+        try:
+            self._active_runnables.remove(runnable)
+        except ValueError:
+            return
 
 
 class ImmediateOperationExecutor:
