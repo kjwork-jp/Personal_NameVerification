@@ -36,9 +36,9 @@ def main() -> int:
         query_service=query_service,
         core_service=core_service,
         role_context=role_context,
-        export_backup_service=ExportBackupService(connection),
+        export_backup_service=ExportBackupService(connection, database_path=database_path),
         backup_restore_service=BackupRestoreService(),
-        import_service=ImportService(connection),
+        import_service=ImportService(connection, database_path=database_path),
         database_path=database_path,
         connection=connection,
     )
