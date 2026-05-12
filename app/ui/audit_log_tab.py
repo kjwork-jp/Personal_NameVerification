@@ -6,7 +6,7 @@ import json
 from dataclasses import dataclass
 from typing import Any, Protocol
 
-from PySide6.QtCore import QDateTime, Qt
+from PySide6.QtCore import QDateTime
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
