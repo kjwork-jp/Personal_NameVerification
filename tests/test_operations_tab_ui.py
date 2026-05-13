@@ -586,6 +586,25 @@ def test_operations_log_jsonl_format(tmp_path: Path) -> None:
     assert parsed["path"] == "/tmp/csv"
 
 
+def test_operations_log_explicit_path_writes_to_that_path(tmp_path: Path) -> None:
+    from app.ui.operations_log import OperationsJsonlLogger
+
+    target = tmp_path / "40_logs" / "operations_events.jsonl"
+    logger = OperationsJsonlLogger(log_path=target)
+
+    logger.append(
+        action="create_backup",
+        role="admin",
+        status="success",
+        message="backup ok",
+    )
+
+    assert target.exists()
+    parsed = json.loads(target.read_text(encoding="utf-8").strip())
+    assert parsed["action"] == "create_backup"
+    assert parsed["source"] == str(target)
+
+
 def test_operations_log_rotation_and_ttl(tmp_path: Path) -> None:
     from app.ui.operations_log import OperationsJsonlLogger
 

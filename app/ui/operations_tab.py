@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import re
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path, PurePosixPath
 from typing import Any, Protocol
 
@@ -137,7 +137,7 @@ class OperationLoggerLike(Protocol):
         limit: int = 100,
         *,
         include_archives: bool = False,
-    ) -> tuple[list[object], int]: ...
+    ) -> tuple[Sequence[object], int]: ...
 
     def list_archives(self) -> list[Path]: ...
 

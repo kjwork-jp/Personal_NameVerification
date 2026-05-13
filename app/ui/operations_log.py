@@ -11,6 +11,8 @@ from typing import Protocol
 
 from PySide6.QtCore import QStandardPaths
 
+DEFAULT_OPERATIONS_LOG_FILE_NAME = "operations_events.jsonl"
+
 
 class AppDataLocator(Protocol):
     def writableLocation(self, location: QStandardPaths.StandardLocation) -> str: ...
@@ -34,11 +36,13 @@ class OperationsJsonlLogger:
     def __init__(
         self,
         app_data_locator: AppDataLocator | None = None,
-        file_name: str = "operations_events.jsonl",
+        file_name: str = DEFAULT_OPERATIONS_LOG_FILE_NAME,
         max_bytes: int = 1_000_000,
         ttl_days: int = 30,
         now_provider: Callable[[], datetime] | None = None,
+        log_path: Path | None = None,
     ) -> None:
+        self._explicit_log_path = log_path.expanduser() if log_path is not None else None
         self._locator = app_data_locator or QStandardPaths
         self._file_name = file_name
         self._max_bytes = max_bytes
@@ -46,12 +50,16 @@ class OperationsJsonlLogger:
         self._now_provider = now_provider or (lambda: datetime.now(UTC))
 
     def _log_path(self) -> Path:
-        base_dir = self._locator.writableLocation(QStandardPaths.StandardLocation.AppDataLocation)
-        if not base_dir.strip():
-            base_dir = str(Path.home() / ".nameverification")
-        target_dir = Path(base_dir)
-        target_dir.mkdir(parents=True, exist_ok=True)
-        return target_dir / self._file_name
+        if self._explicit_log_path is not None:
+            self._explicit_log_path.parent.mkdir(parents=True, exist_ok=True)
+            return self._explicit_log_path
+        return default_operations_log_path(self._locator, self._file_name)
+
+    @property
+    def log_path(self) -> Path:
+        """Return the concrete JSONL path used by this logger."""
+
+        return self._log_path()
 
     def append(
         self,
@@ -170,3 +178,18 @@ class OperationsJsonlLogger:
                 except Exception:
                     decode_errors += 1
         return events, decode_errors
+
+
+def default_operations_log_path(
+    app_data_locator: AppDataLocator | None = None,
+    file_name: str = DEFAULT_OPERATIONS_LOG_FILE_NAME,
+) -> Path:
+    """Resolve the historical AppDataLocation-backed Operations JSONL path."""
+
+    locator = app_data_locator or QStandardPaths
+    base_dir = locator.writableLocation(QStandardPaths.StandardLocation.AppDataLocation)
+    if not base_dir.strip():
+        base_dir = str(Path.home() / ".nameverification")
+    target_dir = Path(base_dir)
+    target_dir.mkdir(parents=True, exist_ok=True)
+    return target_dir / file_name

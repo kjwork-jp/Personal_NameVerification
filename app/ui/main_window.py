@@ -20,7 +20,8 @@ from app.ui.context_helpers import apply_operator_context
 from app.ui.help_settings_tab import HelpSettingsTab
 from app.ui.link_management_tab import LinkManagementTab
 from app.ui.name_management_tab import NameManagementTab
-from app.ui.operations_tab import OperationsTab
+from app.ui.operations_log import OperationsJsonlLogger
+from app.ui.operations_tab import OperationLoggerLike, OperationsTab
 from app.ui.role_context import RoleContext
 from app.ui.search_tab import SearchTab
 from app.ui.subtitle_management_tab import SubtitleManagementTab
@@ -37,6 +38,14 @@ def _timestamp_suffix() -> str:
     return datetime.now().strftime("%Y%m%d_%H%M%S")
 
 
+def _looks_like_operations_package_root(package_root: Path) -> bool:
+    return (
+        (package_root / "10_app").is_dir()
+        or (package_root / "30_prod_db").is_dir()
+        or (package_root / "60_exports").is_dir()
+    )
+
+
 class MainWindow(QMainWindow):
     """Top-level main window with user-facing tab layout."""
 
@@ -48,12 +57,20 @@ class MainWindow(QMainWindow):
         export_backup_service: ExportBackupService | None = None,
         backup_restore_service: BackupRestoreService | None = None,
         import_service: ImportService | None = None,
+        package_root: Path | None = None,
         database_path: Path | None = None,
+        change_log_jsonl_path: Path | None = None,
+        operations_log_jsonl_path: Path | None = None,
+        operation_logger: OperationLoggerLike | None = None,
         connection: sqlite3.Connection | None = None,
     ) -> None:
         super().__init__()
         self._connection = connection
+        self._package_root = package_root
         self._database_path = database_path
+        self._change_log_jsonl_path = change_log_jsonl_path
+        self._operations_log_jsonl_path = operations_log_jsonl_path
+        self._operation_logger = operation_logger
         self._role_context = role_context or RoleContext.admin()
         self.setWindowTitle("NameVerification v3")
         self.resize(1180, 760)
@@ -114,15 +131,27 @@ class MainWindow(QMainWindow):
             and backup_restore_service is not None
             and import_service is not None
         ):
+            operation_logger = self._operation_logger
+            if operation_logger is None and operations_log_jsonl_path is not None:
+                operation_logger = OperationsJsonlLogger(log_path=operations_log_jsonl_path)
             operations_tab = OperationsTab(
                 export_backup_service=export_backup_service,
                 backup_restore_service=backup_restore_service,
                 import_service=import_service,
                 role_context=self._role_context,
+                operation_logger=operation_logger,
             )
             self._prefill_operations_paths(operations_tab)
             self._add_tab(operations_tab, "データ入出力")
-        self._add_tab(HelpSettingsTab(database_path=database_path), "ヘルプ / 設定")
+        self._add_tab(
+            HelpSettingsTab(
+                package_root=self._package_root,
+                database_path=database_path,
+                change_log_jsonl_path=self._change_log_jsonl_path,
+                operations_log_jsonl_path=self._operations_log_jsonl_path,
+            ),
+            "ヘルプ / 設定",
+        )
         self.tabs.currentChanged.connect(self._refresh_current_tab)
         self.setCentralWidget(self.tabs)
         apply_searchable_comboboxes(self)
@@ -144,6 +173,10 @@ class MainWindow(QMainWindow):
         operations_tab.apply_default_paths(defaults)
 
     def _resolve_operations_package_root(self) -> Path | None:
+        if self._package_root is not None and _looks_like_operations_package_root(
+            self._package_root
+        ):
+            return self._package_root
         if self._database_path is None:
             return None
         return resolve_package_root_from_database_path(self._database_path)
