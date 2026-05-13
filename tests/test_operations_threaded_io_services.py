@@ -65,8 +65,9 @@ def test_import_services_use_thread_local_sqlite_connection(tmp_path: Path) -> N
     csv_target_connection = initialize_database(csv_target_db)
     csv_import_service = ImportService(csv_target_connection, database_path=csv_target_db)
 
-    csv_counts = _run_in_worker(lambda: csv_import_service.import_csv(csv_dir))
+    csv_counts, csv_before_import = _run_in_worker(lambda: csv_import_service.import_csv(csv_dir))
     assert csv_counts["names"] == 1
+    assert csv_before_import.exists()
     assert csv_target_connection.execute("SELECT raw_name FROM names").fetchone()[0] == "Alice"
     csv_target_connection.close()
 
@@ -74,8 +75,11 @@ def test_import_services_use_thread_local_sqlite_connection(tmp_path: Path) -> N
     json_target_connection = initialize_database(json_target_db)
     json_import_service = ImportService(json_target_connection, database_path=json_target_db)
 
-    json_counts = _run_in_worker(lambda: json_import_service.import_json(json_path))
+    json_counts, json_before_import = _run_in_worker(
+        lambda: json_import_service.import_json(json_path)
+    )
     assert json_counts["titles"] == 1
+    assert json_before_import.exists()
     title_name = json_target_connection.execute(
         "SELECT title_name FROM titles"
     ).fetchone()[0]
