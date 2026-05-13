@@ -123,9 +123,7 @@ def import_from_json_file(
 
 
 def _validate_empty_target_db(connection: sqlite3.Connection, table_names: tuple[str, ...]) -> None:
-    for table_name in table_names:
-        count_row = connection.execute(f"SELECT COUNT(1) AS c FROM {table_name}").fetchone()
-        count = int(count_row[0]) if count_row is not None else 0
+    for table_name, count in read_table_counts(connection, table_names).items():
         if count > 0:
             raise ValidationError(
                 f"import target db must be empty: table {table_name} has {count} rows"
@@ -176,3 +174,13 @@ def _insert_rows(
     sql = f"INSERT INTO {table_name} ({columns_sql}) VALUES ({placeholders})"
     values = [tuple(row[column] for column in columns) for row in rows]
     connection.executemany(sql, values)
+
+
+def read_table_counts(
+    connection: sqlite3.Connection, table_names: tuple[str, ...]
+) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for table_name in table_names:
+        count_row = connection.execute(f"SELECT COUNT(1) AS c FROM {table_name}").fetchone()
+        counts[table_name] = int(count_row[0]) if count_row is not None else 0
+    return counts

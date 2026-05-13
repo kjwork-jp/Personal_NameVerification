@@ -94,7 +94,7 @@ class ExportBackupLike(Protocol):
         db_path: Path,
         backup_path: Path,
         role: UserRole = "admin",
-    ) -> Path: ...
+    ) -> tuple[Path, Path]: ...
 
 
 class BackupRestoreLike(Protocol):
@@ -107,9 +107,11 @@ class BackupRestoreLike(Protocol):
 
 
 class ImportLike(Protocol):
-    def import_csv(self, csv_dir: Path, role: UserRole = "admin") -> dict[str, int]: ...
+    def import_csv(self, csv_dir: Path, role: UserRole = "admin") -> tuple[dict[str, int], Path]: ...
 
-    def import_json(self, json_path: Path, role: UserRole = "admin") -> dict[str, int]: ...
+    def import_json(self, json_path: Path, role: UserRole = "admin") -> tuple[dict[str, int], Path]: ...
+
+    def preview_import_target_state(self) -> dict[str, int]: ...
 
 
 class SettingsLike(Protocol):
@@ -1037,10 +1039,23 @@ class OperationsTab(QWidget):
         target_path = self._require_text(self.restore_target_db_path_input, "復元先DBファイル")
         if backup_path is None or target_path is None:
             return
+        target_resolved = self._ui_path(target_path).resolve(strict=False)
+        current_db = target_resolved
+        same_target = self._ui_path(backup_path).resolve(strict=False) == target_resolved
+        strong_warning = "\n⚠ 現在利用中DBを上書きします。" if same_target else ""
+        preview_before_restore = target_resolved.parent / "backups" / "before_restore"
         if not confirm_destructive_action(
             self,
             "復元確認",
-            "restore を実行します。対象DBは置換されます。続行しますか？",
+            (
+                "restore を実行します。\n"
+                f"- backup input: {backup_path}\n"
+                f"- target DB: {target_path}\n"
+                f"- current DB: {current_db}\n"
+                f"- before_restore backup path: {preview_before_restore}\n"
+                f"{strong_warning}"
+                "対象DBは置換されます。続行しますか？"
+            ),
         ):
             message = "Restore はキャンセルされました"
             self._set_message(message)
@@ -1067,7 +1082,7 @@ class OperationsTab(QWidget):
             message = (
                 "Restore 完了（cancel requested 後に完了）"
                 if self._cancel_requested
-                else f"Restore 成功: {result}"
+                else f"Restore 成功: {result[0]} (before_restore: {result[1]})"
             )
             self._set_message(message)
             self._record_operation(
@@ -1097,10 +1112,18 @@ class OperationsTab(QWidget):
         csv_dir = self._require_text(self.import_csv_dir_input, "CSVディレクトリ")
         if csv_dir is None:
             return
+        counts = self._import_service.preview_import_target_state()
+        is_empty = all(v == 0 for v in counts.values())
         if not confirm_destructive_action(
             self,
             "CSV Import確認",
-            "CSV import を実行します。空DBへの初期取込のみ想定です。続行しますか？",
+            (
+                "CSV import を実行します。\n"
+                f"- import source: {csv_dir}\n"
+                f"- current DB state: {'空' if is_empty else '非空'} {counts}\n"
+                f"- before_import backup path: <auto>\n"
+                "空DBへの初期取込のみ想定です。続行しますか？"
+            ),
         ):
             message = "CSV Import はキャンセルされました"
             self._set_message(message)
@@ -1116,7 +1139,7 @@ class OperationsTab(QWidget):
             message = (
                 "CSV import 完了（cancel requested 後に完了）"
                 if self._cancel_requested
-                else f"CSV import 成功: {result}"
+                else f"CSV import 成功: {result[0]} (before_import: {result[1]})"
             )
             self._set_message(message)
             self._record_operation("import_csv", status, message, path=csv_dir)
@@ -1134,10 +1157,18 @@ class OperationsTab(QWidget):
         json_path = self._require_text(self.import_json_path_input, "JSONファイル")
         if json_path is None:
             return
+        counts = self._import_service.preview_import_target_state()
+        is_empty = all(v == 0 for v in counts.values())
         if not confirm_destructive_action(
             self,
             "JSON Import確認",
-            "JSON import を実行します。空DBへの初期取込のみ想定です。続行しますか？",
+            (
+                "JSON import を実行します。\n"
+                f"- import source: {json_path}\n"
+                f"- current DB state: {'空' if is_empty else '非空'} {counts}\n"
+                f"- before_import backup path: <auto>\n"
+                "空DBへの初期取込のみ想定です。続行しますか？"
+            ),
         ):
             message = "JSON Import はキャンセルされました"
             self._set_message(message)
@@ -1153,7 +1184,7 @@ class OperationsTab(QWidget):
             message = (
                 "JSON import 完了（cancel requested 後に完了）"
                 if self._cancel_requested
-                else f"JSON import 成功: {result}"
+                else f"JSON import 成功: {result[0]} (before_import: {result[1]})"
             )
             self._set_message(message)
             self._record_operation("import_json", status, message, path=json_path)
