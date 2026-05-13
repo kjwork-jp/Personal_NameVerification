@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 import sys
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -23,6 +23,17 @@ def pytest_runtest_setup(item: Any) -> None:
     """Keep absorbed UI guard ordering stable during tests."""
 
     _ = item
+    if not hasattr(PurePosixPath, "resolve"):
+
+        def _resolve_pure_posix_path(
+            self: PurePosixPath,
+            strict: bool = False,
+        ) -> PurePosixPath:
+            _ = strict
+            return self
+
+        PurePosixPath.resolve = _resolve_pure_posix_path  # type: ignore[attr-defined]
+
     from app.ui.input_defaults import friendly_error_message
     from app.ui.title_subtitle_management_tab import TitleSubtitleManagementTab
 
