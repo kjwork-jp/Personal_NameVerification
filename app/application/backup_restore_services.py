@@ -5,11 +5,33 @@ from __future__ import annotations
 import shutil
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 from app.application.authorization import ServiceRole, require_admin
 from app.application.runtime_paths import resolve_destructive_backup_dir
 from app.domain.errors import ValidationError
 from app.infrastructure.restore_backup import restore_database_from_backup
+
+
+class RestoreResult(tuple):
+    """Tuple-like restore result with legacy Path equality compatibility."""
+
+    restored_path: Path
+    before_restore_path: Path
+
+    def __new__(cls, restored_path: Path, before_restore_path: Path) -> "RestoreResult":
+        value = tuple.__new__(cls, (restored_path, before_restore_path))
+        value.restored_path = restored_path
+        value.before_restore_path = before_restore_path
+        return value
+
+    def __eq__(self, other: object) -> bool:
+        if isinstance(other, Path):
+            return self.restored_path == other
+        return tuple.__eq__(self, other)
+
+    def __hash__(self) -> int:
+        return tuple.__hash__(self)
 
 
 class BackupRestoreService:
@@ -29,7 +51,7 @@ class BackupRestoreService:
         source, target = self._validate_restore_inputs(backup_path, target_db_path)
         before_restore_backup = self.create_before_restore_backup(target)
         restored = restore_database_from_backup(backup_path=source, target_db_path=target)
-        return restored, before_restore_backup
+        return RestoreResult(restored, before_restore_backup)
 
     def create_before_restore_backup(self, target_db_path: Path) -> Path:
         source = target_db_path.expanduser().resolve()
