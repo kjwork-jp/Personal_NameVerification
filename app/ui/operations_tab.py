@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path, PurePosixPath
-from typing import Any, Protocol
+from typing import Any, Protocol, cast
 
 from PySide6.QtCore import QSettings, QStringListModel, Qt
 from PySide6.QtWidgets import (
@@ -94,7 +94,7 @@ class ExportBackupLike(Protocol):
         db_path: Path,
         backup_path: Path,
         role: UserRole = "admin",
-    ) -> tuple[Path, Path]: ...
+    ) -> Path: ...
 
 
 class BackupRestoreLike(Protocol):
@@ -103,7 +103,7 @@ class BackupRestoreLike(Protocol):
         backup_path: Path,
         target_db_path: Path,
         role: UserRole = "admin",
-    ) -> Path: ...
+    ) -> tuple[Path, Path]: ...
 
 
 class ImportLike(Protocol):
@@ -896,6 +896,13 @@ class OperationsTab(QWidget):
             return PurePosixPath(value)
         return Path(value)
 
+    def _display_path(self, value: str) -> str:
+        path_obj = self._ui_path(value)
+        resolve_method = getattr(path_obj, "resolve", None)
+        if callable(resolve_method):
+            return str(resolve_method(strict=False))
+        return str(path_obj)
+
     def _run_export_csv(self) -> None:
         if not self._ensure_not_busy():
             return
@@ -1039,11 +1046,11 @@ class OperationsTab(QWidget):
         target_path = self._require_text(self.restore_target_db_path_input, "復元先DBファイル")
         if backup_path is None or target_path is None:
             return
-        target_resolved = self._ui_path(target_path).resolve(strict=False)
+        target_resolved = self._display_path(target_path)
         current_db = target_resolved
-        same_target = self._ui_path(backup_path).resolve(strict=False) == target_resolved
+        same_target = self._display_path(backup_path) == target_resolved
         strong_warning = "\n⚠ 現在利用中DBを上書きします。" if same_target else ""
-        preview_before_restore = target_resolved.parent / "backups" / "before_restore"
+        preview_before_restore = Path(target_resolved).parent / "backups" / "before_restore"
         if not confirm_destructive_action(
             self,
             "復元確認",
@@ -1076,13 +1083,14 @@ class OperationsTab(QWidget):
             )
 
         def _success(result: object) -> None:
+            restored_result = cast(tuple[Path, Path], result)
             self._push_recent_path("restore_backup_file", backup_path)
             self._push_recent_path("restore_target_file", target_path)
             status = "cancel" if self._cancel_requested else "success"
             message = (
                 "Restore 完了（cancel requested 後に完了）"
                 if self._cancel_requested
-                else f"Restore 成功: {result[0]} (before_restore: {result[1]})"
+                else f"Restore 成功: {restored_result[0]} (before_restore: {restored_result[1]})"
             )
             self._set_message(message)
             self._record_operation(
@@ -1134,12 +1142,13 @@ class OperationsTab(QWidget):
             return self._import_service.import_csv(Path(csv_dir), role=self._role)
 
         def _success(result: object) -> None:
+            import_result = cast(tuple[dict[str, int], Path], result)
             self._push_recent_path("import_csv_dir", csv_dir)
             status = "cancel" if self._cancel_requested else "success"
             message = (
                 "CSV import 完了（cancel requested 後に完了）"
                 if self._cancel_requested
-                else f"CSV import 成功: {result[0]} (before_import: {result[1]})"
+                else f"CSV import 成功: {import_result[0]} (before_import: {import_result[1]})"
             )
             self._set_message(message)
             self._record_operation("import_csv", status, message, path=csv_dir)
@@ -1179,12 +1188,13 @@ class OperationsTab(QWidget):
             return self._import_service.import_json(self._ui_path(json_path), role=self._role)
 
         def _success(result: object) -> None:
+            import_result = cast(tuple[dict[str, int], Path], result)
             self._push_recent_path("import_json_file", json_path)
             status = "cancel" if self._cancel_requested else "success"
             message = (
                 "JSON import 完了（cancel requested 後に完了）"
                 if self._cancel_requested
-                else f"JSON import 成功: {result[0]} (before_import: {result[1]})"
+                else f"JSON import 成功: {import_result[0]} (before_import: {import_result[1]})"
             )
             self._set_message(message)
             self._record_operation("import_json", status, message, path=json_path)

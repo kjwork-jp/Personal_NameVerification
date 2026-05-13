@@ -37,9 +37,11 @@ def test_restore_success_for_admin(tmp_path: Path) -> None:
     _seed_name(target_db, "OriginalTarget")
 
     service = BackupRestoreService()
-    result = service.restore_database(backup_path=backup_db, target_db_path=target_db, role="admin")
-
-    assert result == target_db.resolve()
+    restored_path, before_restore_path = service.restore_database(
+        backup_path=backup_db, target_db_path=target_db, role="admin"
+    )
+    assert restored_path == target_db.resolve()
+    assert before_restore_path.exists()
     assert _read_names(target_db) == ["FromBackup"]
 
 
