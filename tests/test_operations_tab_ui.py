@@ -126,22 +126,32 @@ class StubBackupRestoreService:
 
     def restore_database(
         self, backup_path: Path, target_db_path: Path, role: str = "admin"
-    ) -> Path:
+    ) -> tuple[Path, Path]:
         self.calls.append(f"restore:{backup_path}:{target_db_path}:{role}")
-        return target_db_path
+        return target_db_path, Path("/tmp/before_restore.db")
 
 
 class StubImportService:
     def __init__(self) -> None:
         self.calls: list[str] = []
 
-    def import_csv(self, csv_dir: Path, role: str = "admin") -> dict[str, int]:
+    def import_csv(self, csv_dir: Path, role: str = "admin") -> tuple[dict[str, int], Path]:
         self.calls.append(f"import_csv:{csv_dir}:{role}")
-        return {"names": 1}
+        return {"names": 1}, Path("/tmp/before_import.db")
 
-    def import_json(self, json_path: Path, role: str = "admin") -> dict[str, int]:
+    def import_json(self, json_path: Path, role: str = "admin") -> tuple[dict[str, int], Path]:
         self.calls.append(f"import_json:{json_path}:{role}")
-        return {"names": 1}
+        return {"names": 1}, Path("/tmp/before_import.db")
+
+    def preview_import_target_state(self) -> dict[str, int]:
+        return {
+            "names": 0,
+            "titles": 0,
+            "subtitles": 0,
+            "name_subtitle_links": 0,
+            "name_title_links": 0,
+            "change_logs": 0,
+        }
 
 
 def _app() -> QApplication:
@@ -457,9 +467,7 @@ def test_operations_tab_history_normalizes_tuple_and_blank_values() -> None:
 
 def test_operations_tab_default_paths_can_replace_recent_history_prefill() -> None:
     _app()
-    settings = FakeSettings(
-        {"operations/recent_paths/csv_export_dir": ["/tmp/old-csv"]}
-    )
+    settings = FakeSettings({"operations/recent_paths/csv_export_dir": ["/tmp/old-csv"]})
 
     tab = OperationsTab(
         export_backup_service=StubExportBackupService(),
@@ -482,9 +490,7 @@ def test_operations_tab_default_paths_can_replace_recent_history_prefill() -> No
 
 def test_operations_tab_default_paths_do_not_overwrite_existing_text() -> None:
     _app()
-    settings = FakeSettings(
-        {"operations/recent_paths/json_export_file": ["/tmp/history.json"]}
-    )
+    settings = FakeSettings({"operations/recent_paths/json_export_file": ["/tmp/history.json"]})
 
     tab = OperationsTab(
         export_backup_service=StubExportBackupService(),

@@ -113,3 +113,13 @@ def ensure_runtime_parent_dirs(*paths: Path | None) -> None:
 
 def _looks_like_release_root(root: Path) -> bool:
     return (root / _RELEASE_APP_DIR_NAME).is_dir() or (root / "30_prod_db").is_dir()
+
+
+def resolve_destructive_backup_dir(database_path: Path, *, operation: str) -> Path:
+    """Resolve fallback backup directory for destructive operations."""
+
+    db_path = database_path.expanduser().resolve(strict=False)
+    package_root = resolve_package_root_from_database_path(db_path)
+    if package_root is not None:
+        return package_root / "50_backups" / operation
+    return db_path.parent / "backups" / operation
