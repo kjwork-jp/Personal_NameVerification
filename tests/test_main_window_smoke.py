@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import re
 from pathlib import Path
 
 import pytest
@@ -12,7 +13,10 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 qt_widgets = pytest.importorskip("PySide6.QtWidgets", exc_type=ImportError)
 QApplication = qt_widgets.QApplication
 
+from app.ui import main_window as main_window_module  # noqa: E402
+from app.ui import operations_tab as operations_tab_module  # noqa: E402
 from app.ui.main_window import MainWindow  # noqa: E402
+from app.ui.operations_tab import OperationsTab  # noqa: E402
 from app.ui.role_context import RoleContext  # noqa: E402
 
 
@@ -87,6 +91,46 @@ class EmptyImportService:
         return {}
 
 
+class FakeSettings:
+    def __init__(self, seed: dict[str, object] | None = None) -> None:
+        self.store: dict[str, object] = seed.copy() if seed else {}
+
+    def value(self, key: str, defaultValue: object | None = None) -> object | None:
+        return self.store.get(key, defaultValue)
+
+    def setValue(self, key: str, value: object) -> None:
+        self.store[key] = value
+
+    def remove(self, key: str) -> None:
+        self.store.pop(key, None)
+
+
+class StubOperationLogger:
+    def append(
+        self,
+        *,
+        action: str,
+        role: str,
+        status: str,
+        message: str,
+        path: str | None = None,
+        path2: str | None = None,
+    ) -> None:
+        _ = (action, role, status, message, path, path2)
+
+    def read_latest(
+        self,
+        limit: int = 100,
+        *,
+        include_archives: bool = False,
+    ) -> tuple[list[object], int]:
+        _ = (limit, include_archives)
+        return [], 0
+
+    def list_archives(self) -> list[Path]:
+        return []
+
+
 class EmptyCoreService:
     def create_name(self, *args: object, **kwargs: object) -> int:
         _ = (args, kwargs)
@@ -157,6 +201,36 @@ def _get_app() -> QApplication:
     return app
 
 
+def _patch_operations_dependencies(
+    monkeypatch: pytest.MonkeyPatch,
+    settings: FakeSettings | None = None,
+) -> None:
+    settings = settings or FakeSettings()
+    monkeypatch.setattr(operations_tab_module, "QSettings", lambda *args: settings)
+    monkeypatch.setattr(
+        operations_tab_module,
+        "OperationsJsonlLogger",
+        lambda *args, **kwargs: StubOperationLogger(),
+    )
+
+
+def _build_main_window(database_path: Path | None = None) -> MainWindow:
+    return MainWindow(
+        query_service=EmptyQueryService(),
+        core_service=EmptyCoreService(),
+        export_backup_service=EmptyExportBackupService(),
+        backup_restore_service=EmptyBackupRestoreService(),
+        import_service=EmptyImportService(),
+        database_path=database_path,
+    )
+
+
+def _operations_tab(window: MainWindow) -> OperationsTab:
+    tab = window._tabs_by_name["データ入出力"]
+    assert isinstance(tab, OperationsTab)
+    return tab
+
+
 def test_main_window_has_required_tabs() -> None:
     _get_app()
     window = MainWindow(
@@ -179,6 +253,75 @@ def test_main_window_has_required_tabs() -> None:
     assert tab_widget.tabText(6) == "操作履歴"
     assert tab_widget.tabText(7) == "データ入出力"
     assert tab_widget.tabText(8) == "ヘルプ / 設定"
+
+
+def test_main_window_prefills_portable_operations_paths(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _get_app()
+    settings = FakeSettings(
+        {
+            "operations/recent_paths/csv_export_dir": ["/tmp/old-csv"],
+            "operations/recent_paths/restore_backup_file": ["/tmp/old-backup.db"],
+            "operations/recent_paths/import_json_file": ["/tmp/old-import.json"],
+        }
+    )
+    _patch_operations_dependencies(monkeypatch, settings)
+    package_root = tmp_path / "v0.1.0-rc2"
+    (package_root / "10_app").mkdir(parents=True)
+    db_path = package_root / "30_prod_db" / "nameverification.db"
+    db_path.parent.mkdir()
+
+    window = _build_main_window(database_path=db_path)
+    tab = _operations_tab(window)
+
+    assert Path(tab.csv_export_path_input.text()) == package_root / "60_exports" / "csv"
+    assert Path(tab.db_path_input.text()) == db_path
+    assert Path(tab.restore_target_db_path_input.text()) == db_path
+    assert tab.restore_backup_path_input.text() == ""
+    assert tab.import_json_path_input.text() == ""
+    assert Path(tab.import_csv_dir_input.text()) == package_root / "60_exports" / "csv"
+
+    json_path = Path(tab.json_export_path_input.text())
+    sql_path = Path(tab.sql_dump_path_input.text())
+    backup_path = Path(tab.backup_output_path_input.text())
+    assert json_path.parent == package_root / "60_exports" / "json"
+    assert sql_path.parent == package_root / "60_exports" / "sql"
+    assert backup_path.parent == package_root / "50_backups" / "daily"
+    assert re.fullmatch(r"nameverification_export_\d{8}_\d{6}\.json", json_path.name)
+    assert re.fullmatch(r"nameverification_dump_\d{8}_\d{6}\.sql", sql_path.name)
+    assert re.fullmatch(r"nameverification_\d{8}_\d{6}\.db", backup_path.name)
+
+
+def test_main_window_prefills_nonportable_operations_paths_from_safe_tmp(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _get_app()
+    _patch_operations_dependencies(monkeypatch)
+    fallback_base = tmp_path / "safe-tmp" / "NameVerification v3"
+    monkeypatch.setattr(
+        main_window_module,
+        "_operations_fallback_base_dir",
+        lambda: fallback_base,
+    )
+    db_path = tmp_path / "dev.db"
+
+    window = _build_main_window(database_path=db_path)
+    tab = _operations_tab(window)
+
+    assert Path(tab.csv_export_path_input.text()) == fallback_base / "60_exports" / "csv"
+    assert Path(tab.db_path_input.text()) == db_path
+    assert Path(tab.json_export_path_input.text()).parent == (
+        fallback_base / "60_exports" / "json"
+    )
+    assert Path(tab.sql_dump_path_input.text()).parent == (
+        fallback_base / "60_exports" / "sql"
+    )
+    assert Path(tab.backup_output_path_input.text()).parent == (
+        fallback_base / "50_backups" / "daily"
+    )
 
 
 def test_main_window_accepts_role_context() -> None:

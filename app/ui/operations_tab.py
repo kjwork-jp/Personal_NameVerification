@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import re
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from pathlib import Path, PurePosixPath
 from typing import Any, Protocol
 
@@ -167,6 +167,7 @@ class OperationsTab(QWidget):
         self._operation_logger = operation_logger or OperationsJsonlLogger()
         self._operation_executor = operation_executor or ThreadPoolOperationExecutor()
         self._history_models: dict[str, QStringListModel] = {}
+        self._history_prefilled_fields: set[str] = set()
         self._clear_history_buttons: dict[str, QPushButton] = {}
         self._is_busy = False
         self._cancel_requested = False
@@ -651,6 +652,29 @@ class OperationsTab(QWidget):
             return self._normalize_recent_paths([str(item) for item in raw])
         return []
 
+    def apply_default_paths(
+        self,
+        defaults: Mapping[str, Path | str],
+        *,
+        replace_history_prefills: bool = False,
+    ) -> None:
+        """Apply caller-provided defaults without clobbering explicit field text."""
+
+        bindings = dict(self._history_field_bindings())
+        for field_key, path in defaults.items():
+            line_edit = bindings[field_key]
+            current_text = line_edit.text().strip()
+            has_text = bool(current_text)
+            history = self._get_recent_paths(field_key)
+            came_from_history = (
+                field_key in self._history_prefilled_fields
+                and bool(history)
+                and current_text == history[0]
+            )
+            if not has_text or (replace_history_prefills and came_from_history):
+                line_edit.setText(str(path))
+                self._history_prefilled_fields.discard(field_key)
+
     def _push_recent_path(self, field_key: str, value: str) -> None:
         candidate = value.strip()
         if not candidate:
@@ -659,6 +683,7 @@ class OperationsTab(QWidget):
             [candidate] + self._get_recent_paths(field_key)
         )
         self._settings.setValue(self._history_settings_key(field_key), updated)
+        self._history_prefilled_fields.discard(field_key)
         model = self._history_models.get(field_key)
         if model is not None:
             model.setStringList(updated)
@@ -673,6 +698,7 @@ class OperationsTab(QWidget):
             line_edit.setCompleter(completer)
             if history and not line_edit.text().strip():
                 line_edit.setText(history[0])
+                self._history_prefilled_fields.add(field_key)
 
     def _select_directory(self, target: QLineEdit, title: str, *, field_key: str) -> None:
         chosen = QFileDialog.getExistingDirectory(self, title, target.text().strip())

@@ -66,6 +66,21 @@ def resolve_change_log_jsonl_path(*, package_root: Path | None = None) -> Path:
     return Path("logs") / "change_logs.jsonl"
 
 
+def resolve_package_root_from_database_path(database_path: Path) -> Path | None:
+    """Return the portable package root when ``database_path`` matches the layout."""
+
+    resolved_db_path = database_path.expanduser().resolve(strict=False)
+    if resolved_db_path.name != _DEFAULT_DB_RELATIVE_PATH.name:
+        return None
+    if resolved_db_path.parent.name != _DEFAULT_DB_RELATIVE_PATH.parent.name:
+        return None
+
+    package_root = resolved_db_path.parent.parent
+    if (package_root / _RELEASE_APP_DIR_NAME).is_dir() or (package_root / "60_exports").is_dir():
+        return package_root
+    return None
+
+
 def ensure_runtime_parent_dirs(*paths: Path) -> None:
     """Create parent directories for runtime files when they are explicit paths."""
 

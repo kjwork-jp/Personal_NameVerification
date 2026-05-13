@@ -60,6 +60,7 @@
 5. 運用操作
    - export（CSV/JSON/SQL dump）を実行。
    - backup create を実行。
+   - portable配布では初期表示が `60_exports` / `50_backups/daily` 配下を指すことを確認。
    - （必要時のみ）restore / import は admin かつ確認ダイアログ経由で実行。
 
 ### 3.2 export / import / backup / restore の注意点
