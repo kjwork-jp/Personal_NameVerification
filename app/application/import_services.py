@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import csv
+import json
 import shutil
 import sqlite3
 from collections.abc import Iterator
@@ -11,6 +13,7 @@ from pathlib import Path
 
 from app.application.authorization import ServiceRole, require_admin
 from app.application.runtime_paths import resolve_destructive_backup_dir
+from app.domain.errors import ValidationError
 from app.infrastructure.import_data import (
     IMPORT_TABLES,
     import_from_csv_directory,
@@ -34,6 +37,9 @@ class ImportService:
 
     def import_csv(self, csv_dir: Path, role: ServiceRole = "admin") -> tuple[dict[str, int], Path]:
         require_admin(role, action="import_csv")
+        self._validate_csv_source(csv_dir)
+        with self._operation_connection() as connection:
+            self._validate_empty_target(connection)
         before_import_backup = self.create_before_import_backup()
         with self._operation_connection() as connection:
             return import_from_csv_directory(connection, csv_dir), before_import_backup
@@ -42,6 +48,9 @@ class ImportService:
         self, json_path: Path, role: ServiceRole = "admin"
     ) -> tuple[dict[str, int], Path]:
         require_admin(role, action="import_json")
+        self._validate_json_source(json_path)
+        with self._operation_connection() as connection:
+            self._validate_empty_target(connection)
         before_import_backup = self.create_before_import_backup()
         with self._operation_connection() as connection:
             return import_from_json_file(connection, json_path), before_import_backup
@@ -51,15 +60,68 @@ class ImportService:
             return read_table_counts(connection, IMPORT_TABLES)
 
     def create_before_import_backup(self) -> Path:
-        if self._database_path is None:
-            raise ValueError("database_path is required for pre-import backup")
-        source = self._database_path.expanduser().resolve()
+        source = self._resolve_database_path()
+        if not source.exists() or not source.is_file():
+            raise ValidationError(f"import target database does not exist: {source}")
         backup_dir = resolve_destructive_backup_dir(source, operation="before_import")
         backup_dir.mkdir(parents=True, exist_ok=True)
         stamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
         backup_path = backup_dir / f"before_import_{stamp}.db"
         shutil.copy2(source, backup_path)
         return backup_path
+
+    def _resolve_database_path(self) -> Path:
+        if self._database_path is not None:
+            return self._database_path.expanduser().resolve()
+
+        row = self._connection.execute("PRAGMA database_list").fetchone()
+        if row is None:
+            raise ValidationError("database_path is required for pre-import backup")
+        # PRAGMA database_list columns: seq, name, file.
+        rows = self._connection.execute("PRAGMA database_list").fetchall()
+        for candidate in rows:
+            name = str(candidate[1])
+            file_name = str(candidate[2] or "")
+            if name == "main" and file_name.strip():
+                return Path(file_name).expanduser().resolve()
+        raise ValidationError("file-backed main database is required for pre-import backup")
+
+    def _validate_empty_target(self, connection: sqlite3.Connection) -> None:
+        for table_name, count in read_table_counts(connection, IMPORT_TABLES).items():
+            if count > 0:
+                raise ValidationError(
+                    f"import target db must be empty: table {table_name} has {count} rows"
+                )
+
+    def _validate_csv_source(self, csv_dir: Path) -> None:
+        target_dir = csv_dir.expanduser().resolve()
+        if not target_dir.exists() or not target_dir.is_dir():
+            raise ValidationError(f"csv directory does not exist: {target_dir}")
+        for table_name in IMPORT_TABLES:
+            file_path = target_dir / f"{table_name}.csv"
+            if not file_path.exists() or not file_path.is_file():
+                raise ValidationError(f"required csv file is missing: {file_path}")
+            try:
+                with file_path.open("r", encoding="utf-8", newline="") as fp:
+                    csv.DictReader(fp).fieldnames
+            except csv.Error as exc:
+                raise ValidationError(f"csv file is invalid: {file_path}") from exc
+
+    def _validate_json_source(self, json_path: Path) -> None:
+        source = json_path.expanduser().resolve()
+        if not source.exists() or not source.is_file():
+            raise ValidationError(f"json file does not exist: {source}")
+        try:
+            payload = json.loads(source.read_text("utf-8"))
+        except json.JSONDecodeError as exc:
+            raise ValidationError("json file is invalid") from exc
+        if not isinstance(payload, dict):
+            raise ValidationError("json payload must be an object")
+        for table_name in IMPORT_TABLES:
+            if table_name not in payload:
+                raise ValidationError(f"json payload missing required key: {table_name}")
+            if not isinstance(payload[table_name], list):
+                raise ValidationError(f"json payload key is not a list: {table_name}")
 
     @contextmanager
     def _operation_connection(self) -> Iterator[sqlite3.Connection]:
