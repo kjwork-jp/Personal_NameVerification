@@ -15,6 +15,7 @@ QApplication = qt_widgets.QApplication
 
 from app.ui import main_window as main_window_module  # noqa: E402
 from app.ui import operations_tab as operations_tab_module  # noqa: E402
+from app.ui.help_settings_tab import HelpSettingsTab  # noqa: E402
 from app.ui.main_window import MainWindow  # noqa: E402
 from app.ui.operations_tab import OperationsTab  # noqa: E402
 from app.ui.role_context import RoleContext  # noqa: E402
@@ -214,7 +215,10 @@ def _patch_operations_dependencies(
     )
 
 
-def _build_main_window(database_path: Path | None = None) -> MainWindow:
+def _build_main_window(
+    database_path: Path | None = None,
+    **kwargs: object,
+) -> MainWindow:
     return MainWindow(
         query_service=EmptyQueryService(),
         core_service=EmptyCoreService(),
@@ -222,6 +226,7 @@ def _build_main_window(database_path: Path | None = None) -> MainWindow:
         backup_restore_service=EmptyBackupRestoreService(),
         import_service=EmptyImportService(),
         database_path=database_path,
+        **kwargs,
     )
 
 
@@ -292,6 +297,61 @@ def test_main_window_prefills_portable_operations_paths(
     assert re.fullmatch(r"nameverification_export_\d{8}_\d{6}\.json", json_path.name)
     assert re.fullmatch(r"nameverification_dump_\d{8}_\d{6}\.sql", sql_path.name)
     assert re.fullmatch(r"nameverification_\d{8}_\d{6}\.db", backup_path.name)
+
+
+def test_main_window_injects_explicit_operations_log_path(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _get_app()
+    settings = FakeSettings()
+    monkeypatch.setattr(operations_tab_module, "QSettings", lambda *args: settings)
+    captured_paths: list[Path | None] = []
+
+    class CapturingLogger(StubOperationLogger):
+        def __init__(self, log_path: Path | None = None) -> None:
+            captured_paths.append(log_path)
+
+    monkeypatch.setattr(main_window_module, "OperationsJsonlLogger", CapturingLogger)
+    operations_log_path = tmp_path / "40_logs" / "operations_events.jsonl"
+
+    window = _build_main_window(
+        database_path=tmp_path / "nameverification.db",
+        operations_log_jsonl_path=operations_log_path,
+    )
+
+    tab = _operations_tab(window)
+    assert isinstance(tab._operation_logger, CapturingLogger)
+    assert captured_paths == [operations_log_path]
+
+
+def test_main_window_passes_runtime_paths_to_help_settings(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _get_app()
+    _patch_operations_dependencies(monkeypatch)
+    package_root = tmp_path / "v0.1.0-rc2"
+    (package_root / "10_app").mkdir(parents=True)
+    database_path = package_root / "30_prod_db" / "nameverification.db"
+    change_log_path = package_root / "40_logs" / "change_logs.jsonl"
+    operations_log_path = package_root / "40_logs" / "operations_events.jsonl"
+
+    window = _build_main_window(
+        database_path=database_path,
+        package_root=package_root,
+        change_log_jsonl_path=change_log_path,
+        operations_log_jsonl_path=operations_log_path,
+    )
+    tab = window._tabs_by_name["ヘルプ / 設定"]
+
+    assert isinstance(tab, HelpSettingsTab)
+    assert tab.package_root_input.text() == str(package_root.resolve(strict=False))
+    assert tab.database_path_input.text() == str(database_path.resolve(strict=False))
+    assert tab.change_log_path_input.text() == str(change_log_path.resolve(strict=False))
+    assert tab.operations_log_path_input.text() == str(
+        operations_log_path.resolve(strict=False)
+    )
 
 
 def test_main_window_prefills_nonportable_operations_paths_from_safe_tmp(

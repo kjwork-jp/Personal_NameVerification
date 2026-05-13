@@ -9,6 +9,7 @@ from pathlib import Path
 _RELEASE_APP_DIR_NAME = "10_app"
 _DEFAULT_DB_RELATIVE_PATH = Path("30_prod_db") / "nameverification.db"
 _DEFAULT_CHANGE_LOG_RELATIVE_PATH = Path("40_logs") / "change_logs.jsonl"
+_DEFAULT_OPERATIONS_LOG_RELATIVE_PATH = Path("40_logs") / "operations_events.jsonl"
 
 
 def resolve_package_root(
@@ -66,6 +67,23 @@ def resolve_change_log_jsonl_path(*, package_root: Path | None = None) -> Path:
     return Path("logs") / "change_logs.jsonl"
 
 
+def resolve_operations_log_jsonl_path(*, package_root: Path | None = None) -> Path | None:
+    """Resolve the Operations execution JSONL path for runtime startup.
+
+    Returning ``None`` preserves the historical QStandardPaths.AppDataLocation
+    default used by ``OperationsJsonlLogger`` during source/development runs.
+    """
+
+    configured_log_path = os.environ.get("NAMEVERIFICATION_OPERATIONS_LOG_JSONL_PATH")
+    if configured_log_path and configured_log_path.strip():
+        return Path(configured_log_path).expanduser()
+
+    root = package_root or resolve_package_root()
+    if _looks_like_release_root(root):
+        return root / _DEFAULT_OPERATIONS_LOG_RELATIVE_PATH
+    return None
+
+
 def resolve_package_root_from_database_path(database_path: Path) -> Path | None:
     """Return the portable package root when ``database_path`` matches the layout."""
 
@@ -81,10 +99,12 @@ def resolve_package_root_from_database_path(database_path: Path) -> Path | None:
     return None
 
 
-def ensure_runtime_parent_dirs(*paths: Path) -> None:
+def ensure_runtime_parent_dirs(*paths: Path | None) -> None:
     """Create parent directories for runtime files when they are explicit paths."""
 
     for path in paths:
+        if path is None:
+            continue
         parent = path.parent
         if parent == Path("") or parent == Path("."):
             continue

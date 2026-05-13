@@ -6,6 +6,7 @@ from app.application.runtime_paths import (
     ensure_runtime_parent_dirs,
     resolve_change_log_jsonl_path,
     resolve_database_path,
+    resolve_operations_log_jsonl_path,
     resolve_package_root,
     resolve_package_root_from_database_path,
 )
@@ -36,18 +37,33 @@ def test_resolve_database_and_log_paths_from_release_root(tmp_path: Path, monkey
     assert resolve_change_log_jsonl_path(package_root=package_root) == (
         package_root / "40_logs" / "change_logs.jsonl"
     )
+    assert resolve_operations_log_jsonl_path(package_root=package_root) == (
+        package_root / "40_logs" / "operations_events.jsonl"
+    )
 
 
 def test_explicit_environment_paths_override_release_defaults(tmp_path: Path, monkeypatch) -> None:
     package_root = tmp_path / "v0.1.0-rc2"
     db_path = tmp_path / "custom" / "custom.db"
     log_path = tmp_path / "custom_logs" / "change_logs.jsonl"
+    operations_log_path = tmp_path / "custom_logs" / "operations_events.jsonl"
 
     monkeypatch.setenv("NAMEVERIFICATION_DB_PATH", str(db_path))
     monkeypatch.setenv("NAMEVERIFICATION_CHANGE_LOG_JSONL_PATH", str(log_path))
+    monkeypatch.setenv("NAMEVERIFICATION_OPERATIONS_LOG_JSONL_PATH", str(operations_log_path))
 
     assert resolve_database_path(package_root=package_root) == db_path
     assert resolve_change_log_jsonl_path(package_root=package_root) == log_path
+    assert resolve_operations_log_jsonl_path(package_root=package_root) == operations_log_path
+
+
+def test_operations_log_path_preserves_appdata_default_for_source_run(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.delenv("NAMEVERIFICATION_OPERATIONS_LOG_JSONL_PATH", raising=False)
+
+    assert resolve_operations_log_jsonl_path(package_root=tmp_path) is None
 
 
 def test_resolve_package_root_from_portable_database_path(tmp_path: Path) -> None:
