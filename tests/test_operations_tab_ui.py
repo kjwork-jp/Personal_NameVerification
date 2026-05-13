@@ -455,6 +455,56 @@ def test_operations_tab_history_normalizes_tuple_and_blank_values() -> None:
     assert tab._get_recent_paths("sql_dump_file") == ["/tmp/a.sql", "/tmp/b.sql"]
 
 
+def test_operations_tab_default_paths_can_replace_recent_history_prefill() -> None:
+    _app()
+    settings = FakeSettings(
+        {"operations/recent_paths/csv_export_dir": ["/tmp/old-csv"]}
+    )
+
+    tab = OperationsTab(
+        export_backup_service=StubExportBackupService(),
+        backup_restore_service=StubBackupRestoreService(),
+        import_service=StubImportService(),
+        role_context=RoleContext(role="admin"),
+        settings=settings,
+        operation_logger=FakeOperationLogger(),
+        operation_executor=ImmediateOperationExecutor(),
+    )
+
+    assert tab.csv_export_path_input.text() == "/tmp/old-csv"
+    tab.apply_default_paths(
+        {"csv_export_dir": "/portable/60_exports/csv"},
+        replace_history_prefills=True,
+    )
+
+    assert tab.csv_export_path_input.text() == "/portable/60_exports/csv"
+
+
+def test_operations_tab_default_paths_do_not_overwrite_existing_text() -> None:
+    _app()
+    settings = FakeSettings(
+        {"operations/recent_paths/json_export_file": ["/tmp/history.json"]}
+    )
+
+    tab = OperationsTab(
+        export_backup_service=StubExportBackupService(),
+        backup_restore_service=StubBackupRestoreService(),
+        import_service=StubImportService(),
+        role_context=RoleContext(role="admin"),
+        settings=settings,
+        operation_logger=FakeOperationLogger(),
+        operation_executor=ImmediateOperationExecutor(),
+    )
+
+    tab.json_export_path_input.setText("/tmp/manual.json")
+    tab.apply_default_paths(
+        {"json_export_file": "/portable/60_exports/json/default.json"},
+        replace_history_prefills=True,
+    )
+
+    assert tab.json_export_path_input.text() == "/tmp/manual.json"
+
+
 def test_operations_tab_persists_success_error_cancel_log_events(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

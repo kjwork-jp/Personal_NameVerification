@@ -9,6 +9,8 @@
 - 起動確認
 - 運用操作 タブで日次運用操作（export/backup create）を実施
 - path 指定は 運用操作 タブの 参照 ボタン（native dialog）を優先利用
+- portable配布では初期表示を配布フォルダ配下（`50_backups/daily`,
+  `60_exports/csv`, `60_exports/json`, `60_exports/sql`）に寄せる
 - recent path history 候補を利用して再入力を省力化
 - 運用操作 実行結果は AppDataLocation 配下の JSONL（append-only）へ記録
 - 運用操作 実行は async worker で分離し、busy 中は二重起動を防止（cancel request 導線あり）

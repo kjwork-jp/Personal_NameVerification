@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sqlite3
+from datetime import datetime
 from pathlib import Path
 
 from PySide6.QtGui import QCloseEvent
@@ -13,6 +14,7 @@ from app.application.core_services import CoreService
 from app.application.export_backup_services import ExportBackupService
 from app.application.import_services import ImportService
 from app.application.query_services import QueryService
+from app.application.runtime_paths import resolve_package_root_from_database_path
 from app.ui.audit_log_tab import AuditLogTab
 from app.ui.context_helpers import apply_operator_context
 from app.ui.help_settings_tab import HelpSettingsTab
@@ -25,6 +27,14 @@ from app.ui.subtitle_management_tab import SubtitleManagementTab
 from app.ui.title_management_tab import TitleManagementTab
 from app.ui.trash_tab import TrashTab
 from app.ui.ui_style import apply_friendly_theme, apply_searchable_comboboxes
+
+
+def _operations_fallback_base_dir() -> Path:
+    return Path.home() / "tmp" / "NameVerification v3"
+
+
+def _timestamp_suffix() -> str:
+    return datetime.now().strftime("%Y%m%d_%H%M%S")
 
 
 class MainWindow(QMainWindow):
@@ -123,27 +133,73 @@ class MainWindow(QMainWindow):
         self._tabs_by_name[title] = widget
 
     def _prefill_operations_paths(self, operations_tab: OperationsTab) -> None:
-        base_dir = Path.home() / "tmp" / "NameVerification v3"
-        base_dir.mkdir(parents=True, exist_ok=True)
-        csv_dir = base_dir / "test000_csv"
-        csv_dir.mkdir(parents=True, exist_ok=True)
+        package_root = self._resolve_operations_package_root()
+        timestamp = _timestamp_suffix()
+        if package_root is not None:
+            defaults = self._portable_operations_defaults(package_root, timestamp)
+            operations_tab.apply_default_paths(defaults, replace_history_prefills=True)
+            return
 
-        defaults = {
-            operations_tab.csv_export_path_input: csv_dir,
-            operations_tab.json_export_path_input: base_dir / "test000.json",
-            operations_tab.sql_dump_path_input: base_dir / "test000.sql",
-            operations_tab.backup_output_path_input: base_dir / "test000.db",
-            operations_tab.restore_backup_path_input: base_dir / "test000.db",
-            operations_tab.restore_target_db_path_input: base_dir / "restore_target_test000.db",
-            operations_tab.import_csv_dir_input: csv_dir,
-            operations_tab.import_json_path_input: base_dir / "test000.json",
+        defaults = self._fallback_operations_defaults(timestamp)
+        operations_tab.apply_default_paths(defaults)
+
+    def _resolve_operations_package_root(self) -> Path | None:
+        if self._database_path is None:
+            return None
+        return resolve_package_root_from_database_path(self._database_path)
+
+    def _portable_operations_defaults(
+        self,
+        package_root: Path,
+        timestamp: str,
+    ) -> dict[str, Path | str]:
+        csv_dir = package_root / "60_exports" / "csv"
+        json_dir = package_root / "60_exports" / "json"
+        sql_dir = package_root / "60_exports" / "sql"
+        backup_dir = package_root / "50_backups" / "daily"
+        for directory in (csv_dir, json_dir, sql_dir, backup_dir):
+            directory.mkdir(parents=True, exist_ok=True)
+
+        database_path = self._database_path or (
+            package_root / "30_prod_db" / "nameverification.db"
+        )
+        defaults: dict[str, Path | str] = {
+            "csv_export_dir": csv_dir,
+            "json_export_file": json_dir
+            / f"nameverification_export_{timestamp}.json",
+            "sql_dump_file": sql_dir / f"nameverification_dump_{timestamp}.sql",
+            "db_file": database_path,
+            "backup_output_file": backup_dir / f"nameverification_{timestamp}.db",
+            "restore_backup_file": "",
+            "restore_target_file": database_path,
+            "import_csv_dir": csv_dir,
+            "import_json_file": "",
+        }
+        return defaults
+
+    def _fallback_operations_defaults(self, timestamp: str) -> dict[str, Path | str]:
+        base_dir = _operations_fallback_base_dir()
+        base_dir.mkdir(parents=True, exist_ok=True)
+        csv_dir = base_dir / "60_exports" / "csv"
+        json_dir = base_dir / "60_exports" / "json"
+        sql_dir = base_dir / "60_exports" / "sql"
+        backup_dir = base_dir / "50_backups" / "daily"
+        for directory in (csv_dir, json_dir, sql_dir, backup_dir):
+            directory.mkdir(parents=True, exist_ok=True)
+        defaults: dict[str, Path | str] = {
+            "csv_export_dir": csv_dir,
+            "json_export_file": json_dir
+            / f"nameverification_export_{timestamp}.json",
+            "sql_dump_file": sql_dir / f"nameverification_dump_{timestamp}.sql",
+            "backup_output_file": backup_dir / f"nameverification_{timestamp}.db",
+            "restore_backup_file": "",
+            "restore_target_file": base_dir / "restore_target_nameverification.db",
+            "import_csv_dir": csv_dir,
+            "import_json_file": "",
         }
         if self._database_path is not None:
-            defaults[operations_tab.db_path_input] = self._database_path
-
-        for line_edit, path in defaults.items():
-            if not line_edit.text().strip():
-                line_edit.setText(str(path))
+            defaults["db_file"] = self._database_path
+        return defaults
 
     def _refresh_current_tab(self) -> None:
         widget = self.tabs.currentWidget()

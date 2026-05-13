@@ -47,7 +47,13 @@ v0.1.0-rc2/
 ├─ 10_app/
 │  └─ NameVerification.exe
 ├─ 30_prod_db/
-└─ 40_logs/
+├─ 40_logs/
+├─ 50_backups/
+│  └─ daily/
+└─ 60_exports/
+   ├─ csv/
+   ├─ json/
+   └─ sql/
 ```
 
 この配置で `NAMEVERIFICATION_DB_PATH` を指定しない場合、DBは以下に作成されます。
@@ -134,6 +140,20 @@ $env:NAMEVERIFICATION_CHANGE_LOG_JSONL_ENABLED = "1"
 | Operations log | データ入出力タブの実行ログ確認/出力 | admin中心 | `operations_events.jsonl` を参照 |
 
 Restore / Import は destructive 操作です。実行前にバックアップを取得してください。
+
+portable release layout で起動した場合、データ入出力タブの初期値は配布フォルダ配下を優先します。
+
+```text
+v0.1.0-rc2/60_exports/csv/
+v0.1.0-rc2/60_exports/json/nameverification_export_YYYYMMDD_HHMMSS.json
+v0.1.0-rc2/60_exports/sql/nameverification_dump_YYYYMMDD_HHMMSS.sql
+v0.1.0-rc2/50_backups/daily/nameverification_YYYYMMDD_HHMMSS.db
+v0.1.0-rc2/30_prod_db/nameverification.db
+```
+
+ソース実行や非portable配置では、従来どおりユーザーホーム配下の
+`tmp/NameVerification v3` を安全な既定フォルダとして使います。Restore用バックアップ
+ファイルとJSON importファイルは誤操作を避けるため初期表示では空欄にします。
 
 ## Setup
 

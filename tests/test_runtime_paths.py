@@ -7,6 +7,7 @@ from app.application.runtime_paths import (
     resolve_change_log_jsonl_path,
     resolve_database_path,
     resolve_package_root,
+    resolve_package_root_from_database_path,
 )
 
 
@@ -47,6 +48,28 @@ def test_explicit_environment_paths_override_release_defaults(tmp_path: Path, mo
 
     assert resolve_database_path(package_root=package_root) == db_path
     assert resolve_change_log_jsonl_path(package_root=package_root) == log_path
+
+
+def test_resolve_package_root_from_portable_database_path(tmp_path: Path) -> None:
+    package_root = tmp_path / "v0.1.0-rc2"
+    (package_root / "10_app").mkdir(parents=True)
+    db_path = package_root / "30_prod_db" / "nameverification.db"
+    db_path.parent.mkdir()
+
+    resolved = resolve_package_root_from_database_path(db_path)
+
+    assert resolved == package_root
+
+
+def test_resolve_package_root_from_database_path_requires_portable_marker(
+    tmp_path: Path,
+) -> None:
+    package_root = tmp_path / "v0.1.0-rc2"
+    db_path = package_root / "30_prod_db" / "nameverification.db"
+    db_path.parent.mkdir(parents=True)
+
+    assert resolve_package_root_from_database_path(db_path) is None
+    assert resolve_package_root_from_database_path(db_path.with_name("other.db")) is None
 
 
 def test_ensure_runtime_parent_dirs_creates_parent_directories(tmp_path: Path) -> None:
