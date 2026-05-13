@@ -18,7 +18,7 @@ class RestoreResult(tuple):
     restored_path: Path
     before_restore_path: Path
 
-    def __new__(cls, restored_path: Path, before_restore_path: Path) -> "RestoreResult":
+    def __new__(cls, restored_path: Path, before_restore_path: Path) -> RestoreResult:
         value = tuple.__new__(cls, (restored_path, before_restore_path))
         value.restored_path = restored_path
         value.before_restore_path = before_restore_path
@@ -63,7 +63,9 @@ class BackupRestoreService:
         shutil.copy2(source, backup_path)
         return backup_path
 
-    def _validate_restore_inputs(self, backup_path: Path, target_db_path: Path) -> tuple[Path, Path]:
+    def _validate_restore_inputs(
+        self, backup_path: Path, target_db_path: Path
+    ) -> tuple[Path, Path]:
         source = backup_path.expanduser().resolve()
         target = target_db_path.expanduser().resolve()
 
