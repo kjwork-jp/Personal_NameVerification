@@ -6,7 +6,6 @@ import os
 import sys
 from pathlib import Path
 
-
 _RELEASE_APP_DIR_NAME = "10_app"
 _DEFAULT_DB_RELATIVE_PATH = Path("30_prod_db") / "nameverification.db"
 _DEFAULT_CHANGE_LOG_RELATIVE_PATH = Path("40_logs") / "change_logs.jsonl"
