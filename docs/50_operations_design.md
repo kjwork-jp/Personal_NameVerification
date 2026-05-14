@@ -12,7 +12,10 @@
 - portable配布では初期表示を配布フォルダ配下（`50_backups/daily`,
   `60_exports/csv`, `60_exports/json`, `60_exports/sql`）に寄せる
 - recent path history 候補を利用して再入力を省力化
-- 運用操作 実行結果は AppDataLocation 配下の JSONL（append-only）へ記録
+- 運用操作 実行結果は JSONL（append-only）へ記録する
+  - portable配布では `40_logs/operations_events.jsonl` を既定値とする
+  - source/development 実行では従来どおり AppDataLocation 配下を既定値とする
+  - `NAMEVERIFICATION_OPERATIONS_LOG_JSONL_PATH` が指定されている場合はその値を優先する
 - 運用操作 実行は async worker で分離し、busy 中は二重起動を防止（cancel request 導線あり）
 - 運用操作 ログは size-based rotation と TTL pruning でローカル保守を行う
 - recent path history は 運用操作 タブから一括クリア可能
@@ -29,6 +32,9 @@
 
 ## 3. 週次運用
 - 運用操作 タブ経由でバックアップ復元リハーサル（restore は admin 実行、事前に対象DB接続クローズ）
+- restore 実行時は、アプリ側が復元前DBを `50_backups/before_restore/` 配下へ自動退避することを確認する
+- import 実行時は、アプリ側が取込前DBを `50_backups/before_import/` 配下へ自動退避することを確認する
+- portable配布外のDBでは、DBファイル隣接の `backups/before_restore/` または `backups/before_import/` が退避先になる
 - 運用レポート確認
 - change_logs spot review
 - export / backup 出力ファイル妥当性サンプリング
