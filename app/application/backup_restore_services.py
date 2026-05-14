@@ -5,6 +5,7 @@ from __future__ import annotations
 import shutil
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import cast
 
 from app.application.authorization import ServiceRole, require_admin
 from app.application.runtime_paths import resolve_destructive_backup_dir
@@ -12,14 +13,14 @@ from app.domain.errors import ValidationError
 from app.infrastructure.restore_backup import restore_database_from_backup
 
 
-class RestoreResult(tuple):
+class RestoreResult(tuple[Path, Path]):
     """Tuple-like restore result with legacy Path equality compatibility."""
 
     restored_path: Path
     before_restore_path: Path
 
     def __new__(cls, restored_path: Path, before_restore_path: Path) -> RestoreResult:
-        value = tuple.__new__(cls, (restored_path, before_restore_path))
+        value = cast(RestoreResult, tuple.__new__(cls, (restored_path, before_restore_path)))
         value.restored_path = restored_path
         value.before_restore_path = before_restore_path
         return value
