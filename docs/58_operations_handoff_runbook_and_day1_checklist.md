@@ -5,7 +5,7 @@
 
 - 対象: 運用担当 / 管理者（admin）
 - 前提: Windows ローカル端末、SQLite ローカルファイル、オフライン運用
-- 参照: `docs/50_operations_design.md`、`docs/51_backup_restore_policy.md`、`docs/54_go_live_checklist.md`、`docs/55_incident_response_runbook.md`
+- 参照: `docs/50_operations_design.md`、`docs/51_backup_restore_policy.md`、`docs/54_go_live_checklist.md`、`docs/55_incident_response_runbook.md`、`docs/59_release_evidence_v0_1_0_rc2.md`
 
 ---
 
@@ -13,18 +13,21 @@
 
 ### 2.1 事前固定情報
 - リリース対象 Git SHA を確定し、配布物と一致していることを確認する。
+- v0.1.0-rc2 portable release の固定情報は `docs/59_release_evidence_v0_1_0_rc2.md` を参照する。
 - 実施日（YYYY-MM-DD）/ 実施者 / 端末名 を記録する。
 - 利用ロール（viewer/editor/admin）の確認アカウントを用意する。
 
 ### 2.2 起動確認
 1. アプリを起動する（`python -m app.pyside6_main` または配布実行ファイル）。
-2. タブが表示されることを確認する（検索 / 名前管理 / タイトル/サブタイトル管理 / リンク管理 / ゴミ箱 / 監査ログ / 運用操作）。
-3. 異常終了がないことを確認する。
+2. portable配布では `release/<ReleaseName>/10_app/NameVerification.exe` から起動する。
+3. タブが表示されることを確認する（検索 / 名前管理 / タイトル/サブタイトル管理 / リンク管理 / ゴミ箱 / 監査ログ / 運用操作）。
+4. 異常終了がないことを確認する。
 
 ### 2.3 DB 初期化・存在確認
 1. 対象 DB ファイルの存在を確認する。
 2. 新規環境では初期スキーマが適用済みであることを確認する。
-3. 既存環境では、直近バックアップの存在を確認する。
+3. portable配布では既定DBが `30_prod_db/nameverification.db` に作成されることを確認する。
+4. 既存環境では、直近バックアップの存在を確認する。
 
 ### 2.4 ロール別の確認観点
 - viewer:
@@ -37,6 +40,7 @@
 - admin:
   - read/write/destructive を実行可能。
   - restore/import 実行時に確認ダイアログが表示される。
+  - restore/import 実行時に、実行前DBが `before_restore` / `before_import` に自動退避される。
 
 ---
 
@@ -62,17 +66,23 @@
    - backup create を実行。
    - portable配布では初期表示が `60_exports` / `50_backups/daily` 配下を指すことを確認。
    - （必要時のみ）restore / import は admin かつ確認ダイアログ経由で実行。
+   - restore/import 実行結果に `before_restore` / `before_import` の退避DBパスが表示されることを確認する。
 
 ### 3.2 export / import / backup / restore の注意点
 - path 指定は 参照 ボタンを優先し、手入力ミスを避ける。
 - import（CSV/JSON）は空 DB 限定で実施する。
 - `name_title_links` が CSV/JSON export/import の対象に含まれることを確認する。
 - restore は破壊的操作のため、対象 DB 接続をクローズしてから実施する。
-- restore/import 前に現状退避（バックアップ）を必ず取得する。
+- restore/import は実行前に現状DBを自動退避する。
+  - portable配布では `50_backups/before_restore/` または `50_backups/before_import/` を確認する。
+  - portable配布外ではDB隣接の `backups/before_restore/` または `backups/before_import/` を確認する。
 - viewer は 運用操作 実行不可、editor は export/backup のみ可能。
 
 ### 3.3 operation log の確認場所
-- 運用操作 実行結果は AppDataLocation 配下 `operations_events.jsonl` に記録される。
+- 運用操作 実行結果は JSONL に記録される。
+- portable配布では `40_logs/operations_events.jsonl` を既定値とする。
+- source/development 実行では AppDataLocation 配下 `operations_events.jsonl` を既定値とする。
+- `NAMEVERIFICATION_OPERATIONS_LOG_JSONL_PATH` を指定した場合は、そのパスを優先する。
 - ログの保守は size-based rotation / TTL pruning で行われる。
 
 ### 3.4 log viewer の確認方法（運用操作タブ）
@@ -87,6 +97,7 @@
 ### 3.5 終業時の保全観点
 - 当日バックアップを取得して保存先を記録。
 - 当日 運用操作 実行ログを確認し、必要に応じてエクスポート。
+- destructive 操作を行った場合は `before_restore` / `before_import` の退避DBが存在することを記録する。
 - 未解決事項・不具合を `docs/97_open_issues_and_constraints.md` に追記する。
 
 ### 3.6 role 別の title-name link 操作確認（UAT 必須）
@@ -100,6 +111,8 @@
 
 ### 4.1 実施メタ情報
 - 対象 Git SHA:
+- 対象 release:
+- ZIP SHA256:
 - 実施日（YYYY-MM-DD）:
 - 実施者:
 - 判定（OK / NG / 保留）:
@@ -108,6 +121,7 @@
 ### 4.2 チェック項目
 - [ ] 起動確認（異常終了なし）
 - [ ] DB 存在確認 / 初期化確認
+- [ ] portable配布の `30_prod_db/nameverification.db` 作成確認
 - [ ] viewer 権限確認
 - [ ] editor 権限確認
 - [ ] admin 権限確認
@@ -119,6 +133,9 @@
 - [ ] Audit 確認
 - [ ] 運用操作（export / backup）確認
 - [ ] operation log / log viewer 確認
+- [ ] `40_logs/operations_events.jsonl` 確認（portable配布時）
+- [ ] restore 前自動退避 `50_backups/before_restore/` 確認（実施時のみ）
+- [ ] import 前自動退避 `50_backups/before_import/` 確認（実施時のみ）
 - [ ] 終業時バックアップ確認
 
 ---
@@ -132,6 +149,7 @@
 
 ### 5.2 DB ファイル問題
 - DB path の存在・アクセス権・ロック状態を確認。
+- portable配布では `30_prod_db/nameverification.db` を確認。
 - restore 実行直後なら接続クローズ漏れを確認。
 - 必要に応じて直近バックアップから復旧を検討。
 
@@ -145,7 +163,8 @@
 - 期待操作の区分（read/write/destructive）を `docs/19_permissions_rbac_spec.md` で確認。
 
 ### 5.5 operation log が見えない
-- AppDataLocation 配下の `operations_events.jsonl` の存在確認。
+- portable配布では `40_logs/operations_events.jsonl` の存在を確認。
+- source/development 実行では AppDataLocation 配下の `operations_events.jsonl` の存在を確認。
 - 実行操作自体が失敗していないか UI メッセージを確認。
 - ログローテーションにより archive へ移動していないか確認。
 

@@ -1,8 +1,6 @@
 # 97_open_issues_and_constraints.md
 
 ## 未解決事項
-- UAT/Go-Live判定に使う「リリース基準SHA」の運用ルール（確定・変更時の再判定）
-- PR #117 merge後のリリース資料・配布物メタ情報・checksum・manifest の再固定
 - 非空DBへの merge/overwrite/upsert import 方針
 - SQL import を restore とどう分離して運用するか
 - 実データ件数規模の最終見積
@@ -14,12 +12,19 @@
   - 現時点は「valid role 共通 read-only 許可」を採用
 
 ## 解消済み・実装済み扱い
+- v0.1.0-rc2 portable release のリリース証跡は `docs/59_release_evidence_v0_1_0_rc2.md` に固定済み
+- UAT/Go-Live判定に使うリリース基準は v0.1.0-rc2 / PR #124 merge後の main として一旦固定済み
+- PR #117 merge後のリリース資料・配布物メタ情報・checksum・manifest は v0.1.0-rc2 として再固定済み
 - portable配布時のDB既定先は `30_prod_db/nameverification.db` に寄せる実装済み
 - portable配布時のchange log JSONL既定先は `40_logs/change_logs.jsonl` に寄せる実装済み
 - portable配布時のoperations log JSONL既定先は `40_logs/operations_events.jsonl` に寄せる実装済み
 - restore/import 実行前のDB退避は実装済み
 - invalid restore/import input は退避DB作成前に validation で止める方針へ整合済み
 - import service は file-backed DB path の fallback 解決を実装済み
+- SQLite DB 初期化時の親ディレクトリ作成保証は実装済み
+- SQLite `PRAGMA integrity_check` は初期化時に実行済み
+- portable release smoke script は実装済み
+- 生成済み `release/` 成果物は Git 管理外にする方針へ整備済み
 
 ## 制約
 - Windows ローカル前提
