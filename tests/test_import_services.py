@@ -63,6 +63,7 @@ def test_import_json_success_for_admin_on_empty_db(tmp_path: Path) -> None:
     assert counts["titles"] == 1
     assert counts["subtitles"] == 1
     assert counts["name_subtitle_links"] == 1
+    assert before_import_path.exists()
 
     assert _table_count(target_conn, "change_logs") >= 4
     name_row = target_conn.execute("SELECT raw_name FROM names").fetchone()
@@ -90,6 +91,7 @@ def test_import_csv_success_for_admin_on_empty_db(tmp_path: Path) -> None:
     assert counts["subtitles"] == 1
     assert counts["name_subtitle_links"] == 1
     assert counts["change_logs"] >= 4
+    assert before_import_path.exists()
 
     title_row = target_conn.execute("SELECT title_name FROM titles").fetchone()
     assert title_row is not None
