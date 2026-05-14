@@ -74,10 +74,6 @@ class ImportService:
         if self._database_path is not None:
             return self._database_path.expanduser().resolve()
 
-        row = self._connection.execute("PRAGMA database_list").fetchone()
-        if row is None:
-            raise ValidationError("database_path is required for pre-import backup")
-        # PRAGMA database_list columns: seq, name, file.
         rows = self._connection.execute("PRAGMA database_list").fetchall()
         for candidate in rows:
             name = str(candidate[1])
@@ -103,7 +99,7 @@ class ImportService:
                 raise ValidationError(f"required csv file is missing: {file_path}")
             try:
                 with file_path.open("r", encoding="utf-8", newline="") as fp:
-                    csv.DictReader(fp).fieldnames
+                    _ = csv.DictReader(fp).fieldnames
             except csv.Error as exc:
                 raise ValidationError(f"csv file is invalid: {file_path}") from exc
 
