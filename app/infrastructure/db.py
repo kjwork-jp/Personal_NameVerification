@@ -25,16 +25,36 @@ def apply_schema(connection: sqlite3.Connection, schema_path: Path = DEFAULT_SCH
     connection.execute("PRAGMA foreign_keys = ON;")
     connection.executescript(sql_script)
     ensure_public_ids(connection)
+    check_database_integrity(connection)
 
 
 def initialize_database(
     db_path: Path, schema_path: Path = DEFAULT_SCHEMA_PATH
 ) -> sqlite3.Connection:
     """Create/open a SQLite database file and apply the bootstrap schema."""
-    connection = sqlite3.connect(db_path)
+    resolved_db_path = db_path.expanduser()
+    if resolved_db_path.parent not in {Path(""), Path(".")}:
+        resolved_db_path.parent.mkdir(parents=True, exist_ok=True)
+
+    connection = sqlite3.connect(resolved_db_path)
     connection.row_factory = sqlite3.Row
-    apply_schema(connection=connection, schema_path=schema_path)
+    try:
+        apply_schema(connection=connection, schema_path=schema_path)
+    except Exception:
+        connection.close()
+        raise
     return connection
+
+
+def check_database_integrity(connection: sqlite3.Connection) -> None:
+    """Raise sqlite3.DatabaseError when SQLite integrity_check reports a problem."""
+
+    rows = connection.execute("PRAGMA integrity_check;").fetchall()
+    problems = [str(_row_value(row, "integrity_check", 0)) for row in rows]
+    if problems == ["ok"]:
+        return
+    detail = "; ".join(problems) if problems else "no integrity_check result returned"
+    raise sqlite3.DatabaseError(f"SQLite integrity check failed: {detail}")
 
 
 def ensure_public_ids(connection: sqlite3.Connection) -> None:
