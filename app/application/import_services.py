@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import csv
 import json
 import shutil
 import sqlite3
@@ -36,7 +37,9 @@ class ImportService:
 
     def import_csv(self, csv_dir: Path, role: ServiceRole = "admin") -> tuple[dict[str, int], Path]:
         require_admin(role, action="import_csv")
-        self._preflight_import_csv(csv_dir)
+        self._validate_csv_source(csv_dir)
+        with self._operation_connection() as connection:
+            self._validate_empty_target(connection)
         before_import_backup = self.create_before_import_backup()
         with self._operation_connection() as connection:
             return import_from_csv_directory(connection, csv_dir), before_import_backup
@@ -45,7 +48,9 @@ class ImportService:
         self, json_path: Path, role: ServiceRole = "admin"
     ) -> tuple[dict[str, int], Path]:
         require_admin(role, action="import_json")
-        self._preflight_import_json(json_path)
+        self._validate_json_source(json_path)
+        with self._operation_connection() as connection:
+            self._validate_empty_target(connection)
         before_import_backup = self.create_before_import_backup()
         with self._operation_connection() as connection:
             return import_from_json_file(connection, json_path), before_import_backup
@@ -56,6 +61,8 @@ class ImportService:
 
     def create_before_import_backup(self) -> Path:
         source = self._resolve_database_path()
+        if not source.exists() or not source.is_file():
+            raise ValidationError(f"import target database does not exist: {source}")
         backup_dir = resolve_destructive_backup_dir(source, operation="before_import")
         backup_dir.mkdir(parents=True, exist_ok=True)
         stamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
@@ -66,43 +73,51 @@ class ImportService:
     def _resolve_database_path(self) -> Path:
         if self._database_path is not None:
             return self._database_path.expanduser().resolve()
-        row = self._connection.execute("PRAGMA database_list").fetchall()
-        for item in row:
-            name = str(item[1]) if len(item) > 1 else ""
-            file_path = str(item[2]) if len(item) > 2 else ""
-            if name == "main" and file_path:
-                return Path(file_path).expanduser().resolve()
-        raise ValidationError(
-            "対象DBのファイルパスを特定できません。ファイルDBを使用してください。"
-        )
 
-    def _ensure_empty_target(self) -> None:
-        counts = self.preview_import_target_state()
-        for table_name, count in counts.items():
+        rows = self._connection.execute("PRAGMA database_list").fetchall()
+        for candidate in rows:
+            name = str(candidate[1])
+            file_name = str(candidate[2] or "")
+            if name == "main" and file_name.strip():
+                return Path(file_name).expanduser().resolve()
+        raise ValidationError("file-backed main database is required for pre-import backup")
+
+    def _validate_empty_target(self, connection: sqlite3.Connection) -> None:
+        for table_name, count in read_table_counts(connection, IMPORT_TABLES).items():
             if count > 0:
                 raise ValidationError(
                     f"import target db must be empty: table {table_name} has {count} rows"
                 )
 
-    def _preflight_import_csv(self, csv_dir: Path) -> None:
-        self._ensure_empty_target()
-        source_dir = csv_dir.resolve()
-        if not source_dir.exists() or not source_dir.is_dir():
-            raise ValidationError(f"csv directory does not exist: {source_dir}")
+    def _validate_csv_source(self, csv_dir: Path) -> None:
+        target_dir = csv_dir.expanduser().resolve()
+        if not target_dir.exists() or not target_dir.is_dir():
+            raise ValidationError(f"csv directory does not exist: {target_dir}")
         for table_name in IMPORT_TABLES:
-            file_path = source_dir / f"{table_name}.csv"
+            file_path = target_dir / f"{table_name}.csv"
             if not file_path.exists() or not file_path.is_file():
                 raise ValidationError(f"required csv file is missing: {file_path}")
+            try:
+                with file_path.open("r", encoding="utf-8", newline="") as fp:
+                    _ = csv.DictReader(fp).fieldnames
+            except csv.Error as exc:
+                raise ValidationError(f"csv file is invalid: {file_path}") from exc
 
-    def _preflight_import_json(self, json_path: Path) -> None:
-        self._ensure_empty_target()
-        source = json_path.resolve()
+    def _validate_json_source(self, json_path: Path) -> None:
+        source = json_path.expanduser().resolve()
         if not source.exists() or not source.is_file():
             raise ValidationError(f"json file does not exist: {source}")
         try:
-            json.loads(source.read_text("utf-8"))
+            payload = json.loads(source.read_text("utf-8"))
         except json.JSONDecodeError as exc:
             raise ValidationError("json file is invalid") from exc
+        if not isinstance(payload, dict):
+            raise ValidationError("json payload must be an object")
+        for table_name in IMPORT_TABLES:
+            if table_name not in payload:
+                raise ValidationError(f"json payload missing required key: {table_name}")
+            if not isinstance(payload[table_name], list):
+                raise ValidationError(f"json payload key is not a list: {table_name}")
 
     @contextmanager
     def _operation_connection(self) -> Iterator[sqlite3.Connection]:

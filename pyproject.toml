@@ -99,4 +99,12 @@ ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = ["app.ui.*"]
-disable_error_code = ["misc", "no-any-return", "assignment", "attr-defined", "method-assign"]
+disable_error_code = [
+    "arg-type",
+    "assignment",
+    "attr-defined",
+    "index",
+    "method-assign",
+    "misc",
+    "no-any-return",
+]

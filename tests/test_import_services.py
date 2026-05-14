@@ -56,6 +56,8 @@ def test_import_json_success_for_admin_on_empty_db(tmp_path: Path) -> None:
     import_service = ImportService(target_conn)
 
     counts, before_import_path = import_service.import_json(json_path, role="admin")
+    assert before_import_path.exists()
+    assert before_import_path.name.startswith("before_import_")
     assert set(counts.keys()) == set(TABLES)
     assert counts["names"] == 1
     assert counts["titles"] == 1
@@ -82,6 +84,8 @@ def test_import_csv_success_for_admin_on_empty_db(tmp_path: Path) -> None:
     import_service = ImportService(target_conn)
 
     counts, before_import_path = import_service.import_csv(csv_dir, role="admin")
+    assert before_import_path.exists()
+    assert before_import_path.name.startswith("before_import_")
     assert counts["names"] == 1
     assert counts["titles"] == 1
     assert counts["subtitles"] == 1
