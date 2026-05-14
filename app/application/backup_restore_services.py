@@ -5,7 +5,6 @@ from __future__ import annotations
 import shutil
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import cast
 
 from app.application.authorization import ServiceRole, require_admin
 from app.application.runtime_paths import resolve_destructive_backup_dir
@@ -20,7 +19,7 @@ class RestoreResult(tuple[Path, Path]):
     before_restore_path: Path
 
     def __new__(cls, restored_path: Path, before_restore_path: Path) -> RestoreResult:
-        value = cast(RestoreResult, tuple.__new__(cls, (restored_path, before_restore_path)))
+        value = tuple.__new__(cls, (restored_path, before_restore_path))
         value.restored_path = restored_path
         value.before_restore_path = before_restore_path
         return value
