@@ -32,7 +32,7 @@ class _FakeIntegrityConnection:
     def __init__(self, rows: list[tuple[str]]) -> None:
         self.rows = rows
 
-    def execute(self, sql: str) -> "_FakeIntegrityConnection":
+    def execute(self, sql: str) -> _FakeIntegrityConnection:
         assert sql == "PRAGMA integrity_check;"
         return self
 
