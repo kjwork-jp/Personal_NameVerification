@@ -3,8 +3,6 @@
 ## 未解決事項
 - 実データ件数規模の最終見積
 - アイコン保存方式の最終決定
-- UAT 実施体制
-- 配布先ディレクトリの最終決定
 - read-only 権限のロール間差分（viewer/editor/admin）を将来どこまで分離するか
   - 候補: ゴミ箱/削除済み一覧、監査ログ、deleted 含む検索の閲覧範囲
   - 現時点は「valid role 共通 read-only 許可」を採用
@@ -12,6 +10,7 @@
 ## 解消済み・実装済み扱い
 - v0.1.0-rc2 portable release のリリース証跡は `docs/59_release_evidence_v0_1_0_rc2.md` に固定済み
 - UAT/Go-Live判定に使うリリース基準は v0.1.0-rc2 / PR #124 merge後の main として一旦固定済み
+- UAT 実施体制と配布先ディレクトリ方針は `docs/63_distribution_and_uat_plan.md` にて決定済み
 - PR #117 merge後のリリース資料・配布物メタ情報・checksum・manifest は v0.1.0-rc2 として再固定済み
 - portable配布時のDB既定先は `30_prod_db/nameverification.db` に寄せる実装済み
 - portable配布時のchange log JSONL既定先は `40_logs/change_logs.jsonl` に寄せる実装済み
