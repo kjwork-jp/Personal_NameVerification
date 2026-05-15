@@ -101,3 +101,14 @@ class NameTitleLinkRow:
     link_public_id: str | None = None
     name_public_id: str | None = None
     title_public_id: str | None = None
+
+
+@dataclass(frozen=True)
+class UserAuditLogRow:
+    id: int
+    actor_operator_id: str
+    target_operator_id: str | None
+    action: str
+    before_json: str | None
+    after_json: str | None
+    created_at: str
