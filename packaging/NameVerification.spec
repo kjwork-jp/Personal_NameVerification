@@ -15,6 +15,7 @@ a = Analysis(
     datas=[
         (str(PROJECT_ROOT / "db" / "schema.sql"), "db"),
         (str(PROJECT_ROOT / "db" / "migrations"), "db/migrations"),
+        (str(PROJECT_ROOT / "migrations"), "migrations"),
     ],
     hiddenimports=[
         "PySide6.QtCore",
