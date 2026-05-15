@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, TypeVar, cast
 
 from app.application.authorization import ServiceRole, require_admin, require_known_role
 from app.application.password_services import PasswordHash, hash_password, verify_password
@@ -17,6 +18,8 @@ from app.domain.errors import (
     StateTransitionError,
     ValidationError,
 )
+
+R = TypeVar("R")
 
 
 @dataclass(frozen=True, slots=True)
@@ -340,7 +343,7 @@ class UserService:
         return int(_row_value(row, "COUNT(*)", 0))
 
     def _get_user_row_with_password(self, operator_id: str) -> sqlite3.Row | None:
-        return self._connection.execute(
+        row = self._connection.execute(
             """
             SELECT
                 id,
@@ -363,6 +366,7 @@ class UserService:
             """,
             (operator_id,),
         ).fetchone()
+        return cast(sqlite3.Row | None, row)
 
     def _insert_login_failure(self, user: UserRecord, *, reason: str) -> None:
         self._insert_user_audit_log(
@@ -397,7 +401,7 @@ class UserService:
             ),
         )
 
-    def _write(self, operation: Any) -> Any:
+    def _write(self, operation: Callable[[], R]) -> R:
         try:
             result = operation()
             self._connection.commit()
