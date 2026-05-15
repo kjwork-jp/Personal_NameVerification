@@ -136,7 +136,11 @@ class UserAuditLogTab(QWidget):
 
     def refresh(self) -> None:
         if self._role_context.role != "admin":
-            set_status_message(self.status_label, "ユーザー監査ログはadmin専用です。", level="warning")
+            set_status_message(
+                self.status_label,
+                "ユーザー監査ログはadmin専用です。",
+                level="warning",
+            )
             return
         try:
             self._rows = self._user_audit_service.list_user_audit_logs(
@@ -169,9 +173,17 @@ class UserAuditLogTab(QWidget):
         if self._rows:
             self.logs_table.selectRow(0)
             self._on_selected()
-            set_status_message(self.status_label, f"{len(self._rows)} 件を表示", level="success")
+            set_status_message(
+                self.status_label,
+                f"{len(self._rows)} 件を表示",
+                level="success",
+            )
         else:
-            set_status_message(self.status_label, "表示対象のユーザー監査ログがありません。", level="warning")
+            set_status_message(
+                self.status_label,
+                "表示対象のユーザー監査ログがありません。",
+                level="warning",
+            )
 
     def _on_selected(self) -> None:
         idx = self.logs_table.currentRow()
@@ -185,8 +197,10 @@ class UserAuditLogTab(QWidget):
         row = self._rows[idx]
         before = _parse_json_object(row.before_json)
         after = _parse_json_object(row.after_json)
+        target_operator_id = row.target_operator_id or "-"
         self.detail_summary_label.setText(
-            f"#{row.id} / {row.action} / actor={row.actor_operator_id} / target={row.target_operator_id or '-'}"
+            f"#{row.id} / {row.action} / "
+            f"actor={row.actor_operator_id} / target={target_operator_id}"
         )
         self.before_json_view.setPlainText(_pretty_json(before))
         self.after_json_view.setPlainText(_pretty_json(after))

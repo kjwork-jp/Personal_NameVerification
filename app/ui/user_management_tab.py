@@ -18,7 +18,12 @@ from PySide6.QtWidgets import (
 
 from app.application.authorization import ServiceRole
 from app.application.user_services import CreateUserInput, UserRecord, UserService
-from app.domain.errors import AuthorizationError, ConflictError, StateTransitionError, ValidationError
+from app.domain.errors import (
+    AuthorizationError,
+    ConflictError,
+    StateTransitionError,
+    ValidationError,
+)
 from app.ui.role_context import RoleContext
 from app.ui.ui_style import PageHeader, compact_layout, set_status_message
 

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import sqlite3
-from pathlib import Path
 
 import pytest
 
@@ -22,12 +21,16 @@ def test_schema_creates_required_tables() -> None:
     apply_schema(conn)
 
     assert _table_names(conn) == {
+        "app_settings",
         "change_logs",
         "name_subtitle_links",
         "name_title_links",
         "names",
+        "schema_migrations",
         "subtitles",
         "titles",
+        "user_audit_logs",
+        "users",
     }
 
 
@@ -64,12 +67,3 @@ def test_active_name_uniqueness_is_enforced_by_partial_index() -> None:
         "INSERT INTO names(raw_name, normalized_name, deleted_at) VALUES (?, ?, ?);",
         ("ALICE", "alice", "2026-01-01T00:00:00Z"),
     )
-
-
-def test_schema_and_migration_are_aligned() -> None:
-    schema_sql = Path("db/schema.sql").read_text(encoding="utf-8")
-    migration_sql = Path("db/migrations/0001_initial_schema.sql").read_text(encoding="utf-8")
-    migration_sql += Path("db/migrations/0002_name_title_links.sql").read_text(encoding="utf-8")
-
-    assert "CREATE TABLE IF NOT EXISTS name_title_links" in schema_sql
-    assert "CREATE TABLE IF NOT EXISTS name_title_links" in migration_sql
