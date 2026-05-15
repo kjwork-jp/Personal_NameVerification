@@ -8,7 +8,15 @@ from typing import Any
 
 from app.domain.public_id import new_public_id
 
-DEFAULT_SCHEMA_PATH = Path(__file__).resolve().parents[2] / "db" / "schema.sql"
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+DEFAULT_SCHEMA_PATH = PROJECT_ROOT / "db" / "schema.sql"
+DEFAULT_MIGRATIONS_DIR = PROJECT_ROOT / "migrations"
+_SCHEMA_MIGRATIONS_DDL = """
+CREATE TABLE IF NOT EXISTS schema_migrations (
+    version TEXT PRIMARY KEY,
+    applied_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+"""
 _PUBLIC_ID_TABLES = (
     "names",
     "titles",
@@ -20,12 +28,40 @@ _PUBLIC_ID_TABLES = (
 
 
 def apply_schema(connection: sqlite3.Connection, schema_path: Path = DEFAULT_SCHEMA_PATH) -> None:
-    """Apply schema SQL to an existing SQLite connection."""
+    """Apply schema SQL and pending migrations to an existing SQLite connection."""
     sql_script = schema_path.read_text(encoding="utf-8")
     connection.execute("PRAGMA foreign_keys = ON;")
     connection.executescript(sql_script)
+    apply_migrations(connection)
     ensure_public_ids(connection)
     check_database_integrity(connection)
+
+
+def apply_migrations(
+    connection: sqlite3.Connection, migrations_dir: Path = DEFAULT_MIGRATIONS_DIR
+) -> None:
+    """Apply repo-managed SQLite migration files in filename order."""
+
+    connection.executescript(_SCHEMA_MIGRATIONS_DDL)
+    if not migrations_dir.exists():
+        connection.commit()
+        return
+
+    applied_versions = {
+        str(_row_value(row, "version", 0))
+        for row in connection.execute("SELECT version FROM schema_migrations").fetchall()
+    }
+    migration_files = sorted(migrations_dir.glob("*.sql"))
+    for migration_file in migration_files:
+        version = migration_file.stem
+        if version in applied_versions:
+            continue
+        connection.executescript(migration_file.read_text(encoding="utf-8"))
+        connection.execute(
+            "INSERT INTO schema_migrations (version) VALUES (?)",
+            (version,),
+        )
+    connection.commit()
 
 
 def initialize_database(

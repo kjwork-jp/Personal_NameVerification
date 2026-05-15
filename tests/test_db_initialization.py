@@ -20,6 +20,56 @@ def test_initialize_database_creates_parent_directories(tmp_path: Path) -> None:
         connection.close()
 
 
+def test_initialize_database_applies_auth_migrations(tmp_path: Path) -> None:
+    db_path = tmp_path / "nameverification.db"
+
+    connection = initialize_database(db_path)
+    try:
+        tables = {
+            row[0]
+            for row in connection.execute(
+                "SELECT name FROM sqlite_master WHERE type = 'table'"
+            ).fetchall()
+        }
+        assert "schema_migrations" in tables
+        assert "users" in tables
+        assert "app_settings" in tables
+        assert "user_audit_logs" in tables
+        assert (
+            connection.execute(
+                "SELECT 1 FROM schema_migrations WHERE version = ?",
+                ("20260515_0001_auth_users_settings_audit",),
+            ).fetchone()
+            is not None
+        )
+    finally:
+        connection.close()
+
+
+def test_initialize_database_preserves_existing_data_when_migrating(
+    tmp_path: Path,
+) -> None:
+    db_path = tmp_path / "existing.db"
+
+    connection = initialize_database(db_path)
+    try:
+        connection.execute(
+            "INSERT INTO names (raw_name, normalized_name, note) VALUES (?, ?, ?)",
+            ("既存名", "既存名", "before migration reopen"),
+        )
+        connection.commit()
+    finally:
+        connection.close()
+
+    reopened = initialize_database(db_path)
+    try:
+        assert reopened.execute("SELECT COUNT(*) FROM names").fetchone()[0] == 1
+        assert reopened.execute("SELECT COUNT(*) FROM users").fetchone()[0] == 0
+        assert reopened.execute("PRAGMA integrity_check;").fetchone()[0] == "ok"
+    finally:
+        reopened.close()
+
+
 def test_check_database_integrity_accepts_ok_result() -> None:
     connection = sqlite3.connect(":memory:")
     try:
