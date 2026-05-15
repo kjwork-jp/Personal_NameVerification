@@ -21,6 +21,7 @@ def main() -> int:
         resolve_operations_log_jsonl_path,
         resolve_package_root,
     )
+    from app.application.user_audit_services import UserAuditLogService
     from app.application.user_services import UserService
     from app.infrastructure.db import initialize_database
     from app.ui.initial_admin_setup_dialog import InitialAdminSetupDialog
@@ -38,6 +39,7 @@ def main() -> int:
     query_service = EnhancedQueryService(connection)
     core_service = AutoExportingCoreService(connection, log_path=change_log_jsonl_path)
     user_service = UserService(connection)
+    user_audit_service = UserAuditLogService(connection)
 
     app = QApplication(sys.argv)
     operation_logger = OperationsJsonlLogger(log_path=operations_log_jsonl_path)
@@ -72,6 +74,7 @@ def main() -> int:
         backup_restore_service=BackupRestoreService(),
         import_service=ImportService(connection, database_path=database_path),
         user_service=user_service,
+        user_audit_service=user_audit_service,
         package_root=package_root,
         database_path=database_path,
         change_log_jsonl_path=change_log_jsonl_path,
