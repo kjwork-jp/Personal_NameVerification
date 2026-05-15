@@ -15,6 +15,7 @@ from app.application.export_backup_services import ExportBackupService
 from app.application.import_services import ImportService
 from app.application.query_services import QueryService
 from app.application.runtime_paths import resolve_package_root_from_database_path
+from app.application.user_audit_services import UserAuditLogService
 from app.application.user_services import UserService
 from app.ui.audit_log_tab import AuditLogTab
 from app.ui.context_helpers import apply_operator_context
@@ -29,6 +30,7 @@ from app.ui.subtitle_management_tab import SubtitleManagementTab
 from app.ui.title_management_tab import TitleManagementTab
 from app.ui.trash_tab import TrashTab
 from app.ui.ui_style import apply_friendly_theme, apply_searchable_comboboxes
+from app.ui.user_audit_log_tab import UserAuditLogTab
 from app.ui.user_management_tab import UserManagementTab
 
 
@@ -60,6 +62,7 @@ class MainWindow(QMainWindow):
         backup_restore_service: BackupRestoreService | None = None,
         import_service: ImportService | None = None,
         user_service: UserService | None = None,
+        user_audit_service: UserAuditLogService | None = None,
         package_root: Path | None = None,
         database_path: Path | None = None,
         change_log_jsonl_path: Path | None = None,
@@ -136,6 +139,14 @@ class MainWindow(QMainWindow):
                     role_context=self._role_context,
                 ),
                 "ユーザー管理",
+            )
+        if user_audit_service is not None:
+            self._add_tab(
+                UserAuditLogTab(
+                    user_audit_service=user_audit_service,
+                    role_context=self._role_context,
+                ),
+                "ユーザー監査ログ",
             )
         if (
             export_backup_service is not None
