@@ -1,8 +1,6 @@
 # 97_open_issues_and_constraints.md
 
 ## 未解決事項
-- 非空DBへの merge/overwrite/upsert import 方針
-- SQL import を restore とどう分離して運用するか
 - 実データ件数規模の最終見積
 - アイコン保存方式の最終決定
 - UAT 実施体制
@@ -25,6 +23,8 @@
 - SQLite `PRAGMA integrity_check` は初期化時に実行済み
 - portable release smoke script は実装済み
 - 生成済み `release/` 成果物は Git 管理外にする方針へ整備済み
+- 非空DBへの merge/overwrite/upsert import 方針は `docs/62_import_restore_policy_decision.md` にて、v0.1.0系では禁止継続として決定済み
+- SQL import と restore の責務分離は `docs/62_import_restore_policy_decision.md` にて、SQL import未実装・DB全体復旧はrestore責務として決定済み
 
 ## 制約
 - Windows ローカル前提
@@ -32,3 +32,5 @@
 - 単一拠点利用前提
 - 現行実装は最小 RBAC（read-only は valid role 共通）であり、詳細差分は未実装
 - restore/import はadmin専用操作であり、実施前後のバックアップ証跡確認を運用で必須とする
+- v0.1.0系ではCSV/JSON importは空DB限定とし、非空DBへのmerge/overwrite/upsert importは扱わない
+- v0.1.0系ではSQL importは扱わず、DB全体復旧はrestoreで扱う
