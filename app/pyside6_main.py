@@ -21,7 +21,9 @@ def main() -> int:
         resolve_operations_log_jsonl_path,
         resolve_package_root,
     )
+    from app.application.user_services import UserService
     from app.infrastructure.db import initialize_database
+    from app.ui.initial_admin_setup_dialog import InitialAdminSetupDialog
     from app.ui.login_dialog import LoginDialog
     from app.ui.main_window import MainWindow
     from app.ui.operations_log import OperationsJsonlLogger
@@ -35,9 +37,16 @@ def main() -> int:
     connection = initialize_database(database_path)
     query_service = EnhancedQueryService(connection)
     core_service = AutoExportingCoreService(connection, log_path=change_log_jsonl_path)
+    user_service = UserService(connection)
 
     app = QApplication(sys.argv)
     operation_logger = OperationsJsonlLogger(log_path=operations_log_jsonl_path)
+    if not user_service.list_users(include_disabled=False):
+        setup = InitialAdminSetupDialog(user_service)
+        if setup.exec() != QDialog.DialogCode.Accepted:
+            connection.close()
+            return 0
+
     login = LoginDialog()
     if login.exec() != QDialog.DialogCode.Accepted:
         connection.close()
