@@ -4,13 +4,22 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, TypeVar, cast
 
 from app.application.authorization import ServiceRole, require_admin, require_known_role
-from app.application.password_services import PasswordHash, hash_password
-from app.domain.errors import ConflictError, NotFoundError, StateTransitionError, ValidationError
+from app.application.password_services import PasswordHash, hash_password, verify_password
+from app.domain.errors import (
+    AuthorizationError,
+    ConflictError,
+    NotFoundError,
+    StateTransitionError,
+    ValidationError,
+)
+
+R = TypeVar("R")
 
 
 @dataclass(frozen=True, slots=True)
@@ -101,6 +110,73 @@ class UserService:
                 after=_audit_user_record(created),
             )
             return user_id
+
+        return self._write(operation)
+
+    def authenticate_user(self, operator_id: str, password: str) -> UserRecord:
+        """Authenticate a local user and return the stored role context source."""
+
+        def operation() -> UserRecord:
+            self._validate_operator_id(operator_id, field_name="operator_id")
+            if password == "":
+                raise ValidationError("password is required")
+
+            row = self._get_user_row_with_password(operator_id)
+            if row is None:
+                self._insert_user_audit_log(
+                    actor_operator_id=operator_id,
+                    target_operator_id=operator_id,
+                    action="login_failure",
+                    before=None,
+                    after={"operator_id": operator_id, "reason": "not_found"},
+                )
+                raise AuthorizationError("invalid operator_id or password")
+
+            user = _user_record_from_row(row)
+            if user.disabled_at is not None:
+                self._insert_login_failure(user, reason="disabled")
+                raise AuthorizationError("user is disabled")
+            now = _utc_now()
+            if user.locked_until is not None and user.locked_until > now:
+                self._insert_login_failure(user, reason="locked")
+                raise AuthorizationError("user is locked")
+
+            if not verify_password(password, _password_hash_from_row(row)):
+                self._connection.execute(
+                    """
+                    UPDATE users
+                    SET failed_login_count = failed_login_count + 1, updated_at = ?
+                    WHERE id = ?
+                    """,
+                    (now, user.id),
+                )
+                after_failure = self.get_user(operator_id, include_disabled=True)
+                self._insert_user_audit_log(
+                    actor_operator_id=operator_id,
+                    target_operator_id=operator_id,
+                    action="login_failure",
+                    before=_audit_user_record(user),
+                    after={**_audit_user_record(after_failure), "reason": "password_mismatch"},
+                )
+                raise AuthorizationError("invalid operator_id or password")
+
+            self._connection.execute(
+                """
+                UPDATE users
+                SET failed_login_count = 0, last_login_at = ?, updated_at = ?
+                WHERE id = ?
+                """,
+                (now, now, user.id),
+            )
+            authenticated = self.get_user(operator_id, include_disabled=True)
+            self._insert_user_audit_log(
+                actor_operator_id=operator_id,
+                target_operator_id=operator_id,
+                action="login_success",
+                before=_audit_user_record(user),
+                after=_audit_user_record(authenticated),
+            )
+            return authenticated
 
         return self._write(operation)
 
@@ -266,6 +342,41 @@ class UserService:
         ).fetchone()
         return int(_row_value(row, "COUNT(*)", 0))
 
+    def _get_user_row_with_password(self, operator_id: str) -> sqlite3.Row | None:
+        row = self._connection.execute(
+            """
+            SELECT
+                id,
+                public_id,
+                operator_id,
+                display_name,
+                role,
+                disabled_at,
+                failed_login_count,
+                locked_until,
+                last_login_at,
+                created_at,
+                updated_at,
+                password_hash,
+                password_salt,
+                password_algorithm,
+                password_iterations
+            FROM users
+            WHERE operator_id = ?
+            """,
+            (operator_id,),
+        ).fetchone()
+        return cast(sqlite3.Row | None, row)
+
+    def _insert_login_failure(self, user: UserRecord, *, reason: str) -> None:
+        self._insert_user_audit_log(
+            actor_operator_id=user.operator_id,
+            target_operator_id=user.operator_id,
+            action="login_failure",
+            before=_audit_user_record(user),
+            after={**_audit_user_record(user), "reason": reason},
+        )
+
     def _insert_user_audit_log(
         self,
         *,
@@ -290,7 +401,7 @@ class UserService:
             ),
         )
 
-    def _write(self, operation: Any) -> Any:
+    def _write(self, operation: Callable[[], R]) -> R:
         try:
             result = operation()
             self._connection.commit()
@@ -318,6 +429,15 @@ def _user_record_from_row(row: Any) -> UserRecord:
         last_login_at=_optional_str(_row_value(row, "last_login_at", 8)),
         created_at=str(_row_value(row, "created_at", 9)),
         updated_at=str(_row_value(row, "updated_at", 10)),
+    )
+
+
+def _password_hash_from_row(row: Any) -> PasswordHash:
+    return PasswordHash(
+        algorithm=str(_row_value(row, "password_algorithm", 13)),
+        iterations=int(_row_value(row, "password_iterations", 14)),
+        salt=str(_row_value(row, "password_salt", 12)),
+        password_hash=str(_row_value(row, "password_hash", 11)),
     )
 
 

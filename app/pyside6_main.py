@@ -47,7 +47,7 @@ def main() -> int:
             connection.close()
             return 0
 
-    login = LoginDialog()
+    login = LoginDialog(user_service)
     if login.exec() != QDialog.DialogCode.Accepted:
         connection.close()
         return 0

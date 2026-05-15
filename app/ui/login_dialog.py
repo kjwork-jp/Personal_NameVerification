@@ -1,9 +1,8 @@
-"""Local login dialog for selecting operator and role."""
+"""Password login dialog for local users."""
 
 from __future__ import annotations
 
 from PySide6.QtWidgets import (
-    QComboBox,
     QDialog,
     QDialogButtonBox,
     QFormLayout,
@@ -12,31 +11,33 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
+from app.application.user_services import UserService
+from app.domain.errors import AuthorizationError, ValidationError
 from app.ui.input_defaults import default_operator_id
 from app.ui.role_context import RoleContext
 
 
 class LoginDialog(QDialog):
-    """Small local-only login dialog.
+    """Local password login dialog.
 
-    This is not authentication. It records the local operator and role used for
-    audit logs and UI permission guards.
+    The user's role is loaded from the users table after password authentication.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, user_service: UserService) -> None:
         super().__init__()
+        self._user_service = user_service
+        self._role_context: RoleContext | None = None
         self.setWindowTitle("ログイン")
         self.operator_input = QLineEdit(default_operator_id())
         self.operator_input.setPlaceholderText("操作者ID")
-        self.role_combo = QComboBox()
-        self.role_combo.addItem("管理者", "admin")
-        self.role_combo.addItem("編集者", "editor")
-        self.role_combo.addItem("閲覧者", "viewer")
-        self.message_label = QLabel("ローカル利用前提の操作者・権限選択です。")
+        self.password_input = QLineEdit()
+        self.password_input.setEchoMode(QLineEdit.EchoMode.Password)
+        self.password_input.setPlaceholderText("パスワード")
+        self.message_label = QLabel("操作者IDとパスワードを入力してください。")
 
         form = QFormLayout()
-        form.addRow("操作者", self.operator_input)
-        form.addRow("権限", self.role_combo)
+        form.addRow("操作者ID", self.operator_input)
+        form.addRow("パスワード", self.password_input)
 
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok)
         buttons.accepted.connect(self._accept_if_valid)
@@ -47,14 +48,31 @@ class LoginDialog(QDialog):
         layout.addWidget(buttons)
 
     def role_context(self) -> RoleContext:
-        return RoleContext(
-            role=self.role_combo.currentData(),
-            operator_id=self.operator_input.text().strip(),
-        )
+        if self._role_context is None:
+            raise RuntimeError("login has not been accepted")
+        return self._role_context
 
     def _accept_if_valid(self) -> None:
-        if not self.operator_input.text().strip():
-            self.message_label.setStyleSheet("color: #ff8a8a;")
-            self.message_label.setText("操作者IDを入力してください。")
+        operator_id = self.operator_input.text().strip()
+        password = self.password_input.text()
+        if not operator_id:
+            self._show_error("操作者IDを入力してください。")
             return
+        if not password:
+            self._show_error("パスワードを入力してください。")
+            return
+        try:
+            user = self._user_service.authenticate_user(operator_id, password)
+        except (AuthorizationError, ValidationError):
+            self._show_error("操作者IDまたはパスワードが正しくありません。")
+            return
+
+        self._role_context = RoleContext(
+            role=user.role,
+            operator_id=user.operator_id,
+        )
         self.accept()
+
+    def _show_error(self, message: str) -> None:
+        self.message_label.setStyleSheet("color: #ff8a8a;")
+        self.message_label.setText(message)
