@@ -6,7 +6,13 @@ from pathlib import Path
 import pytest
 
 from app.application.user_services import CreateUserInput, UserService
-from app.domain.errors import AuthorizationError, ConflictError, NotFoundError, StateTransitionError, ValidationError
+from app.domain.errors import (
+    AuthorizationError,
+    ConflictError,
+    NotFoundError,
+    StateTransitionError,
+    ValidationError,
+)
 from app.infrastructure.db import initialize_database
 
 
@@ -27,7 +33,18 @@ def test_create_user_hashes_password_and_writes_audit(tmp_path: Path) -> None:
         )
 
         row = connection.execute(
-            "SELECT operator_id, display_name, role, password_hash, password_salt, password_algorithm, password_iterations FROM users WHERE id = ?",
+            """
+            SELECT
+                operator_id,
+                display_name,
+                role,
+                password_hash,
+                password_salt,
+                password_algorithm,
+                password_iterations
+            FROM users
+            WHERE id = ?
+            """,
             (user_id,),
         ).fetchone()
         assert row is not None
