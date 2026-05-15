@@ -8,6 +8,9 @@
   - 現行ログイン画面は認証ではなく、操作者IDとroleを利用者が任意選択できる
   - 複数ユーザー運用・第三者配布ではNo-Go
   - 詳細は `docs/66_security_user_management_gap_analysis.md` を参照
+- 品質属性別の残存改善工程
+  - 信頼性、可用性、保守性、完全性、機密性、ユーザビリティの不足機能を `docs/67_quality_attribute_gap_analysis.md` に洗い出し済み
+  - P0は認証・ユーザー管理・role自由選択廃止・初回admin作成・ユーザー管理タブ
 
 ## 解消済み・実装済み扱い
 - v0.1.0-rc2 portable release のリリース証跡は `docs/59_release_evidence_v0_1_0_rc2.md` に固定済み
@@ -16,6 +19,7 @@
 - 実データ件数規模とアイコン保存方式は `docs/64_data_scale_and_asset_storage_policy.md` にて、v0.1.0系のGo/No-Go blockerではないと決定済み
 - read-only 権限のロール間差分は `docs/65_readonly_rbac_future_policy.md` にて、v0.1.0系では valid role 共通許可、詳細分離は将来課題として決定済み
 - 認証・ユーザー管理・管理設定の不足機能は `docs/66_security_user_management_gap_analysis.md` に洗い出し済み
+- 品質属性別の残存改善工程は `docs/67_quality_attribute_gap_analysis.md` に洗い出し済み
 - PR #117 merge後のリリース資料・配布物メタ情報・checksum・manifest は v0.1.0-rc2 として再固定済み
 - portable配布時のDB既定先は `30_prod_db/nameverification.db` に寄せる実装済み
 - portable配布時のchange log JSONL既定先は `40_logs/change_logs.jsonl` に寄せる実装済み
@@ -41,3 +45,4 @@
 - v0.1.0系ではSQL importは扱わず、DB全体復旧はrestoreで扱う
 - v0.1.0系ではアイコン・画像資産は実装対象外とし、将来扱う場合はassets配下の相対パス管理を第一候補とする
 - v0.1.0系ではread-only操作はviewer/editor/adminのvalid role共通許可とし、詳細分離は将来課題とする
+- 複数ユーザー運用・第三者配布・機微情報投入では、認証・ユーザー管理・管理設定実装までNo-Goとする
