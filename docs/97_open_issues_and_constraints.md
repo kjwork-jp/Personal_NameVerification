@@ -14,6 +14,9 @@
 - 品質属性別の残存改善工程
   - 信頼性、可用性、保守性、完全性、機密性、ユーザビリティの不足機能を `docs/67_quality_attribute_gap_analysis.md` に洗い出し済み
   - P0は認証・ユーザー管理・role自由選択廃止・初回admin作成・ユーザー管理タブ
+- v0.2.0実装前の詳細設計
+  - v0.2.0設計の過不足は `docs/69_v0_2_0_design_completeness_review.md` に整理済み
+  - 次工程は `docs/70_v0_2_0_auth_user_management_implementation_plan.md` の作成
 
 ## 解消済み・実装済み扱い
 - v0.1.0-rc2 portable release のリリース証跡は `docs/59_release_evidence_v0_1_0_rc2.md` に固定済み
@@ -24,6 +27,7 @@
 - 認証・ユーザー管理・管理設定の不足機能は `docs/66_security_user_management_gap_analysis.md` に洗い出し済み
 - 品質属性別の残存改善工程は `docs/67_quality_attribute_gap_analysis.md` に洗い出し済み
 - DBファイル直アクセスリスクと保護方針は `docs/68_database_file_protection_policy.md` に洗い出し済み
+- v0.2.0設計の過不足は `docs/69_v0_2_0_design_completeness_review.md` に洗い出し済み
 - PR #117 merge後のリリース資料・配布物メタ情報・checksum・manifest は v0.1.0-rc2 として再固定済み
 - portable配布時のDB既定先は `30_prod_db/nameverification.db` に寄せる実装済み
 - portable配布時のchange log JSONL既定先は `40_logs/change_logs.jsonl` に寄せる実装済み
