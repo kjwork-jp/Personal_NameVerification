@@ -116,50 +116,54 @@ class UserService:
     def authenticate_user(self, operator_id: str, password: str) -> UserRecord:
         """Authenticate a local user and return the stored role context source."""
 
+        self._validate_operator_id(operator_id, field_name="operator_id")
+        if password == "":
+            raise ValidationError("password is required")
+
+        row = self._get_user_row_with_password(operator_id)
+        if row is None:
+            self._insert_user_audit_log(
+                actor_operator_id=operator_id,
+                target_operator_id=operator_id,
+                action="login_failure",
+                before=None,
+                after={"operator_id": operator_id, "reason": "not_found"},
+            )
+            self._connection.commit()
+            raise AuthorizationError("invalid operator_id or password")
+
+        user = _user_record_from_row(row)
+        if user.disabled_at is not None:
+            self._insert_login_failure(user, reason="disabled")
+            self._connection.commit()
+            raise AuthorizationError("user is disabled")
+        now = _utc_now()
+        if user.locked_until is not None and user.locked_until > now:
+            self._insert_login_failure(user, reason="locked")
+            self._connection.commit()
+            raise AuthorizationError("user is locked")
+
+        if not verify_password(password, _password_hash_from_row(row)):
+            self._connection.execute(
+                """
+                UPDATE users
+                SET failed_login_count = failed_login_count + 1, updated_at = ?
+                WHERE id = ?
+                """,
+                (now, user.id),
+            )
+            after_failure = self.get_user(operator_id, include_disabled=True)
+            self._insert_user_audit_log(
+                actor_operator_id=operator_id,
+                target_operator_id=operator_id,
+                action="login_failure",
+                before=_audit_user_record(user),
+                after={**_audit_user_record(after_failure), "reason": "password_mismatch"},
+            )
+            self._connection.commit()
+            raise AuthorizationError("invalid operator_id or password")
+
         def operation() -> UserRecord:
-            self._validate_operator_id(operator_id, field_name="operator_id")
-            if password == "":
-                raise ValidationError("password is required")
-
-            row = self._get_user_row_with_password(operator_id)
-            if row is None:
-                self._insert_user_audit_log(
-                    actor_operator_id=operator_id,
-                    target_operator_id=operator_id,
-                    action="login_failure",
-                    before=None,
-                    after={"operator_id": operator_id, "reason": "not_found"},
-                )
-                raise AuthorizationError("invalid operator_id or password")
-
-            user = _user_record_from_row(row)
-            if user.disabled_at is not None:
-                self._insert_login_failure(user, reason="disabled")
-                raise AuthorizationError("user is disabled")
-            now = _utc_now()
-            if user.locked_until is not None and user.locked_until > now:
-                self._insert_login_failure(user, reason="locked")
-                raise AuthorizationError("user is locked")
-
-            if not verify_password(password, _password_hash_from_row(row)):
-                self._connection.execute(
-                    """
-                    UPDATE users
-                    SET failed_login_count = failed_login_count + 1, updated_at = ?
-                    WHERE id = ?
-                    """,
-                    (now, user.id),
-                )
-                after_failure = self.get_user(operator_id, include_disabled=True)
-                self._insert_user_audit_log(
-                    actor_operator_id=operator_id,
-                    target_operator_id=operator_id,
-                    action="login_failure",
-                    before=_audit_user_record(user),
-                    after={**_audit_user_record(after_failure), "reason": "password_mismatch"},
-                )
-                raise AuthorizationError("invalid operator_id or password")
-
             self._connection.execute(
                 """
                 UPDATE users
