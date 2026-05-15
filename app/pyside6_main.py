@@ -33,7 +33,9 @@ def main() -> int:
     database_path = resolve_database_path(package_root=package_root)
     change_log_jsonl_path = resolve_change_log_jsonl_path(package_root=package_root)
     operations_log_jsonl_path = resolve_operations_log_jsonl_path(package_root=package_root)
-    ensure_runtime_parent_dirs(database_path, change_log_jsonl_path, operations_log_jsonl_path)
+    ensure_runtime_parent_dirs(
+        database_path, change_log_jsonl_path, operations_log_jsonl_path
+    )
 
     connection = initialize_database(database_path)
     query_service = EnhancedQueryService(connection)
