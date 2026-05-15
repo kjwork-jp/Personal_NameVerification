@@ -7,6 +7,7 @@ $ScriptRoot = $PSScriptRoot
 $ExePath = Join-Path $ProjectRoot "dist\NameVerification.exe"
 $SmokeDir = Join-Path $ProjectRoot "tmp\exe_smoke"
 $SmokeDbPath = Join-Path $SmokeDir "nameverification_smoke.db"
+$TableCheckScriptPath = Join-Path $SmokeDir "check_smoke_tables.py"
 
 Write-Host "[1/7] Check EXE exists"
 if (-not (Test-Path $ExePath)) {
@@ -39,28 +40,34 @@ if (-not (Test-Path $SmokeDbPath)) {
 
 Write-Host "[6/7] Check required runtime tables"
 $TableCheckScript = @'
+from __future__ import annotations
+
 import sqlite3
 import sys
 
-db_path = sys.argv[1]
-required_tables = set(sys.argv[2:])
-connection = sqlite3.connect(db_path)
-try:
-    tables = {
-        row[0]
-        for row in connection.execute(
-            "SELECT name FROM sqlite_master WHERE type='table'"
-        )
-    }
-finally:
-    connection.close()
 
-missing = sorted(required_tables - tables)
-if missing:
-    raise SystemExit("Missing smoke database tables: " + ", ".join(missing))
-print("Smoke database tables OK: " + ", ".join(sorted(required_tables)))
+def main() -> int:
+    db_path = sys.argv[1]
+    required_tables = set(sys.argv[2:])
+    connection = sqlite3.connect(db_path)
+    try:
+        rows = connection.execute("SELECT name FROM sqlite_master WHERE type='table'")
+        tables = {row[0] for row in rows}
+    finally:
+        connection.close()
+
+    missing = sorted(required_tables - tables)
+    if missing:
+        raise SystemExit("Missing smoke database tables: " + ", ".join(missing))
+    print("Smoke database tables OK: " + ", ".join(sorted(required_tables)))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
 '@
-python -c $TableCheckScript $SmokeDbPath "users" "user_audit_logs" "app_settings" "schema_migrations"
+Set-Content -Path $TableCheckScriptPath -Value $TableCheckScript -Encoding UTF8
+python $TableCheckScriptPath $SmokeDbPath "users" "user_audit_logs" "app_settings" "schema_migrations"
 if ($LASTEXITCODE -ne 0) { throw "Smoke database table check failed" }
 
 Write-Host "[7/7] Stop EXE"
