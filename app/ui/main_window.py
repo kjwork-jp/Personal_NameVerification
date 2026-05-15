@@ -15,6 +15,7 @@ from app.application.export_backup_services import ExportBackupService
 from app.application.import_services import ImportService
 from app.application.query_services import QueryService
 from app.application.runtime_paths import resolve_package_root_from_database_path
+from app.application.user_services import UserService
 from app.ui.audit_log_tab import AuditLogTab
 from app.ui.context_helpers import apply_operator_context
 from app.ui.help_settings_tab import HelpSettingsTab
@@ -28,6 +29,7 @@ from app.ui.subtitle_management_tab import SubtitleManagementTab
 from app.ui.title_management_tab import TitleManagementTab
 from app.ui.trash_tab import TrashTab
 from app.ui.ui_style import apply_friendly_theme, apply_searchable_comboboxes
+from app.ui.user_management_tab import UserManagementTab
 
 
 def _operations_fallback_base_dir() -> Path:
@@ -57,6 +59,7 @@ class MainWindow(QMainWindow):
         export_backup_service: ExportBackupService | None = None,
         backup_restore_service: BackupRestoreService | None = None,
         import_service: ImportService | None = None,
+        user_service: UserService | None = None,
         package_root: Path | None = None,
         database_path: Path | None = None,
         change_log_jsonl_path: Path | None = None,
@@ -126,6 +129,14 @@ class MainWindow(QMainWindow):
             AuditLogTab(query_service=query_service, role_context=self._role_context),
             "操作履歴",
         )
+        if user_service is not None:
+            self._add_tab(
+                UserManagementTab(
+                    user_service=user_service,
+                    role_context=self._role_context,
+                ),
+                "ユーザー管理",
+            )
         if (
             export_backup_service is not None
             and backup_restore_service is not None
@@ -258,5 +269,4 @@ class MainWindow(QMainWindow):
     def closeEvent(self, event: QCloseEvent) -> None:  # noqa: N802
         if self._connection is not None:
             self._connection.commit()
-            self._connection.close()
         super().closeEvent(event)

@@ -71,6 +71,7 @@ def main() -> int:
         export_backup_service=ExportBackupService(connection, database_path=database_path),
         backup_restore_service=BackupRestoreService(),
         import_service=ImportService(connection, database_path=database_path),
+        user_service=user_service,
         package_root=package_root,
         database_path=database_path,
         change_log_jsonl_path=change_log_jsonl_path,
