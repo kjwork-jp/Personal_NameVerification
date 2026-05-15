@@ -4,6 +4,10 @@
 - Day1業務CRUD/UAT本実施
   - 検索、CRUD、link、ゴミ箱、Audit、export、backup、権限、再起動後永続化の手動確認
   - 現時点のGo/No-Goは `docs/61_day0_day1_execution_record_v0_1_0_rc2_20260515.md` 上で Conditional Go
+- 認証・ユーザー管理・管理設定の実装
+  - 現行ログイン画面は認証ではなく、操作者IDとroleを利用者が任意選択できる
+  - 複数ユーザー運用・第三者配布ではNo-Go
+  - 詳細は `docs/66_security_user_management_gap_analysis.md` を参照
 
 ## 解消済み・実装済み扱い
 - v0.1.0-rc2 portable release のリリース証跡は `docs/59_release_evidence_v0_1_0_rc2.md` に固定済み
@@ -11,6 +15,7 @@
 - UAT 実施体制と配布先ディレクトリ方針は `docs/63_distribution_and_uat_plan.md` にて決定済み
 - 実データ件数規模とアイコン保存方式は `docs/64_data_scale_and_asset_storage_policy.md` にて、v0.1.0系のGo/No-Go blockerではないと決定済み
 - read-only 権限のロール間差分は `docs/65_readonly_rbac_future_policy.md` にて、v0.1.0系では valid role 共通許可、詳細分離は将来課題として決定済み
+- 認証・ユーザー管理・管理設定の不足機能は `docs/66_security_user_management_gap_analysis.md` に洗い出し済み
 - PR #117 merge後のリリース資料・配布物メタ情報・checksum・manifest は v0.1.0-rc2 として再固定済み
 - portable配布時のDB既定先は `30_prod_db/nameverification.db` に寄せる実装済み
 - portable配布時のchange log JSONL既定先は `40_logs/change_logs.jsonl` に寄せる実装済み
@@ -30,6 +35,7 @@
 - オフライン前提
 - 単一拠点利用前提
 - 現行実装は最小 RBAC（read-only は valid role 共通）であり、詳細差分は未実装
+- 現行ログイン画面は認証ではなく、単一ユーザー・信頼済みローカル利用の暫定導線である
 - restore/import はadmin専用操作であり、実施前後のバックアップ証跡確認を運用で必須とする
 - v0.1.0系ではCSV/JSON importは空DB限定とし、非空DBへのmerge/overwrite/upsert importは扱わない
 - v0.1.0系ではSQL importは扱わず、DB全体復旧はrestoreで扱う
