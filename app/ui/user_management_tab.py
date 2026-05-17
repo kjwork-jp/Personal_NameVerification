@@ -24,6 +24,7 @@ from app.domain.errors import (
     StateTransitionError,
     ValidationError,
 )
+from app.ui.navigation_guide import OperationGuide
 from app.ui.role_context import RoleContext
 from app.ui.ui_style import PageHeader, compact_layout, set_status_message
 
@@ -93,7 +94,9 @@ class UserManagementTab(QWidget):
         self.table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
 
         self.target_operator_input = QLineEdit()
-        self.target_operator_input.setPlaceholderText("対象操作者ID")
+        self.target_operator_input.setPlaceholderText(
+            "一覧で行選択すると自動入力。手入力も可"
+        )
         self.target_role_combo = QComboBox()
         self.target_role_combo.addItem("管理者", "admin")
         self.target_role_combo.addItem("編集者", "editor")
@@ -110,12 +113,26 @@ class UserManagementTab(QWidget):
 
         action_row = QHBoxLayout()
         compact_layout(action_row)
-        action_row.addWidget(self.target_operator_input)
-        action_row.addWidget(self.target_role_combo)
+        action_row.addWidget(QLabel("選択中/対象の操作者ID"))
+        action_row.addWidget(self.target_operator_input, 2)
+        action_row.addWidget(QLabel("変更後の権限"))
+        action_row.addWidget(self.target_role_combo, 1)
         action_row.addWidget(self.change_role_button)
         action_row.addWidget(self.disable_button)
         action_row.addWidget(self.enable_button)
         action_row.addWidget(self.refresh_button)
+
+        self.action_group = QGroupBox("選択ユーザーへの操作")
+        action_group_layout = QVBoxLayout(self.action_group)
+        compact_layout(action_group_layout)
+        action_group_layout.setContentsMargins(8, 20, 8, 8)
+        action_group_layout.addWidget(
+            QLabel(
+                "一覧で対象ユーザーの行を選ぶと、対象操作者IDへ自動入力されます。"
+                "権限変更は右の『変更後の権限』を選んでから実行します。"
+            )
+        )
+        action_group_layout.addLayout(action_row)
 
         layout = QVBoxLayout(self)
         compact_layout(layout, margins=6, spacing=5)
@@ -126,10 +143,22 @@ class UserManagementTab(QWidget):
             ),
             0,
         )
+        layout.addWidget(
+            OperationGuide(
+                "操作ガイド",
+                [
+                    "新規ユーザーは上の『ユーザー作成』で操作者ID・初期パスワード・権限を入力して作成します。",
+                    "既存ユーザーを変更する場合は、一覧で対象行を選んでから下の『選択ユーザーへの操作』を使います。",
+                    "最後の有効な管理者は、降格・無効化できない仕様です。",
+                    "実行結果や失敗理由は緑/赤のメッセージ欄に表示されます。",
+                ],
+            ),
+            0,
+        )
         layout.addWidget(self.status_label, 0)
         layout.addWidget(self.create_group, 0)
         layout.addWidget(self.table, 1)
-        layout.addLayout(action_row, 0)
+        layout.addWidget(self.action_group, 0)
 
         self._apply_permissions()
         self.refresh()
