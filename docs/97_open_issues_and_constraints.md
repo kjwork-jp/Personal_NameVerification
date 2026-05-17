@@ -1,5 +1,12 @@
 # 97_open_issues_and_constraints.md
 
+## 2026-05-17追記: main after PR #141 時点の補足
+
+- 認証・ユーザー管理はPR #126〜#141で大きく進行済み。
+- 実装済み: auth schema migration、password hashing、user service、初回admin setup、password login、user management tab、user audit log tab、EXE smoke auth table check。
+- 残作業: v0.2.0統合UAT、docs/97本文全体の再整理、v0.2.0-rc1 release evidence固定、DB/backup/export/log保護警告・診断。
+- 旧記述の「次工程はPR-020-001」は古い。PR-020-001相当はPR #126で実装済み。
+
 ## 未解決事項
 - Day1業務CRUD/UAT本実施
   - 検索、CRUD、link、ゴミ箱、Audit、export、backup、権限、再起動後永続化の手動確認
