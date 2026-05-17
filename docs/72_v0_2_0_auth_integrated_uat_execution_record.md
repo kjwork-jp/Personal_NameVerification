@@ -15,14 +15,14 @@
 | 実行日 | 2026-05-18 |
 | 実行者 | NAOKI KAJIWARA |
 | 対象branch | `main` |
-| 対象commit | `87a4440` |
-| Python | 未記入 |
-| OS | Windows |
-| DB path | 未記入 |
-| change log JSONL path | 未記入 |
-| EXE path | 未記入 |
+| 対象commit | `78417cc` |
+| Python | 3.13.1 |
+| OS | Windows 11 |
+| DB path | `tmp/exe_smoke/nameverification_smoke.db` / GUI UAT DB path未記録 |
+| change log JSONL path | GUI UAT path未記録 |
+| EXE path | `dist/NameVerification.exe` |
 | release candidate | v0.2.0 UAT candidate |
-| 総合判定 | UAT継続（品質ゲート4項目OK、EXE/GUI UAT未実施） |
+| 総合判定 | UAT継続（品質ゲート6項目OK、GUI UAT一部OK、role別/既存DB互換/portable未実施） |
 
 ---
 
@@ -39,13 +39,13 @@ python -m pip --version
 実行結果:
 
 ```text
-git pull origin main: Fast-forward 07f13b7..87a4440
-87a4440 (HEAD -> main, origin/main, origin/HEAD) docs: add v020 auth UAT execution record template
+git pull origin main: Fast-forward 87a4440..78417cc
+78417cc (HEAD -> main, origin/main, origin/HEAD) docs: record v020 UAT quality gate results
+87a4440 docs: add v020 auth UAT execution record template
 07f13b7 docs: add v020 auth integrated UAT checklist
 6236cd8 docs: add PR141 status note to open issues
 87530df Merge pull request #142 from kjwork-jp/docs-sync-auth-current-state-after-pr141
-52eec46 docs: update v020 plan progress after PR141
-python --version: 未記入
+python --version: Python 3.13.1
 python -m pip --version: 未記入
 ```
 
@@ -61,7 +61,7 @@ $env:NAMEVERIFICATION_CHANGE_LOG_JSONL_PATH = "$PWD\tmp\uat_v020\change_logs.jso
 実行結果:
 
 ```text
-未実施
+明示設定ログなし。EXE smokeは script 管理の isolated smoke database path を使用。
 ```
 
 ---
@@ -74,8 +74,8 @@ $env:NAMEVERIFICATION_CHANGE_LOG_JSONL_PATH = "$PWD\tmp\uat_v020\change_logs.jso
 | QG-002 | ruff | `ruff check .` | pass | OK | `All checks passed!` |
 | QG-003 | black | `black --check .` | pass | OK | `All done!` / `26 files would be left unchanged.` |
 | QG-004 | mypy | `mypy app` | pass | OK | `Success: no issues found in 52 source files` |
-| QG-005 | EXE build | `.\scripts\build_exe_windows.ps1` | EXE作成 | 未実施 | 次工程で実施 |
-| QG-006 | EXE smoke | `.\scripts\smoke_test_exe_windows.ps1` | auth tables check pass | 未実施 | 次工程で実施 |
+| QG-005 | EXE build | `.\scripts\build_exe_windows.ps1` | EXE作成 | OK | `Build complete: dist/NameVerification.exe` |
+| QG-006 | EXE smoke | `.\scripts\smoke_test_exe_windows.ps1` | auth tables check pass | OK | `Smoke database tables OK: app_settings, schema_migrations, user_audit_logs, users` |
 
 ---
 
@@ -83,11 +83,11 @@ $env:NAMEVERIFICATION_CHANGE_LOG_JSONL_PATH = "$PWD\tmp\uat_v020\change_logs.jso
 
 | ID | 確認項目 | 期待結果 | 結果 | 証跡/メモ |
 |---|---|---|---|---|
-| ADM-001 | users 0件時の初回setup表示 | InitialAdminSetupDialog 表示 | 未実施 |  |
-| ADM-002 | admin作成 | admin user 作成 | 未実施 |  |
+| ADM-001 | users 0件時の初回setup表示 | InitialAdminSetupDialog 表示 | OK | screenshot確認: 初回管理者作成dialog表示 |
+| ADM-002 | admin作成 | admin user 作成 | OK | screenshot確認: admin / admin がユーザー一覧に表示 |
 | ADM-003 | password confirmation不一致 | 作成不可 | 未実施 |  |
 | ADM-004 | 空operator_id | 作成不可 | 未実施 |  |
-| ADM-005 | setup後のlogin遷移 | LoginDialog 表示 | 未実施 |  |
+| ADM-005 | setup後のlogin遷移 | LoginDialog 表示 | OK | screenshot確認: login dialog表示 |
 
 ---
 
@@ -95,11 +95,11 @@ $env:NAMEVERIFICATION_CHANGE_LOG_JSONL_PATH = "$PWD\tmp\uat_v020\change_logs.jso
 
 | ID | 確認項目 | 期待結果 | 結果 | 証跡/メモ |
 |---|---|---|---|---|
-| LOG-001 | 正常login | MainWindow表示 | 未実施 |  |
-| LOG-002 | role combo廃止 | role選択UIなし | 未実施 |  |
+| LOG-001 | 正常login | MainWindow表示 | OK | screenshot確認: NameVerification v3 MainWindow表示 |
+| LOG-002 | role combo廃止 | role選択UIなし | OK | screenshot確認: LoginDialogは操作者ID/passwordのみ |
 | LOG-003 | 誤password | login拒否 | 未実施 |  |
 | LOG-004 | 未登録operator_id | login拒否 | 未実施 |  |
-| LOG-005 | RoleContext反映 | admin操作可能 | 未実施 |  |
+| LOG-005 | RoleContext反映 | admin操作可能 | OK | screenshot確認: adminでユーザー管理tab操作可能 |
 
 ---
 
@@ -107,7 +107,7 @@ $env:NAMEVERIFICATION_CHANGE_LOG_JSONL_PATH = "$PWD\tmp\uat_v020\change_logs.jso
 
 | ID | 確認項目 | 期待結果 | 結果 | 証跡/メモ |
 |---|---|---|---|---|
-| USR-001 | tab表示 | ユーザー管理tab表示 | 未実施 |  |
+| USR-001 | tab表示 | ユーザー管理tab表示 | OK | screenshot確認 |
 | USR-002 | viewer作成 | viewer user一覧表示 | 未実施 |  |
 | USR-003 | editor作成 | editor user一覧表示 | 未実施 |  |
 | USR-004 | operator_id重複 | 重複エラー | 未実施 |  |
@@ -128,7 +128,7 @@ $env:NAMEVERIFICATION_CHANGE_LOG_JSONL_PATH = "$PWD\tmp\uat_v020\change_logs.jso
 | RBAC-003 | viewer | restore/import | 不可 | 未実施 |  |
 | RBAC-004 | editor | 名前登録/更新 | 可能 | 未実施 |  |
 | RBAC-005 | editor | restore/import | 不可 | 未実施 |  |
-| RBAC-006 | admin | destructive操作 | 可能 | 未実施 |  |
+| RBAC-006 | admin | destructive操作 | 可能 | 一部OK | adminでユーザー管理tab操作可能。restore/import等は未実施 |
 | RBAC-007 | non-admin | user management tab | 操作不可または表示制限 | 未実施 |  |
 | RBAC-008 | non-admin | user audit log tab | 操作不可または表示制限 | 未実施 |  |
 
@@ -138,12 +138,12 @@ $env:NAMEVERIFICATION_CHANGE_LOG_JSONL_PATH = "$PWD\tmp\uat_v020\change_logs.jso
 
 | ID | 確認項目 | 期待結果 | 結果 | 証跡/メモ |
 |---|---|---|---|---|
-| AUD-001 | login_success記録 | user_audit_logsに記録 | 未実施 |  |
+| AUD-001 | login_success記録 | user_audit_logsに記録 | OK | screenshot確認: `login_success` 表示 |
 | AUD-002 | login_failure記録 | user_audit_logsに記録 | 未実施 |  |
-| AUD-003 | user_create記録 | user_audit_logsに記録 | 未実施 |  |
+| AUD-003 | user_create記録 | user_audit_logsに記録 | OK | screenshot確認: `user_create` 表示 |
 | AUD-004 | user_role_change記録 | user_audit_logsに記録 | 未実施 |  |
 | AUD-005 | user_disable記録 | user_audit_logsに記録 | 未実施 |  |
-| AUD-006 | password非記録 | password平文が出ない | 未実施 |  |
+| AUD-006 | password非記録 | password平文が出ない | 未判定 | screenshot範囲ではpassword平文は見えないが、全JSON確認は未実施 |
 
 ---
 
@@ -152,14 +152,14 @@ $env:NAMEVERIFICATION_CHANGE_LOG_JSONL_PATH = "$PWD\tmp\uat_v020\change_logs.jso
 | ID | 確認項目 | 期待結果 | 結果 | 証跡/メモ |
 |---|---|---|---|---|
 | MIG-001 | 既存v0.1.0 DB open | migration成功 | 未実施 |  |
-| MIG-002 | schema_migrations記録 | migration version記録 | 未実施 |  |
+| MIG-002 | schema_migrations記録 | migration version記録 | OK | EXE smokeで `schema_migrations` table存在を確認 |
 | MIG-003 | 既存データ維持 | 既存データが残る | 未実施 |  |
-| MIG-004 | users 0件時setup | 初回admin setup表示 | 未実施 |  |
+| MIG-004 | users 0件時setup | 初回admin setup表示 | OK | screenshot確認 |
 
 SQLite確認結果:
 
 ```text
-未記入
+Smoke database tables OK: app_settings, schema_migrations, user_audit_logs, users
 ```
 
 ---
@@ -168,8 +168,8 @@ SQLite確認結果:
 
 | ID | 確認項目 | 期待結果 | 結果 | 証跡/メモ |
 |---|---|---|---|---|
-| EXE-001 | build | EXE作成 | 未実施 |  |
-| EXE-002 | smoke | auth tables check pass | 未実施 |  |
+| EXE-001 | build | EXE作成 | OK | `Build complete: dist/NameVerification.exe` |
+| EXE-002 | smoke | auth tables check pass | OK | `Smoke database tables OK: app_settings, schema_migrations, user_audit_logs, users` |
 | EXE-003 | package | release folder作成 | 未実施 |  |
 | EXE-004 | portable smoke | pass | 未実施 |  |
 
@@ -179,7 +179,8 @@ SQLite確認結果:
 
 | ID | 区分 | 重大度 | 内容 | 再現手順 | 対応方針 | 状態 |
 |---|---|---|---|---|---|---|
-| BUG-001 | - | - | 現時点で品質ゲート4項目の不具合なし | - | EXE/GUI UATへ進む | open |
+| BUG-001 | - | - | 現時点で品質ゲート6項目の不具合なし | - | GUI残UATへ進む | open |
+| UAT-REMAIN-001 | UAT残 | 中 | validation系、viewer/editor、role変更、無効化/有効化、既存DB migration、portable package smoke が未実施 | docs/71に従う | 次工程で実施 | open |
 
 ---
 
@@ -187,15 +188,15 @@ SQLite確認結果:
 
 | 判定項目 | 判定 | コメント |
 |---|---|---|
-| 品質ゲート | OK | pytest / ruff / black / mypy はpass |
-| 初回admin setup | 未判定 |  |
-| login | 未判定 |  |
-| user management | 未判定 |  |
-| role別操作 | 未判定 |  |
-| user audit log | 未判定 |  |
-| migration | 未判定 |  |
-| EXE / portable | 未判定 |  |
-| 総合判定 | UAT継続 | 品質ゲート4項目OK。EXE build/smokeとGUI UATへ進む |
+| 品質ゲート | OK | pytest / ruff / black / mypy / EXE build / EXE smoke はpass |
+| 初回admin setup | 一部OK | 初回表示、admin作成、login遷移OK。validation系は未実施 |
+| login | 一部OK | 正常login、role combo廃止、admin反映OK。異常系は未実施 |
+| user management | 一部OK | tab表示とadmin一覧表示OK。viewer/editor作成等は未実施 |
+| role別操作 | 一部OK | admin操作の一部OK。viewer/editor/non-adminは未実施 |
+| user audit log | 一部OK | login_success/user_create表示OK。異常系・role変更等は未実施 |
+| migration | 一部OK | auth tables存在確認OK。既存DB互換は未実施 |
+| EXE / portable | 一部OK | EXE build/smoke OK。package/portable smokeは未実施 |
+| 総合判定 | UAT継続 | 主要起動・品質・EXE smokeはOK。残UAT完了後にGo/No-Go判定 |
 
 判定基準:
 
@@ -210,8 +211,9 @@ SQLite確認結果:
 ## 15. 次工程
 
 - 直近の次工程
-  - `.\scripts\build_exe_windows.ps1`
-  - `.\scripts\smoke_test_exe_windows.ps1`
+  - GUI UAT残項目を実施する。
+  - viewer/editor作成、role変更、無効化/有効化、最後のadmin保護、login失敗、password非記録を確認する。
+  - `v0.2.0-rc1` package生成とportable smokeを実施する。
 - Go / Conditional Go の場合
   - `v0.2.0-rc1` packaging
   - portable smoke
