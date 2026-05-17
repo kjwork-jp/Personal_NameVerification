@@ -12,17 +12,17 @@
 
 | 項目 | 記録 |
 |---|---|
-| 実行日 | 未記入 |
-| 実行者 | 未記入 |
+| 実行日 | 2026-05-18 |
+| 実行者 | NAOKI KAJIWARA |
 | 対象branch | `main` |
-| 対象commit | 未記入 |
+| 対象commit | `87a4440` |
 | Python | 未記入 |
 | OS | Windows |
 | DB path | 未記入 |
 | change log JSONL path | 未記入 |
 | EXE path | 未記入 |
 | release candidate | v0.2.0 UAT candidate |
-| 総合判定 | 未判定 |
+| 総合判定 | UAT継続（品質ゲート4項目OK、EXE/GUI UAT未実施） |
 
 ---
 
@@ -39,7 +39,14 @@ python -m pip --version
 実行結果:
 
 ```text
-未記入
+git pull origin main: Fast-forward 07f13b7..87a4440
+87a4440 (HEAD -> main, origin/main, origin/HEAD) docs: add v020 auth UAT execution record template
+07f13b7 docs: add v020 auth integrated UAT checklist
+6236cd8 docs: add PR141 status note to open issues
+87530df Merge pull request #142 from kjwork-jp/docs-sync-auth-current-state-after-pr141
+52eec46 docs: update v020 plan progress after PR141
+python --version: 未記入
+python -m pip --version: 未記入
 ```
 
 ---
@@ -54,7 +61,7 @@ $env:NAMEVERIFICATION_CHANGE_LOG_JSONL_PATH = "$PWD\tmp\uat_v020\change_logs.jso
 実行結果:
 
 ```text
-未記入
+未実施
 ```
 
 ---
@@ -63,12 +70,12 @@ $env:NAMEVERIFICATION_CHANGE_LOG_JSONL_PATH = "$PWD\tmp\uat_v020\change_logs.jso
 
 | ID | 確認項目 | コマンド | 期待結果 | 結果 | 証跡/メモ |
 |---|---|---|---|---|---|
-| QG-001 | pytest | `pytest -q` | pass | 未実施 |  |
-| QG-002 | ruff | `ruff check .` | pass | 未実施 |  |
-| QG-003 | black | `black --check .` | pass | 未実施 |  |
-| QG-004 | mypy | `mypy app` | pass | 未実施 |  |
-| QG-005 | EXE build | `.\scripts\build_exe_windows.ps1` | EXE作成 | 未実施 |  |
-| QG-006 | EXE smoke | `.\scripts\smoke_test_exe_windows.ps1` | auth tables check pass | 未実施 |  |
+| QG-001 | pytest | `pytest -q` | pass | OK | `................................................................................................................ [ 67%]` / `....................................................... [100%]` |
+| QG-002 | ruff | `ruff check .` | pass | OK | `All checks passed!` |
+| QG-003 | black | `black --check .` | pass | OK | `All done!` / `26 files would be left unchanged.` |
+| QG-004 | mypy | `mypy app` | pass | OK | `Success: no issues found in 52 source files` |
+| QG-005 | EXE build | `.\scripts\build_exe_windows.ps1` | EXE作成 | 未実施 | 次工程で実施 |
+| QG-006 | EXE smoke | `.\scripts\smoke_test_exe_windows.ps1` | auth tables check pass | 未実施 | 次工程で実施 |
 
 ---
 
@@ -172,7 +179,7 @@ SQLite確認結果:
 
 | ID | 区分 | 重大度 | 内容 | 再現手順 | 対応方針 | 状態 |
 |---|---|---|---|---|---|---|
-| BUG-001 | 未記入 | 未記入 | 未記入 | 未記入 | 未記入 | 未記入 |
+| BUG-001 | - | - | 現時点で品質ゲート4項目の不具合なし | - | EXE/GUI UATへ進む | open |
 
 ---
 
@@ -180,7 +187,7 @@ SQLite確認結果:
 
 | 判定項目 | 判定 | コメント |
 |---|---|---|
-| 品質ゲート | 未判定 |  |
+| 品質ゲート | OK | pytest / ruff / black / mypy はpass |
 | 初回admin setup | 未判定 |  |
 | login | 未判定 |  |
 | user management | 未判定 |  |
@@ -188,7 +195,7 @@ SQLite確認結果:
 | user audit log | 未判定 |  |
 | migration | 未判定 |  |
 | EXE / portable | 未判定 |  |
-| 総合判定 | 未判定 |  |
+| 総合判定 | UAT継続 | 品質ゲート4項目OK。EXE build/smokeとGUI UATへ進む |
 
 判定基準:
 
@@ -202,6 +209,9 @@ SQLite確認結果:
 
 ## 15. 次工程
 
+- 直近の次工程
+  - `.\scripts\build_exe_windows.ps1`
+  - `.\scripts\smoke_test_exe_windows.ps1`
 - Go / Conditional Go の場合
   - `v0.2.0-rc1` packaging
   - portable smoke
