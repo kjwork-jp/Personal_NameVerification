@@ -44,7 +44,8 @@ class UserManagementTab(QWidget):
         )
 
         self.operator_input = QLineEdit()
-        self.operator_input.setPlaceholderText("例: user01")
+        self.operator_input.setPlaceholderText("例: viewer")
+        self.operator_input.setToolTip("ログイン時に入力する操作者IDです。例: viewer")
         self.display_name_input = QLineEdit()
         self.display_name_input.setPlaceholderText("任意")
         self.password_input = QLineEdit()
@@ -58,14 +59,20 @@ class UserManagementTab(QWidget):
         self.create_button.clicked.connect(self._create_user)
 
         form = QFormLayout()
-        form.addRow("操作者ID", self.operator_input)
+        form.setContentsMargins(0, 0, 0, 0)
+        form.setVerticalSpacing(6)
+        form.addRow("操作者ID（ログインID）", self.operator_input)
         form.addRow("表示名", self.display_name_input)
         form.addRow("初期パスワード", self.password_input)
         form.addRow("権限", self.role_combo)
 
-        create_group = QGroupBox("ユーザー作成")
-        create_layout = QVBoxLayout(create_group)
+        self.create_group = QGroupBox("ユーザー作成")
+        create_layout = QVBoxLayout(self.create_group)
         compact_layout(create_layout)
+        # QGroupBox の title は margin 領域に描画されるため、上余白が小さいと
+        # 先頭行（操作者ID）がタイトルに隠れる。UATで実際に発生したため、
+        # このgroupだけは上余白を明示的に確保する。
+        create_layout.setContentsMargins(8, 20, 8, 8)
         create_layout.addLayout(form)
         create_layout.addWidget(self.create_button)
 
@@ -120,7 +127,7 @@ class UserManagementTab(QWidget):
             0,
         )
         layout.addWidget(self.status_label, 0)
-        layout.addWidget(create_group, 0)
+        layout.addWidget(self.create_group, 0)
         layout.addWidget(self.table, 1)
         layout.addLayout(action_row, 0)
 
