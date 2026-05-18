@@ -125,14 +125,35 @@ class LinkManagementTab(QWidget):
 
     def _apply_role_guards(self) -> None:
         role = self._role_context.role
-        self.link_button.setEnabled(can_link(role))
-        self.unlink_button.setEnabled(can_unlink(role))
+        can_register = can_link(role)
+        can_remove = can_unlink(role)
+        can_any_write = can_register or can_remove
+        disabled = "このロールでは実行できません"
+
+        self.operator_input.setEnabled(can_any_write)
+        for widget in (
+            self.register_name_combo,
+            self.register_title_combo,
+            self.register_subtitle_combo,
+        ):
+            widget.setEnabled(can_register)
+            widget.setToolTip(disabled if not can_register else "関連付け対象を選択します")
+        for widget in (self.unregister_name_combo, self.unregister_link_combo):
+            widget.setEnabled(can_remove)
+            widget.setToolTip(disabled if not can_remove else "解除対象を選択します")
+
+        self.link_button.setEnabled(can_register)
+        self.unlink_button.setEnabled(can_remove)
+        self.tabs.setTabEnabled(0, can_register)
+        self.tabs.setTabEnabled(1, can_remove)
         self.link_button.setToolTip(
-            "このロールでは実行できません" if not can_link(role) else "未関連の名前とサブタイトルを関連付けます"
+            disabled if not can_register else "未関連の名前とサブタイトルを関連付けます"
         )
         self.unlink_button.setToolTip(
-            "このロールでは実行できません" if not can_unlink(role) else "既存関連を解除します"
+            disabled if not can_remove else "既存関連を解除します"
         )
+        if not can_any_write:
+            self._set_message("viewerは関連付けの登録・解除を実行できません", is_error=True)
 
     def _refresh_all(self) -> None:
         self._names = _call_optional_role(
@@ -150,6 +171,7 @@ class LinkManagementTab(QWidget):
         self._populate_combo(self.register_title_combo, self._titles, _title_label)
         self._refresh_registration_subtitles()
         self._refresh_unlink_candidates()
+        self._apply_role_guards()
 
     def _refresh_registration_subtitles(self) -> None:
         name_id = self._selected_data(self.register_name_combo)
@@ -191,6 +213,9 @@ class LinkManagementTab(QWidget):
         self._populate_combo(self.unregister_link_combo, self._links, _link_label, data_attr="link_id")
 
     def _create_link(self) -> None:
+        if not can_link(self._role_context.role):
+            self._set_message("このロールでは関連付けを登録できません", is_error=True)
+            return
         operator_id = self._require_operator_id()
         name_id = self._selected_data(self.register_name_combo)
         subtitle_id = self._selected_data(self.register_subtitle_combo)
@@ -210,6 +235,9 @@ class LinkManagementTab(QWidget):
         self._refresh_all()
 
     def _unlink_link(self) -> None:
+        if not can_unlink(self._role_context.role):
+            self._set_message("このロールでは関連付けを解除できません", is_error=True)
+            return
         operator_id = self._require_operator_id()
         link_id = self._selected_data(self.unregister_link_combo)
         if operator_id is None:
