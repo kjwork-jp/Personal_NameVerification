@@ -10,6 +10,7 @@ from PySide6.QtWidgets import (
     QPushButton,
     QTableWidget,
     QTableWidgetItem,
+    QTabWidget,
     QVBoxLayout,
     QWidget,
 )
@@ -57,17 +58,7 @@ class UserManagementTab(QWidget):
         self.create_button = QPushButton("ユーザー作成")
         self.create_button.clicked.connect(self._create_user)
 
-        create_body = QWidget()
-        create_body_layout = QVBoxLayout(create_body)
-        compact_layout(create_body_layout, margins=0, spacing=7)
-        create_body_layout.addWidget(
-            _input_block("操作者ID（ログインID）", self.operator_input)
-        )
-        create_body_layout.addWidget(_input_block("表示名", self.display_name_input))
-        create_body_layout.addWidget(_input_block("初期パスワード", self.password_input))
-        create_body_layout.addWidget(_input_block("権限", self.role_combo))
-        create_body_layout.addWidget(self.create_button)
-        self.create_group = SectionPanel("ユーザー作成", create_body)
+        self.create_group = self._build_create_panel()
 
         self.table = QTableWidget(0, 7)
         self.table.setHorizontalHeaderLabels(
@@ -103,6 +94,72 @@ class UserManagementTab(QWidget):
         self.refresh_button.clicked.connect(self.refresh)
         self.table.itemSelectionChanged.connect(self._copy_selected_operator)
 
+        self.action_group = self._build_action_panel()
+        self.list_panel = self._build_list_panel()
+
+        self.sub_tabs = QTabWidget()
+        self.sub_tabs.addTab(self.create_group, "ユーザー作成")
+        self.sub_tabs.addTab(self.list_panel, "ユーザー一覧")
+        self.sub_tabs.addTab(self.action_group, "選択ユーザー操作")
+        self.sub_tabs.setCurrentIndex(0)
+
+        layout = QVBoxLayout(self)
+        compact_layout(layout, margins=6, spacing=5)
+        layout.addWidget(
+            PageHeader(
+                "ユーザー管理",
+                "admin専用。ユーザー作成、一覧確認、権限変更、無効化、有効化を行います。",
+            ),
+            0,
+        )
+        layout.addWidget(
+            OperationGuide(
+                "操作ガイド",
+                [
+                    "新規ユーザーは『ユーザー作成』サブタブで操作者ID・初期パスワード・権限を入力して作成します。",
+                    "既存ユーザーを確認する場合は『ユーザー一覧』サブタブを使います。一覧行を選ぶと操作対象IDへ反映されます。",
+                    "権限変更・無効化・有効化は『選択ユーザー操作』サブタブで実行します。",
+                    "最後の有効な管理者は、降格・無効化できない仕様です。",
+                ],
+            ),
+            0,
+        )
+        layout.addWidget(self.status_label, 0)
+        layout.addWidget(self.sub_tabs, 1)
+
+        self._apply_permissions()
+        self.refresh()
+
+    def _build_create_panel(self) -> QWidget:
+        panel = QWidget()
+        layout = QVBoxLayout(panel)
+        compact_layout(layout, margins=8, spacing=8)
+        layout.addWidget(
+            QLabel(
+                "新規ユーザーを作成します。操作者IDはログインIDとして使います。"
+            )
+        )
+        layout.addWidget(_field_with_label("操作者ID（ログインID）", self.operator_input))
+        layout.addWidget(_field_with_label("表示名", self.display_name_input))
+        layout.addWidget(_field_with_label("初期パスワード", self.password_input))
+        layout.addWidget(_field_with_label("権限", self.role_combo))
+        layout.addWidget(self.create_button)
+        layout.addStretch(1)
+        return SectionPanel("ユーザー作成", panel)
+
+    def _build_list_panel(self) -> QWidget:
+        panel = QWidget()
+        layout = QVBoxLayout(panel)
+        compact_layout(layout, margins=8, spacing=6)
+        layout.addWidget(
+            QLabel(
+                "登録済みユーザーの一覧です。行を選択すると『選択ユーザー操作』の対象操作者IDへ自動入力されます。"
+            )
+        )
+        layout.addWidget(self.table, 1)
+        return SectionPanel("ユーザー一覧", panel)
+
+    def _build_action_panel(self) -> QWidget:
         action_row = QHBoxLayout()
         compact_layout(action_row)
         action_row.addWidget(QLabel("選択中/対象の操作者ID"))
@@ -114,46 +171,17 @@ class UserManagementTab(QWidget):
         action_row.addWidget(self.enable_button)
         action_row.addWidget(self.refresh_button)
 
-        action_body = QWidget()
-        action_body_layout = QVBoxLayout(action_body)
-        compact_layout(action_body_layout, margins=0, spacing=6)
-        action_body_layout.addWidget(
+        panel = QWidget()
+        layout = QVBoxLayout(panel)
+        compact_layout(layout, margins=8, spacing=8)
+        layout.addWidget(
             QLabel(
-                "一覧で対象ユーザーの行を選ぶと、対象操作者IDへ自動入力されます。"
-                "権限変更は右の『変更後の権限』を選んでから実行します。"
+                "既存ユーザーを変更します。先に『ユーザー一覧』で対象行を選ぶか、対象操作者IDを手入力してください。"
             )
         )
-        action_body_layout.addLayout(action_row)
-        self.action_group = SectionPanel("選択ユーザーへの操作", action_body)
-
-        layout = QVBoxLayout(self)
-        compact_layout(layout, margins=6, spacing=5)
-        layout.addWidget(
-            PageHeader(
-                "ユーザー管理",
-                "admin専用。ユーザー作成、権限変更、無効化、有効化を行います。",
-            ),
-            0,
-        )
-        layout.addWidget(
-            OperationGuide(
-                "操作ガイド",
-                [
-                    "新規ユーザーは上の『ユーザー作成』で操作者ID・初期パスワード・権限を入力して作成します。",
-                    "既存ユーザーを変更する場合は、一覧で対象行を選んでから下の『選択ユーザーへの操作』を使います。",
-                    "最後の有効な管理者は、降格・無効化できない仕様です。",
-                    "実行結果や失敗理由は緑/赤のメッセージ欄に表示されます。",
-                ],
-            ),
-            0,
-        )
-        layout.addWidget(self.status_label, 0)
-        layout.addWidget(self.create_group, 0)
-        layout.addWidget(self.table, 1)
-        layout.addWidget(self.action_group, 0)
-
-        self._apply_permissions()
-        self.refresh()
+        layout.addLayout(action_row)
+        layout.addStretch(1)
+        return SectionPanel("選択ユーザーへの操作", panel)
 
     def refresh(self) -> None:
         if self._role_context.role != "admin":
@@ -218,6 +246,7 @@ class UserManagementTab(QWidget):
         self.display_name_input.clear()
         self.password_input.clear()
         self.refresh()
+        self.sub_tabs.setCurrentIndex(1)
 
     def _change_role(self) -> None:
         role = self.target_role_combo.currentData()
@@ -232,6 +261,7 @@ class UserManagementTab(QWidget):
             set_status_message(self.status_label, str(exc), level="error")
             return
         self.refresh()
+        self.sub_tabs.setCurrentIndex(1)
 
     def _disable_user(self) -> None:
         try:
@@ -244,6 +274,7 @@ class UserManagementTab(QWidget):
             set_status_message(self.status_label, str(exc), level="error")
             return
         self.refresh()
+        self.sub_tabs.setCurrentIndex(1)
 
     def _enable_user(self) -> None:
         try:
@@ -256,6 +287,7 @@ class UserManagementTab(QWidget):
             set_status_message(self.status_label, str(exc), level="error")
             return
         self.refresh()
+        self.sub_tabs.setCurrentIndex(1)
 
     def _apply_permissions(self) -> None:
         enabled = self._role_context.role == "admin"
@@ -274,17 +306,17 @@ class UserManagementTab(QWidget):
             widget.setEnabled(enabled)
 
 
-def _input_block(label_text: str, field: QWidget) -> QWidget:
-    block = QWidget()
-    layout = QVBoxLayout(block)
-    compact_layout(layout, margins=0, spacing=2)
+def _field_with_label(label_text: str, field: QWidget) -> QWidget:
+    container = QWidget()
+    layout = QVBoxLayout(container)
+    compact_layout(layout, margins=0, spacing=3)
     label = QLabel(label_text)
     label.setWordWrap(False)
-    field.setMinimumHeight(26)
-    field.setMinimumWidth(360)
+    field.setMinimumHeight(28)
+    field.setMinimumWidth(420)
     layout.addWidget(label)
     layout.addWidget(field)
-    return block
+    return container
 
 
 def _service_role(value: object) -> ServiceRole:
