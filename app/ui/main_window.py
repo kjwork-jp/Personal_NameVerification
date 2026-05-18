@@ -27,6 +27,7 @@ from app.application.user_audit_services import UserAuditLogService
 from app.application.user_services import UserService
 from app.ui.audit_log_tab import AuditLogTab
 from app.ui.context_helpers import apply_operator_context
+from app.ui.crud_list_first import apply_crud_list_first
 from app.ui.help_settings_tab import HelpSettingsTab
 from app.ui.link_management_tab import LinkManagementTab
 from app.ui.name_management_tab import NameManagementTab
@@ -271,6 +272,7 @@ class MainWindow(QMainWindow):
     def _add_tab(self, widget: QWidget, title: str) -> None:
         apply_operator_context(widget, self._role_context)
         apply_tab_guide(widget, title)
+        apply_crud_list_first(widget, title)
         self.tabs.addTab(widget, title)
         self._tabs_by_name[title] = widget
 
