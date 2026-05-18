@@ -30,6 +30,7 @@ def main() -> int:
     from app.ui.main_window import MainWindow
     from app.ui.operations_log import OperationsJsonlLogger
     from app.ui.role_context import RoleContext
+    from app.ui.ui_style import ensure_positive_application_font
 
     package_root = resolve_package_root()
     database_path = resolve_database_path(package_root=package_root)
@@ -44,6 +45,7 @@ def main() -> int:
     user_audit_service = UserAuditLogService(connection)
 
     app = QApplication(sys.argv)
+    ensure_positive_application_font(app)
     operation_logger = OperationsJsonlLogger(log_path=operations_log_jsonl_path)
 
     def _append_operation_log(
