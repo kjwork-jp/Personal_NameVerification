@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from PySide6.QtWidgets import (
     QComboBox,
-    QFormLayout,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -26,6 +25,8 @@ from app.domain.errors import (
 from app.ui.navigation_guide import OperationGuide, SectionPanel
 from app.ui.role_context import RoleContext
 from app.ui.ui_style import PageHeader, compact_layout, set_status_message
+
+_LABEL_WIDTH = 170
 
 
 class UserManagementTab(QWidget):
@@ -58,17 +59,15 @@ class UserManagementTab(QWidget):
         self.create_button = QPushButton("ユーザー作成")
         self.create_button.clicked.connect(self._create_user)
 
-        form = QFormLayout()
-        form.setContentsMargins(0, 0, 0, 0)
-        form.setVerticalSpacing(6)
-        form.addRow("操作者ID（ログインID）", self.operator_input)
-        form.addRow("表示名", self.display_name_input)
-        form.addRow("初期パスワード", self.password_input)
-        form.addRow("権限", self.role_combo)
         create_body = QWidget()
         create_body_layout = QVBoxLayout(create_body)
         compact_layout(create_body_layout, margins=0, spacing=6)
-        create_body_layout.addLayout(form)
+        create_body_layout.addWidget(
+            _input_row("操作者ID（ログインID）", self.operator_input)
+        )
+        create_body_layout.addWidget(_input_row("表示名", self.display_name_input))
+        create_body_layout.addWidget(_input_row("初期パスワード", self.password_input))
+        create_body_layout.addWidget(_input_row("権限", self.role_combo))
         create_body_layout.addWidget(self.create_button)
         self.create_group = SectionPanel("ユーザー作成", create_body)
 
@@ -275,6 +274,17 @@ class UserManagementTab(QWidget):
             self.enable_button,
         ):
             widget.setEnabled(enabled)
+
+
+def _input_row(label_text: str, field: QWidget) -> QWidget:
+    row = QWidget()
+    layout = QHBoxLayout(row)
+    compact_layout(layout, margins=0, spacing=6)
+    label = QLabel(label_text)
+    label.setMinimumWidth(_LABEL_WIDTH)
+    layout.addWidget(label, 0)
+    layout.addWidget(field, 1)
+    return row
 
 
 def _service_role(value: object) -> ServiceRole:
