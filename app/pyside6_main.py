@@ -114,10 +114,7 @@ def main() -> int:
             _append_operation_log(
                 action="account_switch",
                 role_context=current_role_context,
-                message=(
-                    "Account switch requested by "
-                    f"{current_role_context.operator_id}"
-                ),
+                message=f"Account switch requested by {current_role_context.operator_id}",
             )
             current_window.close()
 
