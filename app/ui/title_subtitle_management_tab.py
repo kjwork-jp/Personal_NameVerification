@@ -458,6 +458,9 @@ class TitleSubtitleManagementTab(QWidget):
         operator_id = self._require_operator_id()
         if selected is None or operator_id is None:
             return
+        if not can_create_or_update(self._role_context.role):
+            self._set_message("このロールではタイトル更新できません", is_error=True)
+            return
         if selected.deleted:
             self._set_message("削除済みタイトルは更新できません", is_error=True)
             return
@@ -478,6 +481,9 @@ class TitleSubtitleManagementTab(QWidget):
         operator_id = self._require_operator_id()
         if selected is None or operator_id is None:
             return
+        if not can_create_or_update(self._role_context.role):
+            self._set_message("このロールではサブタイトル作成できません", is_error=True)
+            return
         if selected.deleted:
             self._set_message("削除済みタイトルにはサブタイトル作成できません", is_error=True)
             return
@@ -497,6 +503,9 @@ class TitleSubtitleManagementTab(QWidget):
         selected_subtitle = self._require_selected_subtitle()
         operator_id = self._require_operator_id()
         if selected_title is None or selected_subtitle is None or operator_id is None:
+            return
+        if not can_create_or_update(self._role_context.role):
+            self._set_message("このロールではサブタイトル更新できません", is_error=True)
             return
         if selected_title.deleted or selected_subtitle.deleted:
             self._set_message("削除済みデータは更新できません", is_error=True)
@@ -685,12 +694,29 @@ class TitleSubtitleManagementTab(QWidget):
         )
 
     def _update_action_states(self) -> None:
-        can_write = can_create_or_update(self._role_context.role)
-        can_destructive = can_run_destructive_actions(self._role_context.role)
+        role = self._role_context.role
+        can_write = can_create_or_update(role)
+        can_destructive = can_run_destructive_actions(role)
         has_title = self._selected_title is not None
         title_deleted = bool(self._selected_title and self._selected_title.deleted)
         has_subtitle = self._selected_subtitle is not None
         subtitle_deleted = bool(self._selected_subtitle and self._selected_subtitle.deleted)
+
+        readonly = "viewerは参照専用です。追加・更新系の入力はできません"
+        self.operator_input.setEnabled(can_write or can_destructive)
+        for widget in (self.title_name_input, self.title_note_input, self.title_link_name_combo, self.title_link_names_list):
+            widget.setEnabled(can_write)
+            widget.setToolTip("入力できます" if can_write else readonly)
+        subtitle_edit_enabled = can_write and has_title and not title_deleted
+        for widget in (
+            self.subtitle_code_input,
+            self.subtitle_name_input,
+            self.subtitle_sort_order_input,
+            self.subtitle_note_input,
+        ):
+            widget.setEnabled(subtitle_edit_enabled)
+            widget.setToolTip("入力できます" if subtitle_edit_enabled else readonly)
+
         self.title_create_button.setEnabled(can_write)
         self.title_update_button.setEnabled(can_write and has_title and not title_deleted)
         self.title_delete_button.setEnabled(can_destructive and has_title and not title_deleted)
@@ -708,6 +734,8 @@ class TitleSubtitleManagementTab(QWidget):
             self.subtitle_hint_label.setText("削除済みタイトルが選択されています（サブタイトル操作は無効）")
         else:
             self.subtitle_hint_label.setText("選択中タイトル配下のサブタイトルを操作できます")
+        if role == "viewer":
+            self._set_message("viewerはタイトル/サブタイトルの追加・更新・削除を実行できません", is_error=True)
 
     def _configure_table_columns(self) -> None:
         self.titles_table.setColumnWidth(1, 82)
