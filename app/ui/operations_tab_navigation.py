@@ -79,7 +79,7 @@ def apply_operations_subtabs(widget: QWidget) -> None:
 
     insert_index = max(0, grid_index)
     root_layout.insertWidget(insert_index, sub_tabs, 1)
-    setattr(widget, "operations_subtabs", sub_tabs)
+    widget.operations_subtabs = sub_tabs  # type: ignore[attr-defined]
 
 
 def _build_guide_page() -> QWidget:
@@ -109,6 +109,8 @@ def _page_with_group(group: QGroupBox) -> QWidget:
 def _take_first_grid_layout(root_layout: QVBoxLayout) -> tuple[int, QGridLayout | None]:
     for index in range(root_layout.count()):
         item = root_layout.itemAt(index)
+        if item is None:
+            continue
         layout = item.layout()
         if isinstance(layout, QGridLayout):
             root_layout.takeAt(index)
@@ -120,6 +122,8 @@ def _take_group_boxes_from_grid(grid: QGridLayout) -> dict[str, QGroupBox]:
     groups: dict[str, QGroupBox] = {}
     for index in reversed(range(grid.count())):
         item = grid.itemAt(index)
+        if item is None:
+            continue
         group = item.widget()
         if isinstance(group, QGroupBox):
             grid.removeWidget(group)
@@ -131,6 +135,8 @@ def _take_group_boxes_from_grid(grid: QGridLayout) -> dict[str, QGroupBox]:
 def _take_group_box_by_title(layout: QLayout, title_prefix: str) -> QGroupBox | None:
     for index in range(layout.count()):
         item = layout.itemAt(index)
+        if item is None:
+            continue
         group = item.widget()
         if isinstance(group, QGroupBox) and group.title().startswith(title_prefix):
             layout.takeAt(index)
