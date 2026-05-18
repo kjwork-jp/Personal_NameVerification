@@ -37,6 +37,7 @@ from app.ui.rbac_ui_guards import apply_operations_tab_role_guards
 from app.ui.role_context import RoleContext
 from app.ui.search_tab import SearchTab
 from app.ui.subtitle_management_tab import SubtitleManagementTab
+from app.ui.tab_guides import apply_tab_guide
 from app.ui.title_management_tab import TitleManagementTab
 from app.ui.trash_tab import TrashTab
 from app.ui.ui_style import apply_friendly_theme, apply_searchable_comboboxes
@@ -269,6 +270,7 @@ class MainWindow(QMainWindow):
 
     def _add_tab(self, widget: QWidget, title: str) -> None:
         apply_operator_context(widget, self._role_context)
+        apply_tab_guide(widget, title)
         self.tabs.addTab(widget, title)
         self._tabs_by_name[title] = widget
 
