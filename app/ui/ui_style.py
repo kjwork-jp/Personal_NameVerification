@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
+    QApplication,
     QComboBox,
     QCompleter,
     QLabel,
@@ -18,6 +19,20 @@ _STATUS_COLORS = {
     "warning": ("#ffd166", "#3b3325", "#8a6d2d"),
     "error": ("#ff8a8a", "#3b292d", "#8a3d45"),
 }
+
+
+def ensure_positive_application_font(
+    app: QApplication,
+    *,
+    fallback_point_size: int = 9,
+) -> None:
+    """Normalize application font size to avoid platform fonts with pointSize -1."""
+
+    font = app.font()
+    if font.pointSize() > 0:
+        return
+    font.setPointSize(fallback_point_size)
+    app.setFont(font)
 
 
 def apply_friendly_theme(widget: QWidget) -> None:
