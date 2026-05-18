@@ -6,7 +6,7 @@ import sys
 
 
 def main() -> int:
-    """Launch the minimal PySide6 application shell."""
+    """Launch the PySide6 application shell."""
     from PySide6.QtWidgets import QApplication, QDialog
 
     from app.application.auto_log_export import AutoExportingCoreService
@@ -28,6 +28,7 @@ def main() -> int:
     from app.ui.login_dialog import LoginDialog
     from app.ui.main_window import MainWindow
     from app.ui.operations_log import OperationsJsonlLogger
+    from app.ui.role_context import RoleContext
 
     package_root = resolve_package_root()
     database_path = resolve_database_path(package_root=package_root)
@@ -43,48 +44,86 @@ def main() -> int:
 
     app = QApplication(sys.argv)
     operation_logger = OperationsJsonlLogger(log_path=operations_log_jsonl_path)
-    if not user_service.list_users(include_disabled=False):
-        setup = InitialAdminSetupDialog(user_service)
-        if setup.exec() != QDialog.DialogCode.Accepted:
-            connection.close()
-            return 0
 
-    login = LoginDialog(user_service)
-    if login.exec() != QDialog.DialogCode.Accepted:
+    def _append_operation_log(
+        *,
+        action: str,
+        role_context: RoleContext,
+        message: str,
+    ) -> None:
+        try:
+            operation_logger.append(
+                action=action,
+                role=role_context.role,
+                status="success",
+                message=message,
+                path=str(database_path),
+                path2=str(change_log_jsonl_path),
+            )
+        except Exception:
+            pass
+
+    def _ensure_initial_admin() -> bool:
+        if user_service.list_users(include_disabled=False):
+            return True
+        setup = InitialAdminSetupDialog(user_service)
+        return setup.exec() == QDialog.DialogCode.Accepted
+
+    if not _ensure_initial_admin():
         connection.close()
         return 0
-    role_context = login.role_context()
-    try:
-        operation_logger.append(
+
+    exit_code = 0
+    while True:
+        login = LoginDialog(user_service)
+        if login.exec() != QDialog.DialogCode.Accepted:
+            break
+
+        role_context = login.role_context()
+        _append_operation_log(
             action="app_startup",
-            role=role_context.role,
-            status="success",
+            role_context=role_context,
             message="Application startup",
-            path=str(database_path),
-            path2=str(change_log_jsonl_path),
         )
-    except Exception:
-        pass
 
-    window = MainWindow(
-        query_service=query_service,
-        core_service=core_service,
-        role_context=role_context,
-        export_backup_service=ExportBackupService(connection, database_path=database_path),
-        backup_restore_service=BackupRestoreService(),
-        import_service=ImportService(connection, database_path=database_path),
-        user_service=user_service,
-        user_audit_service=user_audit_service,
-        package_root=package_root,
-        database_path=database_path,
-        change_log_jsonl_path=change_log_jsonl_path,
-        operations_log_jsonl_path=operations_log_jsonl_path,
-        operation_logger=operation_logger,
-        connection=connection,
-    )
-    window.show()
+        account_switch_requested = False
+        window = MainWindow(
+            query_service=query_service,
+            core_service=core_service,
+            role_context=role_context,
+            export_backup_service=ExportBackupService(connection, database_path=database_path),
+            backup_restore_service=BackupRestoreService(),
+            import_service=ImportService(connection, database_path=database_path),
+            user_service=user_service,
+            user_audit_service=user_audit_service,
+            package_root=package_root,
+            database_path=database_path,
+            change_log_jsonl_path=change_log_jsonl_path,
+            operations_log_jsonl_path=operations_log_jsonl_path,
+            operation_logger=operation_logger,
+            connection=connection,
+        )
 
-    return int(app.exec())
+        def _request_account_switch() -> None:
+            nonlocal account_switch_requested
+            account_switch_requested = True
+            _append_operation_log(
+                action="account_switch",
+                role_context=role_context,
+                message=f"Account switch requested by {role_context.operator_id}",
+            )
+            window.close()
+
+        window.account_switch_requested.connect(_request_account_switch)
+        window.show()
+
+        exit_code = int(app.exec())
+        if account_switch_requested:
+            continue
+        break
+
+    connection.close()
+    return exit_code
 
 
 if __name__ == "__main__":
