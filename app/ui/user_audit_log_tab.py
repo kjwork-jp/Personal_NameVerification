@@ -132,10 +132,30 @@ class UserAuditLogTab(QWidget):
         root.addWidget(self.status_label)
         root.addWidget(splitter, 1)
 
+        self._apply_permissions()
         self.refresh()
+
+    def _apply_permissions(self) -> None:
+        enabled = self._role_context.role == "admin"
+        for widget in (
+            self.actor_input,
+            self.target_input,
+            self.action_input,
+            self.limit_input,
+            self.reload_button,
+            self.logs_table,
+        ):
+            widget.setEnabled(enabled)
+        if not enabled:
+            self.logs_table.setRowCount(0)
+            self.detail_summary_label.setText("選択中の監査ログ: 未選択")
+            self.before_json_view.clear()
+            self.after_json_view.clear()
+            self.diff_view.clear()
 
     def refresh(self) -> None:
         if self._role_context.role != "admin":
+            self._rows = []
             set_status_message(
                 self.status_label,
                 "ユーザー監査ログはadmin専用です。",
