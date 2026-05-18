@@ -25,6 +25,11 @@ _PUBLIC_ID_TABLES = (
     "name_title_links",
     "change_logs",
 )
+_USER_AUTH_COLUMNS = {
+    "auth_provider": "TEXT NOT NULL DEFAULT 'local'",
+    "windows_account_name": "TEXT",
+    "windows_sid": "TEXT",
+}
 
 
 def apply_schema(connection: sqlite3.Connection, schema_path: Path = DEFAULT_SCHEMA_PATH) -> None:
@@ -34,6 +39,7 @@ def apply_schema(connection: sqlite3.Connection, schema_path: Path = DEFAULT_SCH
     ensure_legacy_public_id_columns(connection)
     connection.executescript(sql_script)
     apply_migrations(connection)
+    ensure_user_auth_columns(connection)
     ensure_public_ids(connection)
     check_database_integrity(connection)
 
@@ -103,6 +109,33 @@ def ensure_legacy_public_id_columns(connection: sqlite3.Connection) -> None:
     connection.commit()
 
 
+def ensure_user_auth_columns(connection: sqlite3.Connection) -> None:
+    """Add local/windows auth metadata columns for existing user databases."""
+
+    if not _table_exists(connection, "users"):
+        return
+    columns = _table_columns(connection, "users")
+    for column_name, ddl in _USER_AUTH_COLUMNS.items():
+        if column_name not in columns:
+            connection.execute(f"ALTER TABLE users ADD COLUMN {column_name} {ddl}")
+    connection.execute("UPDATE users SET auth_provider = 'local' WHERE auth_provider IS NULL")
+    connection.execute(
+        """
+        CREATE UNIQUE INDEX IF NOT EXISTS uq_users_windows_sid
+        ON users(windows_sid)
+        WHERE windows_sid IS NOT NULL
+        """
+    )
+    connection.execute(
+        """
+        CREATE UNIQUE INDEX IF NOT EXISTS uq_users_windows_account_name
+        ON users(windows_account_name)
+        WHERE windows_account_name IS NOT NULL
+        """
+    )
+    connection.commit()
+
+
 def ensure_public_ids(connection: sqlite3.Connection) -> None:
     """Add and backfill nullable public_id columns for existing SQLite databases."""
 
@@ -135,11 +168,15 @@ def _table_exists(connection: sqlite3.Connection, table: str) -> bool:
     return row is not None
 
 
-def _ensure_public_id_column(connection: sqlite3.Connection, table: str) -> None:
-    columns = {
+def _table_columns(connection: sqlite3.Connection, table: str) -> set[str]:
+    return {
         str(_row_value(row, "name", 1))
         for row in connection.execute(f"PRAGMA table_info({table})").fetchall()
     }
+
+
+def _ensure_public_id_column(connection: sqlite3.Connection, table: str) -> None:
+    columns = _table_columns(connection, table)
     if "public_id" not in columns:
         connection.execute(f"ALTER TABLE {table} ADD COLUMN public_id TEXT")
 
