@@ -193,12 +193,20 @@ class NameManagementTab(QWidget):
         role = self._role_context.role
         can_write = can_create_or_update(role)
         can_destructive = can_run_destructive_actions(role)
+        disabled = "このロールでは実行できません"
+        readonly = "viewerは参照専用です。名前・備考は編集できません"
+
+        self.operator_input.setEnabled(can_write or can_destructive)
+        self.raw_name_input.setEnabled(can_write)
+        self.note_input.setEnabled(can_write)
+        self.raw_name_input.setToolTip("名前を入力します" if can_write else readonly)
+        self.note_input.setToolTip("備考を入力します" if can_write else readonly)
+
         self.create_button.setEnabled(can_write)
         self.update_button.setEnabled(can_write)
         self.delete_button.setEnabled(can_destructive)
         self.restore_button.setEnabled(False)
         self.hard_delete_button.setEnabled(False)
-        disabled = "このロールでは実行できません"
         self.create_button.setToolTip(
             disabled if not can_write else "操作者ID を入力して実行します"
         )
@@ -210,6 +218,8 @@ class NameManagementTab(QWidget):
         )
         self.restore_button.setToolTip("復元は削除データタブで行います")
         self.hard_delete_button.setToolTip("完全削除は削除データタブで行います")
+        if not can_write:
+            self._set_message("viewerは名前の追加・更新・削除を実行できません", is_error=True)
 
     def _refresh_list(self) -> None:
         try:
