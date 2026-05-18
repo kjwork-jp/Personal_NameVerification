@@ -26,8 +26,6 @@ from app.ui.navigation_guide import OperationGuide, SectionPanel
 from app.ui.role_context import RoleContext
 from app.ui.ui_style import PageHeader, compact_layout, set_status_message
 
-_LABEL_WIDTH = 170
-
 
 class UserManagementTab(QWidget):
     """Admin-only tab for local user maintenance."""
@@ -61,13 +59,13 @@ class UserManagementTab(QWidget):
 
         create_body = QWidget()
         create_body_layout = QVBoxLayout(create_body)
-        compact_layout(create_body_layout, margins=0, spacing=6)
+        compact_layout(create_body_layout, margins=0, spacing=7)
         create_body_layout.addWidget(
-            _input_row("操作者ID（ログインID）", self.operator_input)
+            _input_block("操作者ID（ログインID）", self.operator_input)
         )
-        create_body_layout.addWidget(_input_row("表示名", self.display_name_input))
-        create_body_layout.addWidget(_input_row("初期パスワード", self.password_input))
-        create_body_layout.addWidget(_input_row("権限", self.role_combo))
+        create_body_layout.addWidget(_input_block("表示名", self.display_name_input))
+        create_body_layout.addWidget(_input_block("初期パスワード", self.password_input))
+        create_body_layout.addWidget(_input_block("権限", self.role_combo))
         create_body_layout.addWidget(self.create_button)
         self.create_group = SectionPanel("ユーザー作成", create_body)
 
@@ -276,15 +274,17 @@ class UserManagementTab(QWidget):
             widget.setEnabled(enabled)
 
 
-def _input_row(label_text: str, field: QWidget) -> QWidget:
-    row = QWidget()
-    layout = QHBoxLayout(row)
-    compact_layout(layout, margins=0, spacing=6)
+def _input_block(label_text: str, field: QWidget) -> QWidget:
+    block = QWidget()
+    layout = QVBoxLayout(block)
+    compact_layout(layout, margins=0, spacing=2)
     label = QLabel(label_text)
-    label.setMinimumWidth(_LABEL_WIDTH)
-    layout.addWidget(label, 0)
-    layout.addWidget(field, 1)
-    return row
+    label.setWordWrap(False)
+    field.setMinimumHeight(26)
+    field.setMinimumWidth(360)
+    layout.addWidget(label)
+    layout.addWidget(field)
+    return block
 
 
 def _service_role(value: object) -> ServiceRole:
