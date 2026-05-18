@@ -12,6 +12,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QLineEdit,
     QPushButton,
+    QTabWidget,
     QTextEdit,
     QVBoxLayout,
     QWidget,
@@ -108,22 +109,22 @@ class HelpSettingsTab(QWidget):
 
         self.message_label = QLabel("")
 
+        self.path_diagnostics_text = QTextEdit()
+        self.path_diagnostics_text.setReadOnly(True)
+        self.security_warning_text = QTextEdit()
+        self.security_warning_text.setReadOnly(True)
+        self.audit_safety_text = QTextEdit()
+        self.audit_safety_text.setReadOnly(True)
         self.guide_text = QTextEdit()
         self.guide_text.setReadOnly(True)
         self.guide_text.setPlainText(_guide_text())
 
-        form = QFormLayout()
-        form.addRow("package root", self.package_root_input)
-        form.addRow("DB保存先", self.database_path_input)
-        form.addRow("DBファイル存在", self.database_exists_input)
-        form.addRow("DBファイルサイズ", self.database_size_input)
-        form.addRow("DB更新日時", self.database_updated_input)
-        form.addRow("DB変更JSONLログ出力先", self.change_log_path_input)
-        form.addRow("Operations実行JSONLログ出力先", self.operations_log_path_input)
-        form.addRow("DB保存先の環境変数", self.database_env_input)
-        form.addRow("現在の操作者", self.operator_input)
-        form.addRow("操作者の環境変数", self.operator_env_input)
-        form.addRow("バックアップ既定先", self.backup_hint_input)
+        self.sections = QTabWidget()
+        self.sections.setObjectName("helpSettingsSubTabs")
+        self.sections.addTab(self._build_basic_info_page(), "基本情報")
+        self.sections.addTab(self._build_path_diagnostics_page(), "パス診断")
+        self.sections.addTab(self._build_security_warning_page(), "保護警告")
+        self.sections.addTab(self._build_operation_memo_page(), "操作メモ")
 
         layout = QVBoxLayout(self)
         layout.addWidget(
@@ -132,15 +133,55 @@ class HelpSettingsTab(QWidget):
                 "EXE配布や通常運用を前提に、保存先・操作者・基本操作を確認します。",
             )
         )
+        layout.addWidget(self.sections, 1)
+        layout.addWidget(self.message_label)
+        self._refresh_diagnostics_texts()
+
+    def _build_basic_info_page(self) -> QWidget:
+        page = QWidget()
+        form = QFormLayout(page)
+        form.addRow("package root", self.package_root_input)
+        form.addRow("DB保存先", self.database_path_input)
+        form.addRow("DBファイル存在", self.database_exists_input)
+        form.addRow("DBファイルサイズ", self.database_size_input)
+        form.addRow("DB更新日時", self.database_updated_input)
+        form.addRow("DB変更JSONLログ出力先", self.change_log_path_input)
+        form.addRow("Operations実行JSONLログ出力先", self.operations_log_path_input)
+        form.addRow("現在の操作者", self.operator_input)
+        form.addRow("バックアップ既定先", self.backup_hint_input)
+        return page
+
+    def _build_path_diagnostics_page(self) -> QWidget:
+        page = QWidget()
+        layout = QVBoxLayout(page)
+        form = QFormLayout()
+        form.addRow("DB保存先の環境変数", self.database_env_input)
+        form.addRow("操作者の環境変数", self.operator_env_input)
         layout.addLayout(form)
         layout.addWidget(self.copy_db_path_button)
         layout.addWidget(self.copy_env_command_button)
         layout.addWidget(self.copy_change_log_command_button)
         layout.addWidget(self.copy_operations_log_command_button)
         layout.addWidget(self.refresh_button)
-        layout.addWidget(self.message_label)
+        layout.addWidget(QLabel("診断結果"))
+        layout.addWidget(self.path_diagnostics_text, 1)
+        return page
+
+    def _build_security_warning_page(self) -> QWidget:
+        page = QWidget()
+        layout = QVBoxLayout(page)
+        layout.addWidget(QLabel("DB / backup / export / log 保護警告"))
+        layout.addWidget(self.security_warning_text, 1)
+        layout.addWidget(QLabel("passwordログ非記録確認"))
+        layout.addWidget(self.audit_safety_text, 1)
+        return page
+
+    def _build_operation_memo_page(self) -> QWidget:
+        page = QWidget()
+        layout = QVBoxLayout(page)
         layout.addWidget(QLabel("使い方の要点"))
-        layout.addWidget(self.guide_text)
+        layout.addWidget(self.guide_text, 1)
+        return page
 
     def _path_text(self, path: Path) -> str:
         return str(path.expanduser().resolve(strict=False))
@@ -203,7 +244,13 @@ class HelpSettingsTab(QWidget):
             os.environ.get("NAMEVERIFICATION_OPERATOR_ID", "未設定") or "未設定"
         )
         self.backup_hint_input.setText(self._backup_hint_text())
+        self._refresh_diagnostics_texts()
         self._set_message("表示を更新しました")
+
+    def _refresh_diagnostics_texts(self) -> None:
+        self.path_diagnostics_text.setPlainText(self._path_diagnostics_text())
+        self.security_warning_text.setPlainText(self._security_warning_text())
+        self.audit_safety_text.setPlainText(_audit_safety_text())
 
     def _copy_database_path(self) -> None:
         QGuiApplication.clipboard().setText(self._path_text(self.database_path))
@@ -232,6 +279,57 @@ class HelpSettingsTab(QWidget):
 
     def _set_message(self, message: str) -> None:
         set_status_message(self.message_label, message, level="success")
+
+    def _path_diagnostics_text(self) -> str:
+        paths = [
+            ("DB", self.database_path),
+            ("DB変更JSONLログ", self.change_log_jsonl_path),
+            ("Operations実行JSONLログ", self._operations_log_path_for_display()),
+        ]
+        lines = ["保存先診断"]
+        for label, path in paths:
+            expanded = path.expanduser()
+            parent = expanded.parent
+            lines.extend(
+                [
+                    f"- {label}: {self._path_text(path)}",
+                    f"  - exists: {expanded.exists()}",
+                    f"  - parent exists: {parent.exists()}",
+                    f"  - readable: {os.access(expanded, os.R_OK) if expanded.exists() else '未作成'}",
+                    f"  - writable parent: {os.access(parent, os.W_OK) if parent.exists() else False}",
+                ]
+            )
+        return "\n".join(lines)
+
+    def _security_warning_text(self) -> str:
+        return "\n".join(
+            [
+                "重要: このアプリの認証/RBACはアプリ内操作を制御するものです。",
+                "SQLite DB、backup、export、JSONL logファイルをOS上で読めるユーザーは、",
+                "アプリを経由せずにファイルを直接閲覧・コピーできる可能性があります。",
+                "",
+                "推奨運用:",
+                "- 配布フォルダは利用者ごとに分離する。",
+                "- Windowsのユーザープロファイル配下、またはACL制御されたフォルダへ配置する。",
+                "- 機微情報を扱う場合はBitLocker/EFSなどのOS側保護を併用する。",
+                "- backup/export/logを共有フォルダへ置く場合は、閲覧権限を明示的に制限する。",
+                "- Restore/Import前にはbackupを取得し、Operations Logとchange_logsを突合する。",
+            ]
+        )
+
+
+def _audit_safety_text() -> str:
+    return "\n".join(
+        [
+            "passwordログ非記録方針:",
+            "- user_audit_logsのbefore_json/after_jsonは operator_id, display_name, role,",
+            "  disabled_at, failed_login_count, locked_until, last_login_at を記録対象とします。",
+            "- password、password_hash、password_salt、password_algorithm、",
+            "  password_iterations は監査ログ表示/JSON差分に含めません。",
+            "- login_failureではreasonのみを記録し、入力されたpassword値は記録しません。",
+            "- 自動テストで平文passwordおよびpassword系キーが監査ログに混入しないことを確認します。",
+        ]
+    )
 
 
 def _guide_text() -> str:
