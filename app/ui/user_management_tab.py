@@ -5,7 +5,6 @@ from __future__ import annotations
 from PySide6.QtWidgets import (
     QComboBox,
     QFormLayout,
-    QGroupBox,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -24,7 +23,7 @@ from app.domain.errors import (
     StateTransitionError,
     ValidationError,
 )
-from app.ui.navigation_guide import OperationGuide
+from app.ui.navigation_guide import OperationGuide, SectionPanel
 from app.ui.role_context import RoleContext
 from app.ui.ui_style import PageHeader, compact_layout, set_status_message
 
@@ -66,16 +65,12 @@ class UserManagementTab(QWidget):
         form.addRow("表示名", self.display_name_input)
         form.addRow("初期パスワード", self.password_input)
         form.addRow("権限", self.role_combo)
-
-        self.create_group = QGroupBox("ユーザー作成")
-        create_layout = QVBoxLayout(self.create_group)
-        compact_layout(create_layout)
-        # QGroupBox の title は margin 領域に描画されるため、上余白が小さいと
-        # 先頭行（操作者ID）がタイトルに隠れる。UATで実際に発生したため、
-        # このgroupだけは上余白を明示的に確保する。
-        create_layout.setContentsMargins(8, 20, 8, 8)
-        create_layout.addLayout(form)
-        create_layout.addWidget(self.create_button)
+        create_body = QWidget()
+        create_body_layout = QVBoxLayout(create_body)
+        compact_layout(create_body_layout, margins=0, spacing=6)
+        create_body_layout.addLayout(form)
+        create_body_layout.addWidget(self.create_button)
+        self.create_group = SectionPanel("ユーザー作成", create_body)
 
         self.table = QTableWidget(0, 7)
         self.table.setHorizontalHeaderLabels(
@@ -122,17 +117,17 @@ class UserManagementTab(QWidget):
         action_row.addWidget(self.enable_button)
         action_row.addWidget(self.refresh_button)
 
-        self.action_group = QGroupBox("選択ユーザーへの操作")
-        action_group_layout = QVBoxLayout(self.action_group)
-        compact_layout(action_group_layout)
-        action_group_layout.setContentsMargins(8, 20, 8, 8)
-        action_group_layout.addWidget(
+        action_body = QWidget()
+        action_body_layout = QVBoxLayout(action_body)
+        compact_layout(action_body_layout, margins=0, spacing=6)
+        action_body_layout.addWidget(
             QLabel(
                 "一覧で対象ユーザーの行を選ぶと、対象操作者IDへ自動入力されます。"
                 "権限変更は右の『変更後の権限』を選んでから実行します。"
             )
         )
-        action_group_layout.addLayout(action_row)
+        action_body_layout.addLayout(action_row)
+        self.action_group = SectionPanel("選択ユーザーへの操作", action_body)
 
         layout = QVBoxLayout(self)
         compact_layout(layout, margins=6, spacing=5)
