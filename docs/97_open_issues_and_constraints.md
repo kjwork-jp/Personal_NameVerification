@@ -9,13 +9,13 @@
 - editorは通常登録/更新、関連付け登録、export/backupを許可し、destructive/import/restore/user管理/user audit log操作を禁止する方針。
 - adminはdestructive/import/restore/user管理/user audit logを含む管理者権限。ただし最後の有効admin降格・無効化は禁止。
 - 最新状況の横断台帳は `docs/75_v0_2_0_current_status_and_improvement_ledger.md` を参照する。
+- 2026-05-18時点で、品質ゲート再実行と既存DB migration確認は問題なしとして記録済み。
+- ログアウト/アカウント切替導線は、MainWindowからログイン画面へ戻り、別ユーザーで再ログインできる方針で実装済み。
 
 ## 未解決事項
 
 ### P0: v0.2.0 UAT / release blocker
 
-- 最新mainで品質ゲート再実行
-  - `4f4c1d9`、`f926be4`、`6abc7e1`、`f0c4661` 以降で `pytest -q` / `ruff check .` / `black --check .` / `mypy app` を再実行する。
 - editor role UAT本実施
   - 通常登録/更新、関連付け登録、export/backupが可能であることを確認する。
   - 削除、復元、完全削除、関連解除、import/restore、ユーザー管理、ユーザー監査ログ操作が不可であることを確認する。
@@ -24,8 +24,6 @@
   - 最後の有効admin降格・無効化が拒否されることを確認する。
 - login異常系UAT
   - 誤password、未登録operator_id、disabled user、password confirmation不一致、空operator_id等を確認する。
-- migration / 既存DB互換UAT
-  - v0.1.0系DBからv0.2.0系へ起動時migrationできることを確認する。
 - v0.2.0-rc1 portable package / smoke
   - release package生成、manifest/checksum、portable起動、portable smokeを確認する。
 
@@ -54,6 +52,9 @@
 
 ## 解消済み・実装済み扱い
 
+- 2026-05-18時点で、品質ゲート再実行は問題なし。
+- 2026-05-18時点で、既存DB migration確認は問題なし。
+- MainWindowからログアウト/アカウント切替を実行し、再起動なしでLoginDialogへ戻る導線を実装済み。
 - v0.1.0-rc2 portable release のリリース証跡は `docs/59_release_evidence_v0_1_0_rc2.md` に固定済み。
 - UAT/Go-Live判定に使うリリース基準は v0.1.0-rc2 / PR #124 merge後の main として一旦固定済み。
 - UAT 実施体制と配布先ディレクトリ方針は `docs/63_distribution_and_uat_plan.md` にて決定済み。
