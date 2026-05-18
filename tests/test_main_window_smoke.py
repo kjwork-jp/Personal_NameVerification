@@ -248,16 +248,25 @@ def test_main_window_has_required_tabs() -> None:
     )
     tab_widget = window.centralWidget()
     assert tab_widget is not None
-    assert tab_widget.count() == 9
-    assert tab_widget.tabText(0) == "検索"
-    assert tab_widget.tabText(1) == "名前を管理"
-    assert tab_widget.tabText(2) == "タイトルを管理"
-    assert tab_widget.tabText(3) == "サブタイトルを管理"
-    assert tab_widget.tabText(4) == "関連付け"
-    assert tab_widget.tabText(5) == "削除データ"
-    assert tab_widget.tabText(6) == "操作履歴"
-    assert tab_widget.tabText(7) == "データ入出力"
-    assert tab_widget.tabText(8) == "ヘルプ / 設定"
+    assert tab_widget.count() == 8
+    assert [tab_widget.tabText(i) for i in range(tab_widget.count())] == [
+        "検索",
+        "名前を管理",
+        "タイトル/サブタイトル管理",
+        "関連付け",
+        "削除データ",
+        "監査ログ",
+        "データ入出力",
+        "ヘルプ / 設定",
+    ]
+    assert window._tabs_by_name["タイトルを管理"] is window._tabs_by_name[
+        "タイトル/サブタイトル管理"
+    ]
+    assert window._tabs_by_name["サブタイトルを管理"] is window._tabs_by_name[
+        "タイトル/サブタイトル管理"
+    ]
+    assert window._tabs_by_name["操作履歴"] is window._tabs_by_name["監査ログ"]
+    assert window._tabs_by_name["ユーザー監査ログ"] is window._tabs_by_name["監査ログ"]
 
 
 def test_main_window_prefills_portable_operations_paths(
