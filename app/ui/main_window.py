@@ -32,6 +32,7 @@ from app.ui.link_management_tab import LinkManagementTab
 from app.ui.name_management_tab import NameManagementTab
 from app.ui.operations_log import OperationsJsonlLogger
 from app.ui.operations_tab import OperationLoggerLike, OperationsTab
+from app.ui.operations_tab_navigation import apply_operations_subtabs
 from app.ui.rbac_ui_guards import apply_operations_tab_role_guards
 from app.ui.role_context import RoleContext
 from app.ui.search_tab import SearchTab
@@ -178,6 +179,7 @@ class MainWindow(QMainWindow):
                 operation_logger=operation_logger,
             )
             self._prefill_operations_paths(operations_tab)
+            apply_operations_subtabs(operations_tab)
             apply_operations_tab_role_guards(operations_tab, self._role_context)
             self._add_tab(operations_tab, "データ入出力")
         self._add_tab(
