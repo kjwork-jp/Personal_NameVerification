@@ -25,7 +25,7 @@ from app.application.query_services import QueryService
 from app.application.runtime_paths import resolve_package_root_from_database_path
 from app.application.user_audit_services import UserAuditLogService
 from app.application.user_services import UserService
-from app.ui.audit_log_tab import AuditLogTab
+from app.ui.audit_logs_tab import AuditLogsTab
 from app.ui.context_helpers import apply_operator_context
 from app.ui.crud_list_first import apply_crud_list_first
 from app.ui.help_settings_tab import HelpSettingsTab
@@ -37,12 +37,10 @@ from app.ui.operations_tab_navigation import apply_operations_subtabs
 from app.ui.rbac_ui_guards import apply_operations_tab_role_guards
 from app.ui.role_context import RoleContext
 from app.ui.search_tab import SearchTab
-from app.ui.subtitle_management_tab import SubtitleManagementTab
 from app.ui.tab_guides import apply_tab_guide
-from app.ui.title_management_tab import TitleManagementTab
+from app.ui.title_subtitle_unified_tab import TitleSubtitleUnifiedTab
 from app.ui.trash_tab import TrashTab
 from app.ui.ui_style import apply_friendly_theme, apply_searchable_comboboxes
-from app.ui.user_audit_log_tab import UserAuditLogTab
 from app.ui.user_management_tab import UserManagementTab
 
 
@@ -114,20 +112,12 @@ class MainWindow(QMainWindow):
             "名前を管理",
         )
         self._add_tab(
-            TitleManagementTab(
+            TitleSubtitleUnifiedTab(
                 core_service=core_service,
                 query_service=query_service,
                 role_context=self._role_context,
             ),
-            "タイトルを管理",
-        )
-        self._add_tab(
-            SubtitleManagementTab(
-                core_service=core_service,
-                query_service=query_service,
-                role_context=self._role_context,
-            ),
-            "サブタイトルを管理",
+            "タイトル/サブタイトル管理",
         )
         self._add_tab(
             LinkManagementTab(
@@ -145,10 +135,6 @@ class MainWindow(QMainWindow):
             ),
             "削除データ",
         )
-        self._add_tab(
-            AuditLogTab(query_service=query_service, role_context=self._role_context),
-            "操作履歴",
-        )
         if user_service is not None:
             self._add_tab(
                 UserManagementTab(
@@ -157,14 +143,14 @@ class MainWindow(QMainWindow):
                 ),
                 "ユーザー管理",
             )
-        if user_audit_service is not None:
-            self._add_tab(
-                UserAuditLogTab(
-                    user_audit_service=user_audit_service,
-                    role_context=self._role_context,
-                ),
-                "ユーザー監査ログ",
-            )
+        self._add_tab(
+            AuditLogsTab(
+                query_service=query_service,
+                role_context=self._role_context,
+                user_audit_service=user_audit_service,
+            ),
+            "監査ログ",
+        )
         if (
             export_backup_service is not None
             and backup_restore_service is not None
@@ -275,6 +261,8 @@ class MainWindow(QMainWindow):
         apply_crud_list_first(widget, title)
         self.tabs.addTab(widget, title)
         self._tabs_by_name[title] = widget
+        for alias in _tab_aliases(title):
+            self._tabs_by_name[alias] = widget
 
     def _prefill_operations_paths(self, operations_tab: OperationsTab) -> None:
         package_root = self._resolve_operations_package_root()
@@ -380,3 +368,11 @@ class MainWindow(QMainWindow):
         if self._connection is not None:
             self._connection.commit()
         super().closeEvent(event)
+
+
+def _tab_aliases(title: str) -> tuple[str, ...]:
+    if title == "タイトル/サブタイトル管理":
+        return ("タイトルを管理", "サブタイトルを管理")
+    if title == "監査ログ":
+        return ("操作履歴", "ユーザー監査ログ")
+    return ()
