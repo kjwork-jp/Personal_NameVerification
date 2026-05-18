@@ -1,4 +1,4 @@
-"""User management services for local authentication."""
+"""User management services for local and Windows authentication."""
 
 from __future__ import annotations
 
@@ -7,10 +7,11 @@ import sqlite3
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import Any, TypeVar, cast
+from typing import Any, Literal, TypeVar, cast
 
 from app.application.authorization import ServiceRole, require_admin, require_known_role
 from app.application.password_services import PasswordHash, hash_password, verify_password
+from app.application.windows_identity import WindowsIdentity
 from app.domain.errors import (
     AuthorizationError,
     ConflictError,
@@ -20,6 +21,8 @@ from app.domain.errors import (
 )
 
 R = TypeVar("R")
+AuthProvider = Literal["local", "windows"]
+_WINDOWS_DISABLED_PASSWORD = "__windows_auth_password_disabled__"
 
 
 @dataclass(frozen=True, slots=True)
@@ -37,6 +40,9 @@ class UserRecord:
     operator_id: str
     display_name: str | None
     role: ServiceRole
+    auth_provider: AuthProvider
+    windows_account_name: str | None
+    windows_sid: str | None
     disabled_at: str | None
     failed_login_count: int
     locked_until: str | None
@@ -46,7 +52,7 @@ class UserRecord:
 
 
 class UserService:
-    """Application service for admin-managed local users."""
+    """Application service for admin-managed local and Windows users."""
 
     def __init__(self, connection: sqlite3.Connection) -> None:
         self._connection = connection
@@ -59,12 +65,14 @@ class UserService:
         actor_operator_id: str,
         actor_role: ServiceRole = "admin",
     ) -> int:
-        """Create a local user. Only admin can create users."""
+        """Create a local password user. Only admin can create users."""
 
         def operation() -> int:
             require_admin(actor_role, action="create_user")
             self._validate_operator_id(actor_operator_id, field_name="actor_operator_id")
             self._validate_operator_id(payload.operator_id, field_name="operator_id")
+            if payload.password == "":
+                raise ValidationError("password is required")
             role = require_known_role(payload.role, action="create_user")
             stored = hash_password(payload.password)
             now = _utc_now()
@@ -75,6 +83,7 @@ class UserService:
                         operator_id,
                         display_name,
                         role,
+                        auth_provider,
                         password_hash,
                         password_salt,
                         password_algorithm,
@@ -82,7 +91,7 @@ class UserService:
                         password_updated_at,
                         created_at,
                         updated_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ) VALUES (?, ?, ?, 'local', ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
                         payload.operator_id,
@@ -114,7 +123,7 @@ class UserService:
         return self._write(operation)
 
     def authenticate_user(self, operator_id: str, password: str) -> UserRecord:
-        """Authenticate a local user and return the stored role context source."""
+        """Authenticate a local password user."""
 
         self._validate_operator_id(operator_id, field_name="operator_id")
         if password == "":
@@ -127,21 +136,22 @@ class UserService:
                 target_operator_id=operator_id,
                 action="login_failure",
                 before=None,
-                after={"operator_id": operator_id, "reason": "not_found"},
+                after={
+                    "operator_id": operator_id,
+                    "auth_provider": "local",
+                    "reason": "not_found",
+                },
             )
             self._connection.commit()
             raise AuthorizationError("invalid operator_id or password")
 
         user = _user_record_from_row(row)
-        if user.disabled_at is not None:
-            self._insert_login_failure(user, reason="disabled")
+        if user.auth_provider != "local":
+            self._insert_login_failure(user, reason="local_auth_not_allowed")
             self._connection.commit()
-            raise AuthorizationError("user is disabled")
+            raise AuthorizationError("local password login is not available for this user")
+        self._ensure_login_allowed(user)
         now = _utc_now()
-        if user.locked_until is not None and user.locked_until > now:
-            self._insert_login_failure(user, reason="locked")
-            self._connection.commit()
-            raise AuthorizationError("user is locked")
 
         if not verify_password(password, _password_hash_from_row(row)):
             self._connection.execute(
@@ -163,26 +173,19 @@ class UserService:
             self._connection.commit()
             raise AuthorizationError("invalid operator_id or password")
 
-        def operation() -> UserRecord:
-            self._connection.execute(
-                """
-                UPDATE users
-                SET failed_login_count = 0, last_login_at = ?, updated_at = ?
-                WHERE id = ?
-                """,
-                (now, now, user.id),
-            )
-            authenticated = self.get_user(operator_id, include_disabled=True)
-            self._insert_user_audit_log(
-                actor_operator_id=operator_id,
-                target_operator_id=operator_id,
-                action="login_success",
-                before=_audit_user_record(user),
-                after=_audit_user_record(authenticated),
-            )
-            return authenticated
+        return self._mark_login_success(user)
 
-        return self._write(operation)
+    def authenticate_windows_user(self, identity: WindowsIdentity) -> UserRecord:
+        """Authenticate current Windows session and auto-create unknown users as viewer."""
+
+        if identity.account_name.strip() == "":
+            raise ValidationError("windows account name is required")
+        row = self._find_windows_user_row(identity)
+        if row is None:
+            return self._create_windows_viewer(identity)
+        user = _user_record_from_row(row)
+        self._ensure_login_allowed(user)
+        return self._mark_login_success(user)
 
     def change_user_role(
         self,
@@ -192,7 +195,7 @@ class UserService:
         actor_operator_id: str,
         actor_role: ServiceRole = "admin",
     ) -> None:
-        """Change a local user's role while preserving at least one active admin."""
+        """Change a user's role while preserving at least one active admin."""
 
         def operation() -> None:
             require_admin(actor_role, action="change_user_role")
@@ -226,7 +229,7 @@ class UserService:
         actor_operator_id: str,
         actor_role: ServiceRole = "admin",
     ) -> None:
-        """Disable a local user while preserving at least one active admin."""
+        """Disable a user while preserving at least one active admin."""
 
         def operation() -> None:
             require_admin(actor_role, action="disable_user")
@@ -261,7 +264,7 @@ class UserService:
         actor_operator_id: str,
         actor_role: ServiceRole = "admin",
     ) -> None:
-        """Enable a disabled local user."""
+        """Enable a disabled user."""
 
         def operation() -> None:
             require_admin(actor_role, action="enable_user")
@@ -300,6 +303,9 @@ class UserService:
                 operator_id,
                 display_name,
                 role,
+                auth_provider,
+                windows_account_name,
+                windows_sid,
                 disabled_at,
                 failed_login_count,
                 locked_until,
@@ -327,6 +333,9 @@ class UserService:
                 operator_id,
                 display_name,
                 role,
+                auth_provider,
+                windows_account_name,
+                windows_sid,
                 disabled_at,
                 failed_login_count,
                 locked_until,
@@ -339,6 +348,110 @@ class UserService:
             """
         ).fetchall()
         return [_user_record_from_row(row) for row in rows]
+
+    def _create_windows_viewer(self, identity: WindowsIdentity) -> UserRecord:
+        def operation() -> UserRecord:
+            stored = hash_password(_WINDOWS_DISABLED_PASSWORD)
+            now = _utc_now()
+            operator_id = _windows_operator_id(identity)
+            try:
+                self._connection.execute(
+                    """
+                    INSERT INTO users(
+                        operator_id,
+                        display_name,
+                        role,
+                        auth_provider,
+                        windows_account_name,
+                        windows_sid,
+                        password_hash,
+                        password_salt,
+                        password_algorithm,
+                        password_iterations,
+                        password_updated_at,
+                        last_login_at,
+                        created_at,
+                        updated_at
+                    ) VALUES (?, ?, 'viewer', 'windows', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        operator_id,
+                        identity.display_name,
+                        identity.account_name,
+                        identity.sid,
+                        stored.password_hash,
+                        stored.salt,
+                        stored.algorithm,
+                        stored.iterations,
+                        now,
+                        now,
+                        now,
+                        now,
+                    ),
+                )
+            except sqlite3.IntegrityError as exc:
+                raise ConflictError("windows user already exists") from exc
+            created = self.get_user(operator_id, include_disabled=True)
+            self._insert_user_audit_log(
+                actor_operator_id=operator_id,
+                target_operator_id=operator_id,
+                action="user_create",
+                before=None,
+                after={**_audit_user_record(created), "reason": "windows_auto_viewer"},
+            )
+            self._insert_user_audit_log(
+                actor_operator_id=operator_id,
+                target_operator_id=operator_id,
+                action="login_success",
+                before=None,
+                after=_audit_user_record(created),
+            )
+            return created
+
+        return self._write(operation)
+
+    def _mark_login_success(self, user: UserRecord) -> UserRecord:
+        def operation() -> UserRecord:
+            now = _utc_now()
+            self._connection.execute(
+                """
+                UPDATE users
+                SET failed_login_count = 0, last_login_at = ?, updated_at = ?
+                WHERE id = ?
+                """,
+                (now, now, user.id),
+            )
+            authenticated = self.get_user(user.operator_id, include_disabled=True)
+            self._insert_user_audit_log(
+                actor_operator_id=user.operator_id,
+                target_operator_id=user.operator_id,
+                action="login_success",
+                before=_audit_user_record(user),
+                after=_audit_user_record(authenticated),
+            )
+            return authenticated
+
+        return self._write(operation)
+
+    def _find_windows_user_row(self, identity: WindowsIdentity) -> sqlite3.Row | None:
+        if identity.sid:
+            row = self._connection.execute(
+                """
+                SELECT * FROM users
+                WHERE auth_provider = 'windows' AND windows_sid = ?
+                """,
+                (identity.sid,),
+            ).fetchone()
+            if row is not None:
+                return cast(sqlite3.Row, row)
+        row = self._connection.execute(
+            """
+            SELECT * FROM users
+            WHERE auth_provider = 'windows' AND windows_account_name = ?
+            """,
+            (identity.account_name,),
+        ).fetchone()
+        return cast(sqlite3.Row | None, row)
 
     def _active_admin_count(self) -> int:
         row = self._connection.execute(
@@ -355,6 +468,9 @@ class UserService:
                 operator_id,
                 display_name,
                 role,
+                auth_provider,
+                windows_account_name,
+                windows_sid,
                 disabled_at,
                 failed_login_count,
                 locked_until,
@@ -371,6 +487,17 @@ class UserService:
             (operator_id,),
         ).fetchone()
         return cast(sqlite3.Row | None, row)
+
+    def _ensure_login_allowed(self, user: UserRecord) -> None:
+        if user.disabled_at is not None:
+            self._insert_login_failure(user, reason="disabled")
+            self._connection.commit()
+            raise AuthorizationError("user is disabled")
+        now = _utc_now()
+        if user.locked_until is not None and user.locked_until > now:
+            self._insert_login_failure(user, reason="locked")
+            self._connection.commit()
+            raise AuthorizationError("user is locked")
 
     def _insert_login_failure(self, user: UserRecord, *, reason: str) -> None:
         self._insert_user_audit_log(
@@ -427,21 +554,24 @@ def _user_record_from_row(row: Any) -> UserRecord:
         operator_id=str(_row_value(row, "operator_id", 2)),
         display_name=_optional_str(_row_value(row, "display_name", 3)),
         role=require_known_role(str(_row_value(row, "role", 4)), action="read_user"),
-        disabled_at=_optional_str(_row_value(row, "disabled_at", 5)),
-        failed_login_count=int(_row_value(row, "failed_login_count", 6)),
-        locked_until=_optional_str(_row_value(row, "locked_until", 7)),
-        last_login_at=_optional_str(_row_value(row, "last_login_at", 8)),
-        created_at=str(_row_value(row, "created_at", 9)),
-        updated_at=str(_row_value(row, "updated_at", 10)),
+        auth_provider=_auth_provider(str(_row_value(row, "auth_provider", 5))),
+        windows_account_name=_optional_str(_row_value(row, "windows_account_name", 6)),
+        windows_sid=_optional_str(_row_value(row, "windows_sid", 7)),
+        disabled_at=_optional_str(_row_value(row, "disabled_at", 8)),
+        failed_login_count=int(_row_value(row, "failed_login_count", 9)),
+        locked_until=_optional_str(_row_value(row, "locked_until", 10)),
+        last_login_at=_optional_str(_row_value(row, "last_login_at", 11)),
+        created_at=str(_row_value(row, "created_at", 12)),
+        updated_at=str(_row_value(row, "updated_at", 13)),
     )
 
 
 def _password_hash_from_row(row: Any) -> PasswordHash:
     return PasswordHash(
-        algorithm=str(_row_value(row, "password_algorithm", 13)),
-        iterations=int(_row_value(row, "password_iterations", 14)),
-        salt=str(_row_value(row, "password_salt", 12)),
-        password_hash=str(_row_value(row, "password_hash", 11)),
+        algorithm=str(_row_value(row, "password_algorithm", 16)),
+        iterations=int(_row_value(row, "password_iterations", 17)),
+        salt=str(_row_value(row, "password_salt", 15)),
+        password_hash=str(_row_value(row, "password_hash", 14)),
     )
 
 
@@ -450,11 +580,25 @@ def _audit_user_record(user: UserRecord) -> dict[str, Any]:
         "operator_id": user.operator_id,
         "display_name": user.display_name,
         "role": user.role,
+        "auth_provider": user.auth_provider,
+        "windows_account_name": user.windows_account_name,
+        "windows_sid": user.windows_sid,
         "disabled_at": user.disabled_at,
         "failed_login_count": user.failed_login_count,
         "locked_until": user.locked_until,
         "last_login_at": user.last_login_at,
     }
+
+
+def _windows_operator_id(identity: WindowsIdentity) -> str:
+    source = identity.sid or identity.account_name
+    return f"windows:{source}"
+
+
+def _auth_provider(value: str) -> AuthProvider:
+    if value in {"local", "windows"}:
+        return cast(AuthProvider, value)
+    return "local"
 
 
 def _json_or_none(value: dict[str, Any] | None) -> str | None:
