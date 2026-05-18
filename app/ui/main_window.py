@@ -6,8 +6,16 @@ import sqlite3
 from datetime import datetime
 from pathlib import Path
 
-from PySide6.QtGui import QCloseEvent
-from PySide6.QtWidgets import QLabel, QMainWindow, QTabWidget, QWidget
+from PySide6.QtCore import Signal
+from PySide6.QtGui import QAction, QCloseEvent
+from PySide6.QtWidgets import (
+    QLabel,
+    QMainWindow,
+    QMessageBox,
+    QPushButton,
+    QTabWidget,
+    QWidget,
+)
 
 from app.application.backup_restore_services import BackupRestoreService
 from app.application.core_services import CoreService
@@ -54,6 +62,8 @@ def _looks_like_operations_package_root(package_root: Path) -> bool:
 class MainWindow(QMainWindow):
     """Top-level main window with user-facing tab layout."""
 
+    account_switch_requested = Signal()
+
     def __init__(
         self,
         query_service: QueryService,
@@ -84,6 +94,7 @@ class MainWindow(QMainWindow):
         self.resize(1180, 760)
         apply_friendly_theme(self)
         self._setup_login_status_bar()
+        self._setup_account_switch_controls()
 
         self.tabs = QTabWidget(self)
         self._tabs_by_name: dict[str, QWidget] = {}
@@ -182,6 +193,12 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(self.tabs)
         apply_searchable_comboboxes(self)
 
+    @property
+    def role_context(self) -> RoleContext:
+        """Return the current login context used to build this window."""
+
+        return self._role_context
+
     def _format_login_context(self) -> str:
         return (
             f"ログイン中: {self._role_context.operator_id}"
@@ -207,6 +224,46 @@ class MainWindow(QMainWindow):
         self.statusBar().setSizeGripEnabled(False)
         self.statusBar().showMessage("Ready")
         self.statusBar().addPermanentWidget(self.login_status_label, 0)
+
+    def _setup_account_switch_controls(self) -> None:
+        account_menu = self.menuBar().addMenu("アカウント")
+        self.account_switch_action = QAction("アカウント切替", self)
+        self.account_switch_action.setToolTip(
+            "現在の画面を閉じ、ログイン画面に戻って別ユーザーでログインします。"
+        )
+        self.account_switch_action.triggered.connect(
+            lambda _checked=False: self._confirm_account_switch()
+        )
+        account_menu.addAction(self.account_switch_action)
+
+        self.account_switch_button = QPushButton("アカウント切替")
+        self.account_switch_button.setObjectName("accountSwitchButton")
+        self.account_switch_button.setToolTip(
+            "現在の画面を閉じ、ログイン画面に戻って別ユーザーでログインします。"
+        )
+        self.account_switch_button.setStyleSheet(
+            "QPushButton#accountSwitchButton {"
+            "padding: 2px 8px;"
+            "font-weight: 600;"
+            "}"
+        )
+        self.account_switch_button.clicked.connect(
+            lambda _checked=False: self._confirm_account_switch()
+        )
+        self.statusBar().addPermanentWidget(self.account_switch_button, 0)
+
+    def _confirm_account_switch(self) -> None:
+        result = QMessageBox.question(
+            self,
+            "アカウント切替",
+            "現在の画面を閉じてログイン画面に戻ります。\n"
+            "別ユーザーでログインし直しますか？",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if result != QMessageBox.StandardButton.Yes:
+            return
+        self.account_switch_requested.emit()
 
     def _add_tab(self, widget: QWidget, title: str) -> None:
         apply_operator_context(widget, self._role_context)
