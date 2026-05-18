@@ -43,9 +43,11 @@ class UserManagementTab(QWidget):
             level="info",
         )
 
-        self.operator_input = QLineEdit()
-        self.operator_input.setPlaceholderText("例: viewer")
-        self.operator_input.setToolTip("ログイン時に入力する操作者IDです。例: viewer")
+        self.create_operator_input = QLineEdit()
+        self.create_operator_input.setPlaceholderText("例: viewer")
+        self.create_operator_input.setToolTip(
+            "新規作成するユーザーのログインIDです。例: viewer"
+        )
         self.display_name_input = QLineEdit()
         self.display_name_input.setPlaceholderText("任意")
         self.password_input = QLineEdit()
@@ -139,7 +141,7 @@ class UserManagementTab(QWidget):
                 "新規ユーザーを作成します。操作者IDはログインIDとして使います。"
             )
         )
-        layout.addWidget(_field_with_label("操作者ID（ログインID）", self.operator_input))
+        layout.addWidget(_field_with_label("操作者ID（ログインID）", self.create_operator_input))
         layout.addWidget(_field_with_label("表示名", self.display_name_input))
         layout.addWidget(_field_with_label("初期パスワード", self.password_input))
         layout.addWidget(_field_with_label("権限", self.role_combo))
@@ -231,7 +233,7 @@ class UserManagementTab(QWidget):
         try:
             self._user_service.create_user(
                 CreateUserInput(
-                    operator_id=self.operator_input.text().strip(),
+                    operator_id=self.create_operator_input.text().strip(),
                     display_name=self.display_name_input.text().strip() or None,
                     password=self.password_input.text(),
                     role=_service_role(role),
@@ -242,7 +244,7 @@ class UserManagementTab(QWidget):
         except (AuthorizationError, ConflictError, ValidationError) as exc:
             set_status_message(self.status_label, str(exc), level="error")
             return
-        self.operator_input.clear()
+        self.create_operator_input.clear()
         self.display_name_input.clear()
         self.password_input.clear()
         self.refresh()
@@ -292,7 +294,7 @@ class UserManagementTab(QWidget):
     def _apply_permissions(self) -> None:
         enabled = self._role_context.role == "admin"
         for widget in (
-            self.operator_input,
+            self.create_operator_input,
             self.display_name_input,
             self.password_input,
             self.role_combo,
