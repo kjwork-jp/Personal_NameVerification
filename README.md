@@ -32,9 +32,20 @@ python -m app.pyside6_main
 - active user が0件の場合は、最初に `InitialAdminSetupDialog` で初回adminを作成します。
 - 通常起動時は `LoginDialog` で `operator_id` と password を入力します。
 - role は利用者が自由選択せず、DB上の `users.role` から `viewer` / `editor` / `admin` を取得します。
+- MainWindow の title bar と status bar に `ログイン中: <operator_id> / 権限: <role>` を常時表示します。
 - passwordは平文保存せず、PBKDF2-SHA256のhash/salt/iterationsとして保存します。
 - login成功/失敗、user作成、role変更、無効化/有効化などは `user_audit_logs` へ記録します。
 - これはローカル単体アプリ内の認証であり、SSO / OS認証 / AD連携ではありません。
+
+## RBAC summary
+
+| role | 参照 | 通常登録/更新 | 関連付け登録 | 関連解除 | 削除/復元/完全削除 | export/backup | import/restore | ユーザー管理 | ユーザー監査ログ |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| viewer | 可 | 不可 | 不可 | 不可 | 不可 | 不可 | 不可 | 不可 | 不可/内容非表示 |
+| editor | 可 | 可 | 可 | 不可 | 不可 | 可 | 不可 | 不可 | 不可/内容非表示 |
+| admin | 可 | 可 | 可 | 可 | 可 | 可 | 可 | 可 | 可 |
+
+RBACの詳細と残作業は `docs/74_rbac_hardening_plan.md`、v0.2.0の横断状況は `docs/75_v0_2_0_current_status_and_improvement_ledger.md` を参照してください。
 
 ## Portable release layout
 
@@ -149,17 +160,27 @@ $env:NAMEVERIFICATION_CHANGE_LOG_JSONL_ENABLED = "1"
 | データ入出力 | CSV/JSON/SQL出力、バックアップ、Restore、Import、Operations JSONLログ確認を行う |
 | ヘルプ/設定 | DB保存先、環境変数、自動JSONLログ、基本操作を確認する |
 
+## Current UI improvement status
+
+| 区分 | 状態 |
+|---|---|
+| ユーザー管理 | `ガイド` / `ユーザー作成` / `ユーザー一覧` / `選択ユーザー操作` へサブタブ化済み |
+| ログイン状態表示 | title bar / status bar に常時表示済み |
+| viewer RBAC | 主要更新系UIを無効化済み |
+| editor RBAC | 通常更新/export/backupは有効表示、destructive/import/restore/user管理は無効表示。実行UATは未完 |
+| 今後のUI改善 | データ入出力、削除データ、通常CRUD系のサブタブ化を予定 |
+
 ## Data operations
 
 データ入出力タブでは以下を扱います。
 
 | 区分 | 操作 | 権限目安 | 注意 |
 |---|---|---|---|
-| Export | CSV / JSON / SQL dump | editor / admin | 読み取り系 |
-| Backup | SQLite DBバックアップ作成 | editor / admin | 運用前後に取得推奨 |
+| Export | CSV / JSON / SQL dump | editor / admin | 読み取り系。viewerは不可 |
+| Backup | SQLite DBバックアップ作成 | editor / admin | 運用前後に取得推奨。viewerは不可 |
 | Restore | バックアップからDB復元 | admin | destructive。対象DBを置換する |
 | Import | CSV / JSON取込 | admin | destructive。事前バックアップ必須 |
-| Operations log | データ入出力タブの実行ログ確認/出力 | admin中心 | `operations_events.jsonl` を参照 |
+| Operations log | データ入出力タブの実行ログ確認/出力 | viewer/editor/adminで参照可。ログ出力はeditor/admin | `operations_events.jsonl` を参照 |
 
 Restore / Import は destructive 操作です。実行前に自動で `50_backups/before_restore` または `50_backups/before_import` へ退避DBを作成します。
 ただし、重要データ投入前後は明示的なbackup取得も推奨します。
@@ -232,7 +253,7 @@ python .\scripts\generate_sample_data.py --help
 - `app/domain`: normalization rules, public ID helpers, domain errors
 - `app/application`: `CoreService` / `EnhancedQueryService` / `UserService` / `UserAuditLogService` / read models / authorization helpers / automatic JSONL change log export
 - `app/infrastructure`: SQLite schema and migration application helpers
-- `app/ui`: PySide6 UI tabs, first-run admin setup, password login, role-based UI guards
+- `app/ui`: PySide6 UI tabs, first-run admin setup, password login, role-based UI guards, login context display
 - `db/`: base schema SQL
 - `migrations/`: repo-managed SQLite migrations
 - `tests/`: unit + UI tests
@@ -245,6 +266,12 @@ python .\scripts\generate_sample_data.py --help
 - Incident runbook: `docs/55_incident_response_runbook.md`
 - v0.1.0-rc2 release evidence: `docs/59_release_evidence_v0_1_0_rc2.md`
 - v0.2.0 auth/user management implementation plan: `docs/70_v0_2_0_auth_user_management_implementation_plan.md`
+- v0.2.0 integrated UAT checklist: `docs/71_v0_2_0_auth_integrated_uat_checklist.md`
+- v0.2.0 integrated UAT execution record: `docs/72_v0_2_0_auth_integrated_uat_execution_record.md`
+- UI navigation redesign plan: `docs/73_ui_navigation_redesign_plan.md`
+- RBAC hardening plan: `docs/74_rbac_hardening_plan.md`
+- v0.2.0 current status and improvement ledger: `docs/75_v0_2_0_current_status_and_improvement_ledger.md`
+- Open issues and constraints: `docs/97_open_issues_and_constraints.md`
 
 ## Manuals
 
