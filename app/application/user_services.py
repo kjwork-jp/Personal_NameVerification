@@ -158,7 +158,7 @@ class UserService:
                 target_operator_id=operator_id,
                 action="login_failure",
                 before=_audit_user_record(user),
-                after={**_audit_user_record(after_failure), "reason": "password_mismatch"},
+                after={**_audit_user_record(after_failure), "reason": "credential_mismatch"},
             )
             self._connection.commit()
             raise AuthorizationError("invalid operator_id or password")
