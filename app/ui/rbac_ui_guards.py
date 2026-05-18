@@ -46,8 +46,6 @@ def apply_operations_tab_role_guards(tab: Any, role_context: RoleContext) -> Non
     role = role_context.role
     can_export_backup = role in {"editor", "admin"}
     can_restore_import = role == "admin"
-    can_edit_export_backup_paths = can_export_backup
-    can_edit_restore_import_paths = can_restore_import
     can_clear_history = role in {"editor", "admin"}
 
     export_backup_fields = (
@@ -94,7 +92,10 @@ def apply_operations_tab_role_guards(tab: Any, role_context: RoleContext) -> Non
             can_export_backup,
             None if can_export_backup else _VIEWER_TOOLTIP,
         )
-    for name in restore_import_fields + restore_import_browse_buttons + restore_import_action_buttons:
+    restore_import_widgets = (
+        restore_import_fields + restore_import_browse_buttons + restore_import_action_buttons
+    )
+    for name in restore_import_widgets:
         _set_enabled(
             _get(tab, name),
             can_restore_import,
