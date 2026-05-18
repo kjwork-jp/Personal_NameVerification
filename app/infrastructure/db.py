@@ -31,6 +31,7 @@ def apply_schema(connection: sqlite3.Connection, schema_path: Path = DEFAULT_SCH
     """Apply schema SQL and pending migrations to an existing SQLite connection."""
     sql_script = schema_path.read_text(encoding="utf-8")
     connection.execute("PRAGMA foreign_keys = ON;")
+    ensure_legacy_public_id_columns(connection)
     connection.executescript(sql_script)
     apply_migrations(connection)
     ensure_public_ids(connection)
@@ -93,6 +94,15 @@ def check_database_integrity(connection: sqlite3.Connection) -> None:
     raise sqlite3.DatabaseError(f"SQLite integrity check failed: {detail}")
 
 
+def ensure_legacy_public_id_columns(connection: sqlite3.Connection) -> None:
+    """Add public_id columns before schema indexes run against legacy tables."""
+
+    for table in _PUBLIC_ID_TABLES:
+        if _table_exists(connection, table):
+            _ensure_public_id_column(connection, table)
+    connection.commit()
+
+
 def ensure_public_ids(connection: sqlite3.Connection) -> None:
     """Add and backfill nullable public_id columns for existing SQLite databases."""
 
@@ -111,6 +121,18 @@ def ensure_public_ids(connection: sqlite3.Connection) -> None:
                 (new_public_id(), _row_value(row, "id", 0)),
             )
     connection.commit()
+
+
+def _table_exists(connection: sqlite3.Connection, table: str) -> bool:
+    row = connection.execute(
+        """
+        SELECT 1
+        FROM sqlite_master
+        WHERE type = 'table' AND name = ?
+        """,
+        (table,),
+    ).fetchone()
+    return row is not None
 
 
 def _ensure_public_id_column(connection: sqlite3.Connection, table: str) -> None:
