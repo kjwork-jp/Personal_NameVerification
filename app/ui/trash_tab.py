@@ -24,6 +24,7 @@ from app.ui.input_defaults import default_operator_id
 from app.ui.permissions import can_run_destructive_actions
 from app.ui.public_id_display import short_public_id
 from app.ui.role_context import RoleContext, UserRole
+from app.ui.trash_tab_navigation import apply_trash_subtabs
 from app.ui.ui_style import PageHeader, compact_layout
 
 
@@ -192,6 +193,7 @@ class TrashTab(QWidget):
         root.addWidget(self.list_table, 1)
         root.addWidget(self.detail_label)
 
+        apply_trash_subtabs(self)
         self._apply_role_guards()
         self._reload()
 
