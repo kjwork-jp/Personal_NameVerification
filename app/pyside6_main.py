@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sys
+from functools import partial
 
 
 def main() -> int:
@@ -104,17 +105,25 @@ def main() -> int:
             connection=connection,
         )
 
-        def _request_account_switch() -> None:
+        def _request_account_switch(
+            current_role_context: RoleContext,
+            current_window: MainWindow,
+        ) -> None:
             nonlocal account_switch_requested
             account_switch_requested = True
             _append_operation_log(
                 action="account_switch",
-                role_context=role_context,
-                message=f"Account switch requested by {role_context.operator_id}",
+                role_context=current_role_context,
+                message=(
+                    "Account switch requested by "
+                    f"{current_role_context.operator_id}"
+                ),
             )
-            window.close()
+            current_window.close()
 
-        window.account_switch_requested.connect(_request_account_switch)
+        window.account_switch_requested.connect(
+            partial(_request_account_switch, role_context, window)
+        )
         window.show()
 
         exit_code = int(app.exec())
