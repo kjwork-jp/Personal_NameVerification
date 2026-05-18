@@ -7,7 +7,7 @@ from datetime import datetime
 from pathlib import Path
 
 from PySide6.QtGui import QCloseEvent
-from PySide6.QtWidgets import QMainWindow, QTabWidget, QWidget
+from PySide6.QtWidgets import QLabel, QMainWindow, QTabWidget, QWidget
 
 from app.application.backup_restore_services import BackupRestoreService
 from app.application.core_services import CoreService
@@ -79,9 +79,11 @@ class MainWindow(QMainWindow):
         self._operations_log_jsonl_path = operations_log_jsonl_path
         self._operation_logger = operation_logger
         self._role_context = role_context or RoleContext.admin()
-        self.setWindowTitle("NameVerification v3")
+        self._login_context_text = self._format_login_context()
+        self.setWindowTitle(f"NameVerification v3 - {self._login_context_text}")
         self.resize(1180, 760)
         apply_friendly_theme(self)
+        self._setup_login_status_bar()
 
         self.tabs = QTabWidget(self)
         self._tabs_by_name: dict[str, QWidget] = {}
@@ -179,6 +181,32 @@ class MainWindow(QMainWindow):
         self.tabs.currentChanged.connect(self._refresh_current_tab)
         self.setCentralWidget(self.tabs)
         apply_searchable_comboboxes(self)
+
+    def _format_login_context(self) -> str:
+        return (
+            f"ログイン中: {self._role_context.operator_id}"
+            f" / 権限: {self._role_context.role}"
+        )
+
+    def _setup_login_status_bar(self) -> None:
+        self.login_status_label = QLabel(self._login_context_text)
+        self.login_status_label.setObjectName("loginStatusLabel")
+        self.login_status_label.setToolTip(
+            "現在ログイン中の操作者IDと権限です。権限により利用可能な操作が変わります。"
+        )
+        self.login_status_label.setStyleSheet(
+            "QLabel#loginStatusLabel {"
+            "padding: 2px 8px;"
+            "font-weight: 600;"
+            "color: #dbeafe;"
+            "background-color: #1e3a8a;"
+            "border: 1px solid #60a5fa;"
+            "border-radius: 4px;"
+            "}"
+        )
+        self.statusBar().setSizeGripEnabled(False)
+        self.statusBar().showMessage("Ready")
+        self.statusBar().addPermanentWidget(self.login_status_label, 0)
 
     def _add_tab(self, widget: QWidget, title: str) -> None:
         apply_operator_context(widget, self._role_context)
