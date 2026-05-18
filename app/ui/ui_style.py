@@ -43,7 +43,7 @@ def apply_friendly_theme(widget: QWidget) -> None:
         QMainWindow, QWidget {
             background: #20242b;
             color: #f3f6fb;
-            font-size: 12px;
+            font-size: 9pt;
         }
         QTabWidget::pane {
             border: 1px solid #3d4654;
@@ -120,7 +120,7 @@ def apply_friendly_theme(widget: QWidget) -> None:
             border-radius: 7px;
         }
         QLabel#PageHeaderTitle {
-            font-size: 14px;
+            font-size: 10pt;
             font-weight: 700;
             color: #ffffff;
             margin-bottom: 0px;
