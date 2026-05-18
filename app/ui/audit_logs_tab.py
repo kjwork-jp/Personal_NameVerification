@@ -67,8 +67,10 @@ def _build_guide_page() -> QWidget:
     layout = QVBoxLayout(page)
     compact_layout(layout, margins=8, spacing=6)
     text = QLabel(
-        "データ変更ログ: 名前・タイトル・サブタイトル・関連付けなど、業務データの変更履歴です。\n"
-        "ユーザー/認証ログ: ログイン成功/失敗、ユーザー作成、権限変更などの認証・ユーザー管理履歴です。\n"
+        "データ変更ログ: 名前・タイトル・サブタイトル・関連付けなど、"
+        "業務データの変更履歴です。\n"
+        "ユーザー/認証ログ: ログイン成功/失敗、ユーザー作成、権限変更などの"
+        "認証・ユーザー管理履歴です。\n"
         "入出力/起動ログ: データ入出力タブのOperations Logで確認します。"
     )
     text.setWordWrap(True)
