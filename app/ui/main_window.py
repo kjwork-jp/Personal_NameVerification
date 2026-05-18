@@ -24,6 +24,7 @@ from app.ui.link_management_tab import LinkManagementTab
 from app.ui.name_management_tab import NameManagementTab
 from app.ui.operations_log import OperationsJsonlLogger
 from app.ui.operations_tab import OperationLoggerLike, OperationsTab
+from app.ui.rbac_ui_guards import apply_operations_tab_role_guards
 from app.ui.role_context import RoleContext
 from app.ui.search_tab import SearchTab
 from app.ui.subtitle_management_tab import SubtitleManagementTab
@@ -164,6 +165,7 @@ class MainWindow(QMainWindow):
                 operation_logger=operation_logger,
             )
             self._prefill_operations_paths(operations_tab)
+            apply_operations_tab_role_guards(operations_tab, self._role_context)
             self._add_tab(operations_tab, "データ入出力")
         self._add_tab(
             HelpSettingsTab(
@@ -270,12 +272,18 @@ class MainWindow(QMainWindow):
             method = getattr(widget, method_name, None)
             if callable(method):
                 method()
+                self._reapply_tab_role_guards(widget)
                 return
         editor = getattr(widget, "editor", None)
         if editor is not None:
             method = getattr(editor, "_refresh_titles", None)
             if callable(method):
                 method()
+        self._reapply_tab_role_guards(widget)
+
+    def _reapply_tab_role_guards(self, widget: QWidget) -> None:
+        if isinstance(widget, OperationsTab):
+            apply_operations_tab_role_guards(widget, self._role_context)
 
     def closeEvent(self, event: QCloseEvent) -> None:  # noqa: N802
         if self._connection is not None:
