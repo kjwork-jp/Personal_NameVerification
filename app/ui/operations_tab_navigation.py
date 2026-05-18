@@ -79,7 +79,7 @@ def apply_operations_subtabs(widget: QWidget) -> None:
 
     insert_index = max(0, grid_index)
     root_layout.insertWidget(insert_index, sub_tabs, 1)
-    widget.operations_subtabs = sub_tabs  # type: ignore[attr-defined]
+    widget.operations_subtabs = sub_tabs
 
 
 def _build_guide_page() -> QWidget:
