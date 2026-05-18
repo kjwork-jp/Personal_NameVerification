@@ -13,6 +13,9 @@ qt_widgets = pytest.importorskip("PySide6.QtWidgets", exc_type=ImportError)
 QApplication = qt_widgets.QApplication
 QPushButton = qt_widgets.QPushButton
 
+from app.ui.main_window import MainWindow  # noqa: E402
+from app.ui.operations_tab import OperationsTab  # noqa: E402
+from app.ui.role_context import RoleContext  # noqa: E402
 from tests.test_main_window_smoke import (  # noqa: E402
     EmptyBackupRestoreService,
     EmptyCoreService,
@@ -21,10 +24,6 @@ from tests.test_main_window_smoke import (  # noqa: E402
     EmptyQueryService,
     _patch_operations_dependencies,
 )
-
-from app.ui.main_window import MainWindow  # noqa: E402
-from app.ui.operations_tab import OperationsTab  # noqa: E402
-from app.ui.role_context import RoleContext  # noqa: E402
 
 
 def _app() -> QApplication:
