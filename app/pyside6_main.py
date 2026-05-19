@@ -157,7 +157,10 @@ def main() -> int:
 
     exit_code = 0
     while True:
-        QApplication.setQuitOnLastWindowClosed(True)
+        # LoginDialog is a nested modal loop. Keep last-window auto-quit disabled
+        # here so stale popup cleanup from account switching cannot close an empty
+        # login shell before its child widgets finish painting.
+        QApplication.setQuitOnLastWindowClosed(False)
         login = LoginDialog(user_service)
         if login.exec() != QDialog.DialogCode.Accepted:
             break
@@ -205,8 +208,10 @@ def main() -> int:
         )
         window.show()
 
+        QApplication.setQuitOnLastWindowClosed(True)
         exit_code = int(app.exec())
         if account_switch_requested:
+            QApplication.setQuitOnLastWindowClosed(False)
             window.deleteLater()
             QApplication.processEvents()
             continue
