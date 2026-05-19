@@ -55,11 +55,11 @@ def _close_account_switch_widgets(
     native top-level windows if account switching occurs while they are active.
     Do not call QApplication.exit()/quit() here: an explicit app-level exit can
     leak into the next LoginDialog modal loop and show a transient blank window
-    before terminating. Closing the last visible window is enough to return from
-    the current app.exec() loop when quitOnLastWindowClosed is enabled.
+    before terminating. The current MainWindow must remain visible until close()
+    so Qt emits lastWindowClosed and returns from the current app.exec() loop.
     """
 
-    from PySide6.QtWidgets import QApplication, QWidget
+    from PySide6.QtWidgets import QApplication
 
     QApplication.setQuitOnLastWindowClosed(True)
 
@@ -81,8 +81,6 @@ def _close_account_switch_widgets(
     QApplication.processEvents()
     _hide_combo_popups(current_window)
 
-    if isinstance(current_window, QWidget):
-        current_window.hide()
     current_window.close()
     QApplication.processEvents()
 
