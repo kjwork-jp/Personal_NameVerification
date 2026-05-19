@@ -30,7 +30,7 @@ exclude = ["tests", "docs", "prompts", "db", "assets", "scripts"]
 line-length = 100
 target-version = ["py312"]
 include = '''
-^/(app/(application|domain|infrastructure)/.*\.py|app/__init__\.py|app/pyside6_main\.py)$
+^/(app/(application|domain|infrastructure)/.*\.py|app/__init__\.py)$
 '''
 force-exclude = '''
 /(
@@ -43,6 +43,7 @@ force-exclude = '''
   | build
   | dist
   | app/ui
+  | app/pyside6_main\.py
 )/
 '''
 
