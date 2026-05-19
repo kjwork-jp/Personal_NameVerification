@@ -56,6 +56,7 @@ class StubQueryService:
                 deleted_at=None,
                 linked_count=0,
                 title_ids=(),
+                public_id="name-public-id-001",
             )
         ]
 
@@ -72,6 +73,7 @@ class StubQueryService:
                 deleted_at=None,
                 created_at="2026-01-01T00:00:00Z",
                 updated_at="2026-01-01T00:00:00Z",
+                public_id="title-public-id-001",
             )
         ]
 
@@ -91,6 +93,7 @@ class StubQueryService:
                 deleted_at=None,
                 created_at="2026-01-01T00:00:00Z",
                 updated_at="2026-01-01T00:00:00Z",
+                public_id="subtitle-public-id-001",
             )
         ]
 
@@ -111,6 +114,7 @@ class StubQueryService:
                 subtitle_name="Sub1",
                 title_name="T1",
                 link_deleted_at=None,
+                link_public_id="link-public-id-001",
             )
         ]
 
@@ -126,13 +130,17 @@ def test_link_management_tab_registers_primary_relation() -> None:
     _app()
     core = StubCoreService()
     query = StubQueryService(include_existing_link=False)
-    tab = LinkManagementTab(core_service=core, query_service=query)
+    tab = LinkManagementTab(
+        core_service=core,
+        query_service=query,
+        role_context=RoleContext(role="admin", operator_id="op-1"),
+    )
 
-    tab.operator_input.setText("op-1")
     tab._create_link()
 
     assert "link:1:100:primary:op-1:admin" in core.calls
     assert not hasattr(tab, "relation_type_combo")
+    assert not hasattr(tab, "operator_input")
 
 
 def test_link_management_tab_unlinks_existing_relation(
@@ -146,24 +154,29 @@ def test_link_management_tab_unlinks_existing_relation(
     )
     core = StubCoreService()
     query = StubQueryService(include_existing_link=True)
-    tab = LinkManagementTab(core_service=core, query_service=query)
+    tab = LinkManagementTab(
+        core_service=core,
+        query_service=query,
+        role_context=RoleContext(role="admin", operator_id="op-1"),
+    )
 
-    tab.operator_input.setText("op-1")
     tab._unlink_link()
 
     assert "unlink:500:op-1:admin" in core.calls
 
 
-def test_link_management_tab_requires_operator() -> None:
+def test_link_management_uses_login_operator_without_input_field() -> None:
     _app()
+    core = StubCoreService()
     tab = LinkManagementTab(
-        core_service=StubCoreService(),
+        core_service=core,
         query_service=StubQueryService(include_existing_link=False),
+        role_context=RoleContext(role="admin", operator_id="login-user"),
     )
 
-    tab.operator_input.setText("")
+    assert not hasattr(tab, "operator_input")
     tab._create_link()
-    assert "操作者" in tab.message_label.text()
+    assert "link:1:100:primary:login-user:admin" in core.calls
 
 
 def test_link_management_cancel_unlink(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -177,9 +190,9 @@ def test_link_management_cancel_unlink(monkeypatch: pytest.MonkeyPatch) -> None:
     tab = LinkManagementTab(
         core_service=core,
         query_service=StubQueryService(include_existing_link=True),
+        role_context=RoleContext(role="admin", operator_id="op-1"),
     )
 
-    tab.operator_input.setText("op-1")
     tab._unlink_link()
 
     assert not any(call.startswith("unlink:") for call in core.calls)
@@ -221,10 +234,23 @@ def test_link_management_propagates_editor_role_to_service() -> None:
     tab = LinkManagementTab(
         core_service=core,
         query_service=StubQueryService(include_existing_link=False),
-        role_context=RoleContext(role="editor"),
+        role_context=RoleContext(role="editor", operator_id="op-2"),
     )
 
-    tab.operator_input.setText("op-2")
     tab._create_link()
 
     assert "link:1:100:primary:op-2:editor" in core.calls
+
+
+def test_link_management_labels_are_readable_and_full_public_id() -> None:
+    _app()
+    tab = LinkManagementTab(
+        core_service=StubCoreService(),
+        query_service=StubQueryService(include_existing_link=True),
+    )
+
+    assert tab.register_name_combo.itemText(0) == "名前: Alice（公開ID: name-public-id-001）"
+    assert tab.register_title_combo.itemText(0) == "タイトル: T1（公開ID: title-public-id-001）"
+    assert "公開ID=" not in tab.register_name_combo.itemText(0)
+    assert "..." not in tab.register_name_combo.itemText(0)
+    assert "…" not in tab.register_name_combo.itemText(0)
