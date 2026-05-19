@@ -87,7 +87,10 @@ def _tab_titles(window: MainWindow) -> list[str]:
 
 def _operations_subtab_enabled_map(window: MainWindow) -> dict[str, bool]:
     sub_tabs = _operations(window).operations_subtabs
-    return {sub_tabs.tabText(index): sub_tabs.isTabEnabled(index) for index in range(sub_tabs.count())}
+    return {
+        sub_tabs.tabText(index): sub_tabs.isTabEnabled(index)
+        for index in range(sub_tabs.count())
+    }
 
 
 def test_viewer_rbac_disables_write_and_destructive_controls(
