@@ -8,7 +8,7 @@ from typing import Protocol
 
 
 class _ApplicationLike(Protocol):
-    def quit(self) -> None: ...
+    pass
 
 
 class _ClosableWidget(Protocol):
@@ -46,21 +46,22 @@ def _hide_combo_popups(current_window: _ClosableWidget) -> None:
 
 
 def _close_account_switch_widgets(
-    app: _ApplicationLike,
+    _app: _ApplicationLike,
     current_window: _ClosableWidget,
 ) -> None:
-    """Close stray popup/top-level widgets before returning to login.
+    """Close account-switch widgets and let Qt end the main loop naturally.
 
     QComboBox/QCompleter popups and hidden role-guarded widgets can remain as
     native top-level windows if account switching occurs while they are active.
-    During account switching, last-window auto-quit is disabled temporarily so
-    closing the current MainWindow does not terminate the outer login loop before
-    the explicit quit request is handled.
+    Do not call QApplication.exit()/quit() here: an explicit app-level exit can
+    leak into the next LoginDialog modal loop and show a transient blank window
+    before terminating. Closing the last visible window is enough to return from
+    the current app.exec() loop when quitOnLastWindowClosed is enabled.
     """
 
-    from PySide6.QtWidgets import QApplication
+    from PySide6.QtWidgets import QApplication, QWidget
 
-    QApplication.setQuitOnLastWindowClosed(False)
+    QApplication.setQuitOnLastWindowClosed(True)
 
     _hide_combo_popups(current_window)
     QApplication.processEvents()
@@ -80,13 +81,10 @@ def _close_account_switch_widgets(
     QApplication.processEvents()
     _hide_combo_popups(current_window)
 
+    if isinstance(current_window, QWidget):
+        current_window.hide()
     current_window.close()
     QApplication.processEvents()
-    exit_method = getattr(app, "exit", None)
-    if callable(exit_method):
-        exit_method(0)
-        return
-    app.quit()
 
 
 def main() -> int:
