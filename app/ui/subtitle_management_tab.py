@@ -33,7 +33,10 @@ class SubtitleManagementTab(QWidget):
 
         layout = QVBoxLayout(self)
         compact_layout(layout, margins=5, spacing=4)
-        layout.addWidget(PageHeader("サブタイトルを管理", "タイトルを選び、配下のサブタイトルを登録・更新します。"), 0)
+        layout.addWidget(
+            PageHeader("サブタイトルを管理", "タイトルを選び、配下のサブタイトルを登録・更新します。"),
+            0,
+        )
         layout.addWidget(self.editor, 1)
 
     def _hide_title_creation_controls(self) -> None:
@@ -62,7 +65,6 @@ class SubtitleManagementTab(QWidget):
             "コード": "管理番号",
             "sort_order": "表示順",
             "選択中タイトル: 未選択": "選択中タイトル: 未選択",
-            "操作者ID": "操作者",
         }
         long_hint = "タイトルを選択するとサブタイトル操作が有効になります"
         for label in self.editor.findChildren(QLabel):
@@ -77,6 +79,5 @@ class SubtitleManagementTab(QWidget):
                 label.hide()
 
     def _add_guidance_tooltips(self) -> None:
-        self.editor.operator_input.setToolTip("変更履歴に記録する操作者です。")
         self.editor.subtitle_code_input.setToolTip("未入力の場合は自動生成されます。")
         self.editor.subtitle_sort_order_input.setToolTip("一覧での表示順です。未入力時は 0 として扱います。")
