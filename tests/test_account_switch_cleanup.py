@@ -16,7 +16,8 @@ from app.pyside6_main import _close_account_switch_widgets  # noqa: E402
 
 
 class FakeApplication:
-    pass
+    def quit(self) -> None:
+        pass
 
 
 def _app() -> QApplication:
