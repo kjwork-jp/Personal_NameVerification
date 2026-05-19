@@ -70,7 +70,7 @@ def _get(tab: Any, name: str) -> QWidget | None:
 
 
 def apply_tab_action_visibility_guards(tab: Any, role_context: RoleContext) -> None:
-    """Hide action buttons that the current role can never execute.
+    """Hide action buttons and subtabs that the current role can never execute.
 
     Disabled buttons are still useful for transient states, such as no row
     selected. Buttons that are permanently unavailable for a role are hidden to
@@ -84,6 +84,7 @@ def apply_tab_action_visibility_guards(tab: Any, role_context: RoleContext) -> N
         _set_buttons_visible(target, _DESTRUCTIVE_ACTION_BUTTON_NAMES, can_destructive)
         _set_buttons_visible(target, _LINK_ACTION_BUTTON_NAMES, can_link(role_context.role))
         _set_buttons_visible(target, _UNLINK_ACTION_BUTTON_NAMES, can_unlink(role_context.role))
+        _apply_link_subtab_role_guards(target, role_context)
 
 
 def _iter_role_guard_targets(root: Any) -> Iterator[Any]:
@@ -104,6 +105,35 @@ def _iter_role_guard_targets(root: Any) -> Iterator[Any]:
 def _set_buttons_visible(target: Any, names: tuple[str, ...], visible: bool) -> None:
     for name in names:
         _set_visible(_get(target, name), visible)
+
+
+def _apply_link_subtab_role_guards(tab: Any, role_context: RoleContext) -> None:
+    sub_tabs = getattr(tab, "tabs", None)
+    if not isinstance(sub_tabs, QTabWidget):
+        return
+    if _get(tab, "register_name_combo") is None or _get(tab, "unregister_name_combo") is None:
+        return
+
+    enabled_by_title = {
+        "登録": can_link(role_context.role),
+        "解除": can_unlink(role_context.role),
+    }
+    first_visible_enabled_index: int | None = None
+    current_visible_enabled = True
+    tab_bar = sub_tabs.tabBar()
+    set_tab_visible = getattr(tab_bar, "setTabVisible", None)
+    for index in range(sub_tabs.count()):
+        title = sub_tabs.tabText(index)
+        visible = enabled_by_title.get(title, True)
+        sub_tabs.setTabEnabled(index, visible)
+        if callable(set_tab_visible):
+            set_tab_visible(index, visible)
+        if visible and first_visible_enabled_index is None:
+            first_visible_enabled_index = index
+        if index == sub_tabs.currentIndex():
+            current_visible_enabled = visible
+    if not current_visible_enabled and first_visible_enabled_index is not None:
+        sub_tabs.setCurrentIndex(first_visible_enabled_index)
 
 
 def apply_operations_tab_role_guards(tab: Any, role_context: RoleContext) -> None:
