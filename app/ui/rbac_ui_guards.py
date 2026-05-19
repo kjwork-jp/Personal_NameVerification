@@ -111,6 +111,8 @@ def apply_operations_tab_role_guards(tab: Any, role_context: RoleContext) -> Non
             else (_VIEWER_TOOLTIP if role == "viewer" else _EDITOR_DESTRUCTIVE_TOOLTIP),
         )
 
+    _install_cancel_visibility_guard(tab)
+
     clear_recent_paths_button = _get(tab, "clear_recent_paths_button")
     _set_enabled(
         clear_recent_paths_button,
@@ -140,6 +142,26 @@ def apply_operations_tab_role_guards(tab: Any, role_context: RoleContext) -> Non
     )
     _set_visible(export_logs_button, can_export_logs)
     _apply_operations_subtab_role_guards(tab, role_context)
+
+
+def _install_cancel_visibility_guard(tab: Any) -> None:
+    """Show the cancel button only while an async operation is running."""
+
+    cancel_button = _get(tab, "cancel_operation_button")
+    original_apply_busy_state = getattr(tab, "_apply_busy_state", None)
+    if cancel_button is None or not callable(original_apply_busy_state):
+        return
+    if getattr(tab, "_cancel_visibility_guard_installed", False) is True:
+        _set_visible(cancel_button, bool(getattr(tab, "_is_busy", False)))
+        return
+
+    def _guarded_apply_busy_state() -> None:
+        original_apply_busy_state()
+        _set_visible(cancel_button, bool(getattr(tab, "_is_busy", False)))
+
+    setattr(tab, "_apply_busy_state", _guarded_apply_busy_state)
+    setattr(tab, "_cancel_visibility_guard_installed", True)
+    _guarded_apply_busy_state()
 
 
 def _apply_operations_subtab_role_guards(tab: Any, role_context: RoleContext) -> None:
