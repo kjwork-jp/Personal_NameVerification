@@ -93,6 +93,14 @@ def _operations_subtab_enabled_map(window: MainWindow) -> dict[str, bool]:
     }
 
 
+def _operations_subtab_visible_map(window: MainWindow) -> dict[str, bool]:
+    sub_tabs = _operations(window).operations_subtabs
+    return {
+        sub_tabs.tabText(index): sub_tabs.tabBar().isTabVisible(index)
+        for index in range(sub_tabs.count())
+    }
+
+
 def test_viewer_rbac_disables_write_and_destructive_controls(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -112,6 +120,7 @@ def test_viewer_rbac_disables_write_and_destructive_controls(
     assert not operations.restore_button.isEnabled()
     assert not operations.import_csv_button.isEnabled()
     assert not operations.export_logs_button.isEnabled()
+    assert not operations.export_logs_button.isVisible()
 
 
 def test_editor_rbac_allows_normal_write_and_export_backup_only(
@@ -193,6 +202,33 @@ def test_operations_subtabs_are_role_aware(monkeypatch: pytest.MonkeyPatch) -> N
         "Operations Log": True,
     }
     assert _operations_subtab_enabled_map(_window_for_role("admin", monkeypatch)) == {
+        "ガイド": True,
+        "Export": True,
+        "Backup": True,
+        "Restore": True,
+        "Import": True,
+        "Operations Log": True,
+    }
+
+
+def test_unavailable_operations_subtabs_are_hidden(monkeypatch: pytest.MonkeyPatch) -> None:
+    assert _operations_subtab_visible_map(_window_for_role("viewer", monkeypatch)) == {
+        "ガイド": True,
+        "Export": False,
+        "Backup": False,
+        "Restore": False,
+        "Import": False,
+        "Operations Log": True,
+    }
+    assert _operations_subtab_visible_map(_window_for_role("editor", monkeypatch)) == {
+        "ガイド": True,
+        "Export": True,
+        "Backup": True,
+        "Restore": False,
+        "Import": False,
+        "Operations Log": True,
+    }
+    assert _operations_subtab_visible_map(_window_for_role("admin", monkeypatch)) == {
         "ガイド": True,
         "Export": True,
         "Backup": True,
