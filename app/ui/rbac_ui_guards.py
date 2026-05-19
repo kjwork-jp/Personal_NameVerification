@@ -200,7 +200,10 @@ def _apply_readonly_layout_guards(tab: Any, role_context: RoleContext) -> None:
             )
 
     # LinkManagementTab: if no registration/removal operation is available, show only guidance.
-    if _get(tab, "register_name_combo") is not None and _get(tab, "unregister_name_combo") is not None:
+    if (
+        _get(tab, "register_name_combo") is not None
+        and _get(tab, "unregister_name_combo") is not None
+    ):
         can_register = can_link(role)
         can_remove = can_unlink(role)
         link_tabs = getattr(tab, "tabs", None)
