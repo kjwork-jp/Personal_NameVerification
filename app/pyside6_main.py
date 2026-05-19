@@ -8,7 +8,7 @@ from typing import Protocol
 
 
 class _ApplicationLike(Protocol):
-    def exit(self, return_code: int = 0) -> None: ...
+    def quit(self) -> None: ...
 
 
 class _ClosableWidget(Protocol):
@@ -82,7 +82,11 @@ def _close_account_switch_widgets(
 
     current_window.close()
     QApplication.processEvents()
-    app.exit(0)
+    exit_method = getattr(app, "exit", None)
+    if callable(exit_method):
+        exit_method(0)
+        return
+    app.quit()
 
 
 def main() -> int:
