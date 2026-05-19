@@ -8,10 +8,17 @@ behavioral rewrites in one step.
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from typing import Any
 
 from PySide6.QtWidgets import QTabWidget, QWidget
 
+from app.ui.permissions import (
+    can_create_or_update,
+    can_link,
+    can_run_destructive_actions,
+    can_unlink,
+)
 from app.ui.role_context import RoleContext
 
 _VIEWER_TOOLTIP = "viewerは参照専用です。この操作は実行できません。"
@@ -19,6 +26,28 @@ _EDITOR_DESTRUCTIVE_TOOLTIP = (
     "editorは通常出力/バックアップのみ可能です。復元・取込はadmin専用です。"
 )
 _VIEWER_OPERATIONS_TAB_TOOLTIP = "viewerは実行ログ参照のみ可能です。"
+
+_WRITE_ACTION_BUTTON_NAMES = (
+    "create_button",
+    "update_button",
+    "title_create_button",
+    "title_update_button",
+    "subtitle_create_button",
+    "subtitle_update_button",
+)
+_DESTRUCTIVE_ACTION_BUTTON_NAMES = (
+    "delete_button",
+    "restore_button",
+    "hard_delete_button",
+    "title_delete_button",
+    "title_restore_button",
+    "title_hard_delete_button",
+    "subtitle_delete_button",
+    "subtitle_restore_button",
+    "subtitle_hard_delete_button",
+)
+_LINK_ACTION_BUTTON_NAMES = ("link_button",)
+_UNLINK_ACTION_BUTTON_NAMES = ("unlink_button",)
 
 
 def _set_enabled(widget: QWidget | None, enabled: bool, tooltip: str | None = None) -> None:
@@ -38,6 +67,43 @@ def _set_visible(widget: QWidget | None, visible: bool) -> None:
 def _get(tab: Any, name: str) -> QWidget | None:
     value = getattr(tab, name, None)
     return value if isinstance(value, QWidget) else None
+
+
+def apply_tab_action_visibility_guards(tab: Any, role_context: RoleContext) -> None:
+    """Hide action buttons that the current role can never execute.
+
+    Disabled buttons are still useful for transient states, such as no row
+    selected. Buttons that are permanently unavailable for a role are hidden to
+    reduce visual noise and prevent the UI from looking broken.
+    """
+
+    can_write = can_create_or_update(role_context.role)
+    can_destructive = can_run_destructive_actions(role_context.role)
+    for target in _iter_role_guard_targets(tab):
+        _set_buttons_visible(target, _WRITE_ACTION_BUTTON_NAMES, can_write)
+        _set_buttons_visible(target, _DESTRUCTIVE_ACTION_BUTTON_NAMES, can_destructive)
+        _set_buttons_visible(target, _LINK_ACTION_BUTTON_NAMES, can_link(role_context.role))
+        _set_buttons_visible(target, _UNLINK_ACTION_BUTTON_NAMES, can_unlink(role_context.role))
+
+
+def _iter_role_guard_targets(root: Any) -> Iterator[Any]:
+    seen: set[int] = set()
+    pending = [root]
+    while pending:
+        target = pending.pop()
+        if target is None or id(target) in seen:
+            continue
+        seen.add(id(target))
+        yield target
+        for attr_name in ("editor", "title_tab", "subtitle_tab"):
+            child = getattr(target, attr_name, None)
+            if child is not None:
+                pending.append(child)
+
+
+def _set_buttons_visible(target: Any, names: tuple[str, ...], visible: bool) -> None:
+    for name in names:
+        _set_visible(_get(target, name), visible)
 
 
 def apply_operations_tab_role_guards(tab: Any, role_context: RoleContext) -> None:
