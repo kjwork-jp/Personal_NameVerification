@@ -29,7 +29,7 @@ from app.ui.ui_style import PageHeader, compact_layout, set_status_message
 
 
 class UserManagementTab(QWidget):
-    """Admin-only tab for local user maintenance."""
+    """Admin-only tab for local and Windows user maintenance."""
 
     def __init__(self, user_service: UserService, role_context: RoleContext) -> None:
         super().__init__()
@@ -46,7 +46,7 @@ class UserManagementTab(QWidget):
         self.create_operator_input = QLineEdit()
         self.create_operator_input.setPlaceholderText("例: viewer")
         self.create_operator_input.setToolTip(
-            "新規作成するユーザーのログインIDです。例: viewer"
+            "新規作成するローカル認証ユーザーのログインIDです。例: viewer"
         )
         self.display_name_input = QLineEdit()
         self.display_name_input.setPlaceholderText("任意")
@@ -57,24 +57,32 @@ class UserManagementTab(QWidget):
         self.role_combo.addItem("編集者", "editor")
         self.role_combo.addItem("閲覧者", "viewer")
 
-        self.create_button = QPushButton("ユーザー作成")
+        self.create_button = QPushButton("ローカルユーザー作成")
         self.create_button.clicked.connect(self._create_user)
 
         self.guide_panel = self._build_guide_panel()
         self.create_group = self._build_create_panel()
 
-        self.table = QTableWidget(0, 7)
+        self.table = QTableWidget(0, 10)
         self.table.setHorizontalHeaderLabels(
             [
                 "操作者ID",
                 "表示名",
                 "権限",
+                "認証方式",
+                "Windowsアカウント",
                 "状態",
                 "最終ログイン",
                 "失敗回数",
                 "public_id",
+                "Windows SID",
             ]
         )
+        self.table.setColumnWidth(0, 230)
+        self.table.setColumnWidth(3, 80)
+        self.table.setColumnWidth(4, 180)
+        self.table.setColumnWidth(8, 230)
+        self.table.setColumnWidth(9, 240)
         self.table.setAlternatingRowColors(True)
         self.table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
@@ -126,7 +134,8 @@ class UserManagementTab(QWidget):
         guide = OperationGuide(
             "操作ガイド",
             [
-                "新規ユーザーは『ユーザー作成』サブタブで操作者ID・初期パスワード・権限を入力して作成します。",
+                "新規ローカルユーザーは『ユーザー作成』サブタブで操作者ID・初期パスワード・権限を入力して作成します。",
+                "Windows認証ユーザーは、初回Windows認証ログイン時にviewerとして自動登録されます。",
                 "既存ユーザーを確認する場合は『ユーザー一覧』サブタブを使います。一覧行を選ぶと操作対象IDへ反映されます。",
                 "権限変更・無効化・有効化は『選択ユーザー操作』サブタブで実行します。",
                 "最後の有効な管理者は、降格・無効化できない仕様です。",
@@ -146,7 +155,7 @@ class UserManagementTab(QWidget):
         compact_layout(layout, margins=8, spacing=8)
         layout.addWidget(
             QLabel(
-                "新規ユーザーを作成します。操作者IDはログインIDとして使います。"
+                "ローカル認証ユーザーを作成します。Windows認証ユーザーは初回ログイン時にviewerで自動登録されます。"
             )
         )
         layout.addWidget(_field_with_label("操作者ID（ログインID）", self.create_operator_input))
@@ -163,7 +172,7 @@ class UserManagementTab(QWidget):
         compact_layout(layout, margins=8, spacing=6)
         layout.addWidget(
             QLabel(
-                "登録済みユーザーの一覧です。行を選択すると『選択ユーザー操作』の対象操作者IDへ自動入力されます。"
+                "登録済みユーザーの一覧です。認証方式 local/windows とWindows識別情報を確認できます。"
             )
         )
         layout.addWidget(self.table, 1)
@@ -186,7 +195,7 @@ class UserManagementTab(QWidget):
         compact_layout(layout, margins=8, spacing=8)
         layout.addWidget(
             QLabel(
-                "既存ユーザーを変更します。先に『ユーザー一覧』で対象行を選ぶか、対象操作者IDを手入力してください。"
+                "既存ユーザーを変更します。local/windowsのどちらも同じアプリ内ロールへ変更できます。"
             )
         )
         layout.addLayout(action_row)
@@ -219,13 +228,18 @@ class UserManagementTab(QWidget):
             user.operator_id,
             user.display_name or "",
             user.role,
+            user.auth_provider,
+            user.windows_account_name or "",
             status,
             user.last_login_at or "",
             str(user.failed_login_count),
             user.public_id or "",
+            user.windows_sid or "",
         ]
         for column, value in enumerate(values):
-            self.table.setItem(row, column, QTableWidgetItem(value))
+            item = QTableWidgetItem(value)
+            item.setToolTip(value)
+            self.table.setItem(row, column, item)
 
     def _copy_selected_operator(self) -> None:
         selected = self.table.selectedItems()
