@@ -6,6 +6,8 @@ import getpass
 import os
 import platform
 from dataclasses import dataclass
+from importlib import import_module
+from typing import Any, cast
 
 
 @dataclass(frozen=True, slots=True)
@@ -47,9 +49,8 @@ def current_windows_identity() -> WindowsIdentity:
 
 def _lookup_windows_sid(account_name: str) -> str | None:
     try:
-        import win32security  # type: ignore[import-not-found]
-
+        win32security = cast(Any, import_module("win32security"))
         sid, _domain, _account_type = win32security.LookupAccountName(None, account_name)
-        return win32security.ConvertSidToStringSid(sid)
+        return cast(str, win32security.ConvertSidToStringSid(sid))
     except Exception:
         return None
