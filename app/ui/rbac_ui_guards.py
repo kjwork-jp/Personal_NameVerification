@@ -29,6 +29,12 @@ def _set_enabled(widget: QWidget | None, enabled: bool, tooltip: str | None = No
         widget.setToolTip(tooltip)
 
 
+def _set_visible(widget: QWidget | None, visible: bool) -> None:
+    if widget is None:
+        return
+    widget.setVisible(visible)
+
+
 def _get(tab: Any, name: str) -> QWidget | None:
     value = getattr(tab, name, None)
     return value if isinstance(value, QWidget) else None
@@ -38,9 +44,9 @@ def apply_operations_tab_role_guards(tab: Any, role_context: RoleContext) -> Non
     """Apply strict UI RBAC to the data I/O operations tab.
 
     Policy:
-    - viewer: log viewing only. No export, backup, restore, import, path edits,
-      browse buttons, or recent-path deletion.
-    - editor: export/backup only. Restore/import and their path controls are disabled.
+    - viewer: log viewing only. Unavailable operation groups are hidden rather
+      than merely disabled.
+    - editor: export/backup only. Restore/import are hidden.
     - admin: all controls remain available, subject to busy state and internal guards.
     """
 
@@ -105,11 +111,13 @@ def apply_operations_tab_role_guards(tab: Any, role_context: RoleContext) -> Non
             else (_VIEWER_TOOLTIP if role == "viewer" else _EDITOR_DESTRUCTIVE_TOOLTIP),
         )
 
+    clear_recent_paths_button = _get(tab, "clear_recent_paths_button")
     _set_enabled(
-        _get(tab, "clear_recent_paths_button"),
+        clear_recent_paths_button,
         can_clear_history,
         None if can_clear_history else _VIEWER_TOOLTIP,
     )
+    _set_visible(clear_recent_paths_button, can_clear_history)
     clear_history_buttons = getattr(tab, "_clear_history_buttons", {})
     if isinstance(clear_history_buttons, dict):
         for button in clear_history_buttons.values():
@@ -119,14 +127,18 @@ def apply_operations_tab_role_guards(tab: Any, role_context: RoleContext) -> Non
                     can_clear_history,
                     None if can_clear_history else _VIEWER_TOOLTIP,
                 )
+                button.setVisible(can_clear_history)
 
     # Log viewing remains available for all roles, but exporting logs is treated
-    # as an output action and is therefore disallowed for viewer.
+    # as an output action and is therefore hidden for viewer.
+    export_logs_button = _get(tab, "export_logs_button")
+    can_export_logs = role in {"editor", "admin"}
     _set_enabled(
-        _get(tab, "export_logs_button"),
-        role in {"editor", "admin"},
-        None if role in {"editor", "admin"} else _VIEWER_TOOLTIP,
+        export_logs_button,
+        can_export_logs,
+        None if can_export_logs else _VIEWER_TOOLTIP,
     )
+    _set_visible(export_logs_button, can_export_logs)
     _apply_operations_subtab_role_guards(tab, role_context)
 
 
@@ -151,17 +163,22 @@ def _apply_operations_subtab_role_guards(tab: Any, role_context: RoleContext) ->
         "Import": _VIEWER_TOOLTIP if role == "viewer" else _EDITOR_DESTRUCTIVE_TOOLTIP,
     }
 
-    first_enabled_index: int | None = None
-    current_enabled = True
+    first_visible_enabled_index: int | None = None
+    current_visible_enabled = True
+    tab_bar = sub_tabs.tabBar()
+    set_tab_visible = getattr(tab_bar, "setTabVisible", None)
     for index in range(sub_tabs.count()):
         title = sub_tabs.tabText(index)
         enabled = enabled_by_title.get(title, True)
+        visible = enabled
         sub_tabs.setTabEnabled(index, enabled)
+        if callable(set_tab_visible):
+            set_tab_visible(index, visible)
         sub_tabs.setTabToolTip(index, "" if enabled else tooltip_by_title.get(title, ""))
-        if enabled and first_enabled_index is None:
-            first_enabled_index = index
+        if visible and enabled and first_visible_enabled_index is None:
+            first_visible_enabled_index = index
         if index == sub_tabs.currentIndex():
-            current_enabled = enabled
+            current_visible_enabled = visible and enabled
 
-    if not current_enabled and first_enabled_index is not None:
-        sub_tabs.setCurrentIndex(first_enabled_index)
+    if not current_visible_enabled and first_visible_enabled_index is not None:
+        sub_tabs.setCurrentIndex(first_visible_enabled_index)
