@@ -49,19 +49,11 @@ def _close_account_switch_widgets(
     _app: _ApplicationLike,
     current_window: _ClosableWidget,
 ) -> None:
-    """Close account-switch widgets and let Qt end the main loop naturally.
-
-    QComboBox/QCompleter popups and hidden role-guarded widgets can remain as
-    native top-level windows if account switching occurs while they are active.
-    Do not call QApplication.exit()/quit() here: an explicit app-level exit can
-    leak into the next LoginDialog modal loop and show a transient blank window
-    before terminating. The current MainWindow must remain visible until close()
-    so Qt emits lastWindowClosed and returns from the current app.exec() loop.
-    """
+    """Close account-switch widgets while keeping dialog startup clean."""
 
     from PySide6.QtWidgets import QApplication
 
-    QApplication.setQuitOnLastWindowClosed(True)
+    QApplication.setQuitOnLastWindowClosed(False)
 
     _hide_combo_popups(current_window)
     QApplication.processEvents()
@@ -87,6 +79,7 @@ def _close_account_switch_widgets(
 
 def main() -> int:
     """Launch the PySide6 application shell."""
+    from PySide6.QtCore import QEventLoop, Qt
     from PySide6.QtWidgets import QApplication, QDialog
 
     from app.application.auto_log_export import AutoExportingCoreService
@@ -161,11 +154,8 @@ def main() -> int:
         connection.close()
         return 0
 
-    exit_code = 0
+    return_code = 0
     while True:
-        # LoginDialog is a nested modal loop. Keep last-window auto-quit disabled
-        # here so stale popup cleanup from account switching cannot close an empty
-        # login shell before its child widgets finish painting.
         QApplication.setQuitOnLastWindowClosed(False)
         login = LoginDialog(user_service)
         if login.exec() != QDialog.DialogCode.Accepted:
@@ -198,6 +188,9 @@ def main() -> int:
             operation_logger=operation_logger,
             connection=connection,
         )
+        window.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, True)
+
+        main_window_loop = QEventLoop()
 
         def _request_account_switch(
             current_role_context: RoleContext,
@@ -215,19 +208,17 @@ def main() -> int:
         window.account_switch_requested.connect(
             partial(_request_account_switch, role_context, window)
         )
+        window.destroyed.connect(main_window_loop.quit)
         window.show()
 
-        QApplication.setQuitOnLastWindowClosed(True)
-        exit_code = int(app.exec())
+        return_code = int(main_window_loop.exec())
+        QApplication.processEvents()
         if account_switch_requested:
-            QApplication.setQuitOnLastWindowClosed(False)
-            window.deleteLater()
-            QApplication.processEvents()
             continue
         break
 
     connection.close()
-    return exit_code
+    return return_code
 
 
 if __name__ == "__main__":
