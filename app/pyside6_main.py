@@ -17,31 +17,70 @@ class _ClosableWidget(Protocol):
     def deleteLater(self) -> None: ...
 
 
+def _hide_combo_popups(current_window: _ClosableWidget) -> None:
+    """Hide combo/completer popups that can survive account switching."""
+
+    from PySide6.QtWidgets import QApplication, QComboBox, QWidget
+
+    candidate_windows = list(QApplication.topLevelWidgets())
+    if isinstance(current_window, QWidget) and current_window not in candidate_windows:
+        candidate_windows.append(current_window)
+
+    seen_combo_ids: set[int] = set()
+    for widget in candidate_windows:
+        for combo in widget.findChildren(QComboBox):
+            combo_id = id(combo)
+            if combo_id in seen_combo_ids:
+                continue
+            seen_combo_ids.add(combo_id)
+
+            combo.hidePopup()
+            completer = combo.completer()
+            if completer is None:
+                continue
+
+            popup = completer.popup()
+            if popup is not None:
+                popup.hide()
+                popup.close()
+
+
 def _close_account_switch_widgets(
     app: _ApplicationLike,
     current_window: _ClosableWidget,
 ) -> None:
     """Close stray popup/top-level widgets before returning to login.
 
-    QComboBox popups and hidden role-guarded widgets can remain as native
-    top-level windows if account switching occurs while they are active.
-    Closing all non-main top-level widgets prevents orphan "python" windows
-    and lets the event loop return to the login dialog cleanly.
+    QComboBox/QCompleter popups and hidden role-guarded widgets can remain as
+    native top-level windows if account switching occurs while they are active.
+    Closing popup views before destroying the current MainWindow prevents
+    orphan "python" windows and lets the event loop return to the login dialog
+    cleanly.
     """
 
     from PySide6.QtWidgets import QApplication
 
+    _hide_combo_popups(current_window)
+    QApplication.processEvents()
+
     active_popup = QApplication.activePopupWidget()
     if active_popup is not None and active_popup is not current_window:
+        active_popup.hide()
         active_popup.close()
 
     for widget in list(QApplication.topLevelWidgets()):
         if widget is current_window:
             continue
+        widget.hide()
         widget.close()
         widget.deleteLater()
 
+    QApplication.processEvents()
+    _hide_combo_popups(current_window)
+
     current_window.close()
+    current_window.deleteLater()
+    QApplication.processEvents()
     app.quit()
 
 
