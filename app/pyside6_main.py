@@ -53,12 +53,14 @@ def _close_account_switch_widgets(
 
     QComboBox/QCompleter popups and hidden role-guarded widgets can remain as
     native top-level windows if account switching occurs while they are active.
-    Closing popup views before destroying the current MainWindow prevents
-    orphan "python" windows and lets the event loop return to the login dialog
-    cleanly.
+    During account switching, last-window auto-quit is disabled temporarily so
+    closing the current MainWindow does not terminate the outer login loop before
+    the explicit quit request is handled.
     """
 
     from PySide6.QtWidgets import QApplication
+
+    QApplication.setQuitOnLastWindowClosed(False)
 
     _hide_combo_popups(current_window)
     QApplication.processEvents()
@@ -79,7 +81,6 @@ def _close_account_switch_widgets(
     _hide_combo_popups(current_window)
 
     current_window.close()
-    current_window.deleteLater()
     QApplication.processEvents()
     app.quit()
 
@@ -156,6 +157,7 @@ def main() -> int:
 
     exit_code = 0
     while True:
+        QApplication.setQuitOnLastWindowClosed(True)
         login = LoginDialog(user_service)
         if login.exec() != QDialog.DialogCode.Accepted:
             break
@@ -205,6 +207,8 @@ def main() -> int:
 
         exit_code = int(app.exec())
         if account_switch_requested:
+            window.deleteLater()
+            QApplication.processEvents()
             continue
         break
 
