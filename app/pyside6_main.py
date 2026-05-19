@@ -205,7 +205,9 @@ def main() -> int:
             )
             _close_account_switch_widgets(app, current_window)
 
-        window.account_switch_requested.connect(partial(_request_account_switch, role_context, window))
+        window.account_switch_requested.connect(
+            partial(_request_account_switch, role_context, window)
+        )
         window.show()
 
         QApplication.setQuitOnLastWindowClosed(True)
