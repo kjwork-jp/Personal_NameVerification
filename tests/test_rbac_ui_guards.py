@@ -11,6 +11,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 qt_widgets = pytest.importorskip("PySide6.QtWidgets", exc_type=ImportError)
 QApplication = qt_widgets.QApplication
+QLabel = qt_widgets.QLabel
 QPushButton = qt_widgets.QPushButton
 
 from app.ui.main_window import MainWindow  # noqa: E402
@@ -99,6 +100,12 @@ def _operations_subtab_visible_map(window: MainWindow) -> dict[str, bool]:
         sub_tabs.tabText(index): sub_tabs.tabBar().isTabVisible(index)
         for index in range(sub_tabs.count())
     }
+
+
+def _operations_guide_text(window: MainWindow) -> str:
+    guide_label = _operations(window).findChild(QLabel, "operationsRoleGuideLabel")
+    assert guide_label is not None
+    return guide_label.text()
 
 
 def test_viewer_rbac_disables_write_and_destructive_controls(
@@ -236,3 +243,24 @@ def test_unavailable_operations_subtabs_are_hidden(monkeypatch: pytest.MonkeyPat
         "Import": True,
         "Operations Log": True,
     }
+
+
+def test_operations_guide_text_matches_visible_role_scope(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    viewer_guide = _operations_guide_text(_window_for_role("viewer", monkeypatch))
+    editor_guide = _operations_guide_text(_window_for_role("editor", monkeypatch))
+    admin_guide = _operations_guide_text(_window_for_role("admin", monkeypatch))
+
+    assert "操作ガイド（viewer）" in viewer_guide
+    assert "実行ログの参照のみ" in viewer_guide
+    assert "Export / Backup / Restore / Import は表示しません" in viewer_guide
+
+    assert "操作ガイド（editor）" in editor_guide
+    assert "通常の出力とバックアップのみ" in editor_guide
+    assert "Restore / Import は破壊的操作のため表示しません" in editor_guide
+
+    assert "操作ガイド（admin）" in admin_guide
+    assert "データ入出力の全操作" in admin_guide
+    assert "Restore" in admin_guide
+    assert "Import" in admin_guide
