@@ -11,7 +11,7 @@ from __future__ import annotations
 from collections.abc import Iterator
 from typing import Any
 
-from PySide6.QtWidgets import QTabWidget, QWidget
+from PySide6.QtWidgets import QFormLayout, QLabel, QLayout, QTabWidget, QWidget
 
 from app.ui.permissions import (
     can_create_or_update,
@@ -69,6 +69,66 @@ def _get(tab: Any, name: str) -> QWidget | None:
     return value if isinstance(value, QWidget) else None
 
 
+def _set_field_visible(tab: Any, name: str, visible: bool) -> None:
+    widget = _get(tab, name)
+    if widget is None:
+        return
+    _set_visible(widget, visible)
+    label = _find_form_label_for_field(tab, widget)
+    _set_visible(label, visible)
+
+
+def _find_form_label_for_field(tab: Any, field: QWidget) -> QWidget | None:
+    if not isinstance(tab, QWidget):
+        return None
+    layout = tab.layout()
+    if layout is None:
+        return None
+    return _find_form_label_in_layout(layout, field, set())
+
+
+def _find_form_label_in_layout(
+    layout: QLayout,
+    field: QWidget,
+    seen_layout_ids: set[int],
+) -> QWidget | None:
+    if id(layout) in seen_layout_ids:
+        return None
+    seen_layout_ids.add(id(layout))
+
+    if isinstance(layout, QFormLayout):
+        label = layout.labelForField(field)
+        if isinstance(label, QWidget):
+            return label
+
+    for index in range(layout.count()):
+        item = layout.itemAt(index)
+        if item is None:
+            continue
+        child_layout = item.layout()
+        if child_layout is not None:
+            label = _find_form_label_in_layout(child_layout, field, seen_layout_ids)
+            if label is not None:
+                return label
+        child_widget = item.widget()
+        if child_widget is None:
+            continue
+        nested_layout = child_widget.layout()
+        if nested_layout is not None:
+            label = _find_form_label_in_layout(nested_layout, field, seen_layout_ids)
+            if label is not None:
+                return label
+    return None
+
+
+def _set_info_message(tab: Any, message: str) -> None:
+    label = getattr(tab, "message_label", None)
+    if not isinstance(label, QLabel):
+        return
+    label.setStyleSheet("color: #7dd3fc;")
+    label.setText(message)
+
+
 def apply_tab_action_visibility_guards(tab: Any, role_context: RoleContext) -> None:
     """Hide action buttons and subtabs that the current role can never execute.
 
@@ -84,6 +144,7 @@ def apply_tab_action_visibility_guards(tab: Any, role_context: RoleContext) -> N
         _set_buttons_visible(target, _DESTRUCTIVE_ACTION_BUTTON_NAMES, can_destructive)
         _set_buttons_visible(target, _LINK_ACTION_BUTTON_NAMES, can_link(role_context.role))
         _set_buttons_visible(target, _UNLINK_ACTION_BUTTON_NAMES, can_unlink(role_context.role))
+        _apply_readonly_layout_guards(target, role_context)
         _apply_link_subtab_role_guards(target, role_context)
 
 
@@ -105,6 +166,57 @@ def _iter_role_guard_targets(root: Any) -> Iterator[Any]:
 def _set_buttons_visible(target: Any, names: tuple[str, ...], visible: bool) -> None:
     for name in names:
         _set_visible(_get(target, name), visible)
+
+
+def _apply_readonly_layout_guards(tab: Any, role_context: RoleContext) -> None:
+    role = role_context.role
+    can_write = can_create_or_update(role)
+    can_destructive = can_run_destructive_actions(role)
+
+    # NameManagementTab: keep search/filter/list visible, hide edit-only fields for viewer.
+    if _get(tab, "names_table") is not None and _get(tab, "raw_name_input") is not None:
+        for field_name in ("operator_input", "raw_name_input", "note_input"):
+            _set_field_visible(tab, field_name, can_write or can_destructive)
+        if not can_write:
+            _set_info_message(tab, "viewerは参照専用です。名前一覧のみ確認できます。")
+
+    # TitleSubtitleManagementTab: keep selector/tables visible, hide edit forms for viewer.
+    if _get(tab, "titles_table") is not None and _get(tab, "title_name_input") is not None:
+        for field_name in (
+            "title_name_input",
+            "title_note_input",
+            "title_link_name_combo",
+            "title_link_names_list",
+            "subtitle_code_input",
+            "subtitle_name_input",
+            "subtitle_sort_order_input",
+            "subtitle_note_input",
+        ):
+            _set_field_visible(tab, field_name, can_write)
+        if not can_write:
+            _set_info_message(
+                tab,
+                "viewerは参照専用です。タイトル/サブタイトル一覧のみ確認できます。",
+            )
+
+    # LinkManagementTab: if no registration/removal operation is available, show only guidance.
+    if _get(tab, "register_name_combo") is not None and _get(tab, "unregister_name_combo") is not None:
+        can_register = can_link(role)
+        can_remove = can_unlink(role)
+        link_tabs = getattr(tab, "tabs", None)
+        if isinstance(link_tabs, QTabWidget):
+            _set_visible(link_tabs, can_register or can_remove)
+        if not can_register and not can_remove:
+            _set_info_message(
+                tab,
+                "viewerは参照専用です。関連付けの登録・解除フォームは表示しません。",
+            )
+
+    # TrashTab: non-admin can inspect deleted rows only; hide mutation identity/actions.
+    if _get(tab, "list_table") is not None and _get(tab, "entity_selector") is not None:
+        _set_field_visible(tab, "operator_input", can_destructive)
+        if not can_destructive:
+            _set_info_message(tab, "このロールでは削除済みデータを参照のみできます。")
 
 
 def _apply_link_subtab_role_guards(tab: Any, role_context: RoleContext) -> None:
