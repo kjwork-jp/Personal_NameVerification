@@ -1,4 +1,4 @@
-"""Password login dialog for local users."""
+"""Login dialog for local and Windows authentication."""
 
 from __future__ import annotations
 
@@ -8,32 +8,38 @@ from PySide6.QtWidgets import (
     QFormLayout,
     QLabel,
     QLineEdit,
+    QPushButton,
     QVBoxLayout,
 )
 
 from app.application.user_services import UserService
+from app.application.windows_identity import WindowsIdentityError, current_windows_identity
 from app.domain.errors import AuthorizationError, ValidationError
-from app.ui.input_defaults import default_operator_id
 from app.ui.role_context import RoleContext
 
 
 class LoginDialog(QDialog):
-    """Local password login dialog.
-
-    The user's role is loaded from the users table after password authentication.
-    """
+    """Login dialog that supports Windows session auth and local password auth."""
 
     def __init__(self, user_service: UserService) -> None:
         super().__init__()
         self._user_service = user_service
         self._role_context: RoleContext | None = None
         self.setWindowTitle("ログイン")
-        self.operator_input = QLineEdit(default_operator_id())
-        self.operator_input.setPlaceholderText("操作者ID")
+        self.operator_input = QLineEdit()
+        self.operator_input.setPlaceholderText("例: admin")
         self.password_input = QLineEdit()
         self.password_input.setEchoMode(QLineEdit.EchoMode.Password)
         self.password_input.setPlaceholderText("パスワード")
-        self.message_label = QLabel("操作者IDとパスワードを入力してください。")
+        self.message_label = QLabel(
+            "Windows認証またはローカル認証を選択してください。"
+        )
+
+        self.windows_login_button = QPushButton("Windows認証でログイン")
+        self.windows_login_button.setToolTip(
+            "現在のWindowsログインユーザーでログインします。未登録の場合はviewerで自動登録します。"
+        )
+        self.windows_login_button.clicked.connect(self._accept_windows_auth)
 
         form = QFormLayout()
         form.addRow("操作者ID", self.operator_input)
@@ -44,6 +50,8 @@ class LoginDialog(QDialog):
 
         layout = QVBoxLayout(self)
         layout.addWidget(self.message_label)
+        layout.addWidget(self.windows_login_button)
+        layout.addWidget(QLabel("ローカル認証"))
         layout.addLayout(form)
         layout.addWidget(buttons)
 
@@ -51,6 +59,21 @@ class LoginDialog(QDialog):
         if self._role_context is None:
             raise RuntimeError("login has not been accepted")
         return self._role_context
+
+    def _accept_windows_auth(self) -> None:
+        try:
+            identity = current_windows_identity()
+            user = self._user_service.authenticate_windows_user(identity)
+        except (AuthorizationError, ValidationError, WindowsIdentityError) as exc:
+            self._show_error(f"Windows認証に失敗しました: {exc}")
+            return
+
+        self._role_context = RoleContext(
+            role=user.role,
+            operator_id=user.operator_id,
+            auth_provider="windows",
+        )
+        self.accept()
 
     def _accept_if_valid(self) -> None:
         operator_id = self.operator_input.text().strip()
@@ -70,6 +93,7 @@ class LoginDialog(QDialog):
         self._role_context = RoleContext(
             role=user.role,
             operator_id=user.operator_id,
+            auth_provider="local",
         )
         self.accept()
 
