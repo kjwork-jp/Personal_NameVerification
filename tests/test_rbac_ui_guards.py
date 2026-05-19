@@ -85,6 +85,11 @@ def _tab_titles(window: MainWindow) -> list[str]:
     return [window.tabs.tabText(index) for index in range(window.tabs.count())]
 
 
+def _operations_subtab_enabled_map(window: MainWindow) -> dict[str, bool]:
+    sub_tabs = _operations(window).operations_subtabs
+    return {sub_tabs.tabText(index): sub_tabs.isTabEnabled(index) for index in range(sub_tabs.count())}
+
+
 def test_viewer_rbac_disables_write_and_destructive_controls(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -165,3 +170,30 @@ def test_user_management_tab_is_admin_only_when_user_service_is_available(
     assert "ユーザー管理" not in editor_window._tabs_by_name
     assert "ユーザー管理" in _tab_titles(admin_window)
     assert "ユーザー管理" in admin_window._tabs_by_name
+
+
+def test_operations_subtabs_are_role_aware(monkeypatch: pytest.MonkeyPatch) -> None:
+    assert _operations_subtab_enabled_map(_window_for_role("viewer", monkeypatch)) == {
+        "ガイド": True,
+        "Export": False,
+        "Backup": False,
+        "Restore": False,
+        "Import": False,
+        "Operations Log": True,
+    }
+    assert _operations_subtab_enabled_map(_window_for_role("editor", monkeypatch)) == {
+        "ガイド": True,
+        "Export": True,
+        "Backup": True,
+        "Restore": False,
+        "Import": False,
+        "Operations Log": True,
+    }
+    assert _operations_subtab_enabled_map(_window_for_role("admin", monkeypatch)) == {
+        "ガイド": True,
+        "Export": True,
+        "Backup": True,
+        "Restore": True,
+        "Import": True,
+        "Operations Log": True,
+    }
