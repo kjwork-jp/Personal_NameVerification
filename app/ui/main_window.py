@@ -135,7 +135,7 @@ class MainWindow(QMainWindow):
             ),
             "削除データ",
         )
-        if user_service is not None:
+        if user_service is not None and self._role_context.role == "admin":
             self._add_tab(
                 UserManagementTab(
                     user_service=user_service,
