@@ -9,11 +9,14 @@ from typing import Any
 import pytest
 
 from app.application.user_services import CreateUserInput, UserService
+from app.application.windows_identity import WindowsIdentity
 from app.domain.errors import AuthorizationError
 from app.infrastructure.db import apply_schema
 
 _PASSWORD_TOKENS = (
     "plain-secret",
+    "wrong-secret",
+    "__windows_auth_password_disabled__",
     "password_hash",
     "password_salt",
     "password_algorithm",
@@ -84,6 +87,26 @@ def test_user_audit_logs_do_not_store_password_material() -> None:
     payloads = _audit_payloads(connection)
     assert payloads
     _assert_no_password_material(payloads)
+
+
+def test_windows_user_audit_logs_do_not_store_disabled_password_material() -> None:
+    connection = _connection()
+    service = UserService(connection)
+
+    user = service.authenticate_windows_user(
+        WindowsIdentity(
+            account_name="DOMAIN\\naoki",
+            display_name="naoki",
+            sid="S-1-5-21-1000",
+        )
+    )
+    with pytest.raises(AuthorizationError):
+        service.authenticate_user(user.operator_id, "plain-secret")
+
+    payloads = _audit_payloads(connection)
+    assert payloads
+    _assert_no_password_material(payloads)
+    assert "windows_auto_viewer" in "\n".join(payloads)
 
 
 def test_audit_json_contains_only_expected_user_snapshot_keys() -> None:
