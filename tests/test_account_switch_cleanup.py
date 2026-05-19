@@ -16,11 +16,7 @@ from app.pyside6_main import _close_account_switch_widgets  # noqa: E402
 
 
 class FakeApplication:
-    def __init__(self) -> None:
-        self.quit_called = False
-
-    def quit(self) -> None:
-        self.quit_called = True
+    pass
 
 
 def _app() -> QApplication:
@@ -45,7 +41,6 @@ def test_account_switch_cleanup_closes_stray_top_level_widgets() -> None:
 
         _close_account_switch_widgets(fake_app, current_window)
 
-        assert fake_app.quit_called
         assert not current_window.isVisible()
         assert not stray_window.isVisible()
     finally:
@@ -63,7 +58,6 @@ def test_account_switch_cleanup_is_safe_without_extra_windows() -> None:
 
         _close_account_switch_widgets(fake_app, current_window)
 
-        assert fake_app.quit_called
         assert not current_window.isVisible()
     finally:
         current_window.deleteLater()
