@@ -66,7 +66,6 @@ class TitleManagementTab(QWidget):
             "紐づき名前: なし": "関連する名前: なし",
             "タイトル": "タイトル情報",
             "サブタイトル": "",
-            "操作者ID": "操作者",
         }
         for label in self.editor.findChildren(QLabel):
             text = label.text()
@@ -78,7 +77,6 @@ class TitleManagementTab(QWidget):
                 label.setText(text.replace("紐づき名前", "関連する名前"))
 
     def _add_guidance_tooltips(self) -> None:
-        self.editor.operator_input.setToolTip("変更履歴に記録する操作者です。")
         self.editor.title_link_names_list.setToolTip(
             "タイトルに関連付ける名前を選択します。複数選択できます。"
         )
