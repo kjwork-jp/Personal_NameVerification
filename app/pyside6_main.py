@@ -8,7 +8,7 @@ from functools import partial
 
 def main() -> int:
     """Launch the PySide6 application shell."""
-    from PySide6.QtWidgets import QApplication, QDialog
+    from PySide6.QtWidgets import QApplication, QDialog, QWidget
 
     from app.application.auto_log_export import AutoExportingCoreService
     from app.application.backup_restore_services import BackupRestoreService
@@ -72,6 +72,28 @@ def main() -> int:
         setup = InitialAdminSetupDialog(user_service)
         return setup.exec() == QDialog.DialogCode.Accepted
 
+    def _close_account_switch_widgets(current_window: QWidget) -> None:
+        """Close stray popup/top-level widgets before returning to login.
+
+        QComboBox popups and hidden role-guarded widgets can remain as native
+        top-level windows if account switching occurs while they are active.
+        Closing all non-main top-level widgets prevents orphan "python" windows
+        and lets the event loop return to the login dialog cleanly.
+        """
+
+        active_popup = QApplication.activePopupWidget()
+        if active_popup is not None and active_popup is not current_window:
+            active_popup.close()
+
+        for widget in list(QApplication.topLevelWidgets()):
+            if widget is current_window:
+                continue
+            widget.close()
+            widget.deleteLater()
+
+        current_window.close()
+        app.quit()
+
     if not _ensure_initial_admin():
         connection.close()
         return 0
@@ -118,7 +140,7 @@ def main() -> int:
                 role_context=current_role_context,
                 message=f"Account switch requested by {current_role_context.operator_id}",
             )
-            current_window.close()
+            _close_account_switch_widgets(current_window)
 
         window.account_switch_requested.connect(
             partial(_request_account_switch, role_context, window)
