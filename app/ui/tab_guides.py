@@ -41,13 +41,24 @@ _GUIDES: dict[str, str] = {
     "ユーザー監査ログ": (
         "ログイン失敗、ユーザー管理操作などの認証・ユーザー系監査ログを確認します。"
     ),
-    "データ入出力": (
-        "Export / Backup / Restore / Import / Operations Log を用途別に実行します。"
-        "Restore/Importはadmin専用です。"
-    ),
     "ヘルプ / 設定": (
         "実行中のDB、ログ、パッケージパスを確認します。"
         "配布時やトラブル調査時の参照画面です。"
+    ),
+}
+
+_DATA_IO_GUIDES: dict[str, str] = {
+    "viewer": (
+        "Operations Logでデータ入出力の実行ログを参照・絞り込みできます。"
+        "viewerではDB更新、出力、バックアップ、復元、取込は実行できません。"
+    ),
+    "editor": (
+        "Export / Backup / Operations Log を利用できます。"
+        "Restore / Import は破壊的操作のためadmin専用です。"
+    ),
+    "admin": (
+        "Export / Backup / Restore / Import / Operations Log を利用できます。"
+        "Restore / Import は破壊的操作のため、実行前にバックアップを取得してください。"
     ),
 }
 
@@ -70,7 +81,7 @@ def apply_tab_guide(widget: QWidget, tab_title: str) -> None:
     if widget.property("has_tab_guide") is True:
         return
 
-    guide_text = _GUIDES.get(tab_title)
+    guide_text = _guide_text_for(widget, tab_title)
     if guide_text is None:
         return
 
@@ -86,6 +97,7 @@ def apply_tab_guide(widget: QWidget, tab_title: str) -> None:
     guide_layout.setSpacing(2)
 
     label = QLabel(guide_text)
+    label.setObjectName("tabGuideLabel")
     label.setWordWrap(True)
     label.setTextFormat(Qt.TextFormat.PlainText)
     guide_layout.addWidget(label)
@@ -93,3 +105,11 @@ def apply_tab_guide(widget: QWidget, tab_title: str) -> None:
     insert_index = 1 if root_layout.count() > 0 else 0
     root_layout.insertWidget(insert_index, guide)
     widget.setProperty("has_tab_guide", True)
+
+
+def _guide_text_for(widget: QWidget, tab_title: str) -> str | None:
+    if tab_title != "データ入出力":
+        return _GUIDES.get(tab_title)
+
+    role = str(getattr(widget, "_role", "admin"))
+    return _DATA_IO_GUIDES.get(role, _DATA_IO_GUIDES["admin"])
