@@ -349,9 +349,9 @@ def test_uat_title_and_link_visibility_by_role(monkeypatch: pytest.MonkeyPatch) 
     assert isinstance(admin_title, TitleSubtitleUnifiedTab)
     assert not admin_title.title_tab.editor.title_delete_button.isHidden()
 
-    assert _link_subtab_visibility(viewer) == {"登録": False, "解除": False, "ガイド": True}
-    assert _link_subtab_visibility(editor) == {"登録": True, "解除": False, "ガイド": True}
-    assert _link_subtab_visibility(admin) == {"登録": True, "解除": True, "ガイド": True}
+    assert _link_subtab_visibility(viewer) == {"登録": False, "解除": False}
+    assert _link_subtab_visibility(editor) == {"登録": True, "解除": False}
+    assert _link_subtab_visibility(admin) == {"登録": True, "解除": True}
 
     admin_link = admin._tabs_by_name["関連付け"]
     assert admin_link.register_name_combo.itemText(0) == "名前: Alice（公開ID: name-public-id-001）"
