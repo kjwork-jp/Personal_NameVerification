@@ -9,7 +9,6 @@ from PySide6.QtWidgets import (
     QFormLayout,
     QHBoxLayout,
     QLabel,
-    QLineEdit,
     QPushButton,
     QTabWidget,
     QVBoxLayout,
@@ -17,7 +16,6 @@ from PySide6.QtWidgets import (
 )
 
 from app.ui.dialogs import confirm_destructive_action
-from app.ui.input_defaults import default_operator_id
 from app.ui.permissions import can_link, can_unlink
 from app.ui.public_id_display import short_public_id
 from app.ui.role_context import RoleContext
@@ -42,8 +40,6 @@ class LinkManagementTab(QWidget):
         self._subtitles: list[Any] = []
         self._links: list[Any] = []
 
-        self.operator_input = QLineEdit(default_operator_id())
-        self.operator_input.setPlaceholderText("操作者（自動入力）")
         self.message_label = QLabel("")
 
         self.register_name_combo = QComboBox()
@@ -76,7 +72,9 @@ class LinkManagementTab(QWidget):
         register_page = QWidget()
         register_layout = QVBoxLayout(register_page)
         compact_layout(register_layout, margins=3, spacing=4)
-        register_layout.addWidget(QLabel("未関連の組み合わせだけを登録します。関連種類は内部で primary 固定です。"))
+        register_layout.addWidget(
+            QLabel("未関連の組み合わせだけを登録します。関連種類は内部で primary 固定です。")
+        )
         register_layout.addLayout(register_form)
         register_layout.addLayout(register_actions)
         register_layout.addStretch(1)
@@ -103,10 +101,6 @@ class LinkManagementTab(QWidget):
         self.tabs.addTab(register_page, "登録")
         self.tabs.addTab(unregister_page, "解除")
 
-        top_form = QFormLayout()
-        compact_layout(top_form, margins=2, spacing=3)
-        top_form.addRow("操作者", self.operator_input)
-
         top_actions = QHBoxLayout()
         compact_layout(top_actions, margins=0, spacing=4)
         top_actions.addStretch(1)
@@ -115,7 +109,6 @@ class LinkManagementTab(QWidget):
         layout = QVBoxLayout(self)
         compact_layout(layout, margins=5, spacing=4)
         layout.addWidget(PageHeader("関連付け", "名前とサブタイトルの登録・解除を分けて操作します。"))
-        layout.addLayout(top_form)
         layout.addLayout(top_actions)
         layout.addWidget(self.message_label)
         layout.addWidget(self.tabs, 1)
@@ -130,7 +123,6 @@ class LinkManagementTab(QWidget):
         can_any_write = can_register or can_remove
         disabled = "このロールでは実行できません"
 
-        self.operator_input.setEnabled(can_any_write)
         for widget in (
             self.register_name_combo,
             self.register_title_combo,
@@ -216,11 +208,8 @@ class LinkManagementTab(QWidget):
         if not can_link(self._role_context.role):
             self._set_message("このロールでは関連付けを登録できません", is_error=True)
             return
-        operator_id = self._require_operator_id()
         name_id = self._selected_data(self.register_name_combo)
         subtitle_id = self._selected_data(self.register_subtitle_combo)
-        if operator_id is None:
-            return
         if name_id is None or subtitle_id is None:
             self._set_message("名前と未関連サブタイトルを選択してください", is_error=True)
             return
@@ -228,7 +217,7 @@ class LinkManagementTab(QWidget):
             name_id,
             subtitle_id,
             relation_type="primary",
-            operator_id=operator_id,
+            operator_id=self._role_context.operator_id,
             role=self._role_context.role,
         )
         self._set_message("関連付けを登録しました")
@@ -238,10 +227,7 @@ class LinkManagementTab(QWidget):
         if not can_unlink(self._role_context.role):
             self._set_message("このロールでは関連付けを解除できません", is_error=True)
             return
-        operator_id = self._require_operator_id()
         link_id = self._selected_data(self.unregister_link_combo)
-        if operator_id is None:
-            return
         if link_id is None:
             self._set_message("解除する既存関連を選択してください", is_error=True)
             return
@@ -254,7 +240,7 @@ class LinkManagementTab(QWidget):
             return
         self._core_service.unlink_name_from_subtitle(
             link_id,
-            operator_id=operator_id,
+            operator_id=self._role_context.operator_id,
             role=self._role_context.role,
         )
         self._set_message("関連を解除しました")
@@ -280,13 +266,6 @@ class LinkManagementTab(QWidget):
         value = combo.currentData()
         return int(value) if value is not None else None
 
-    def _require_operator_id(self) -> str | None:
-        operator_id = self.operator_input.text().strip()
-        if not operator_id:
-            self._set_message("操作者を入力してください", is_error=True)
-            return None
-        return operator_id
-
     def _set_message(self, message: str, *, is_error: bool = False) -> None:
         color = "#ff8a8a" if is_error else "#7ee787"
         self.message_label.setStyleSheet(f"color: {color};")
@@ -294,19 +273,23 @@ class LinkManagementTab(QWidget):
 
 
 def _name_label(row: Any) -> str:
-    return f"{row.raw_name} / 公開ID={short_public_id(getattr(row, 'public_id', None))}"
+    public_id = short_public_id(getattr(row, "public_id", None))
+    return f"名前: {row.raw_name}（公開ID: {public_id}）"
 
 
 def _title_label(row: Any) -> str:
-    return f"{row.title_name} / 公開ID={short_public_id(getattr(row, 'public_id', None))}"
+    public_id = short_public_id(getattr(row, "public_id", None))
+    return f"タイトル: {row.title_name}（公開ID: {public_id}）"
 
 
 def _subtitle_label(row: Any) -> str:
-    return f"{row.subtitle_code} / {row.subtitle_name} / 公開ID={short_public_id(getattr(row, 'public_id', None))}"
+    public_id = short_public_id(getattr(row, "public_id", None))
+    return f"{row.subtitle_code}: {row.subtitle_name}（公開ID: {public_id}）"
 
 
 def _link_label(row: Any) -> str:
-    return f"{row.title_name} / {row.subtitle_code} / {row.subtitle_name} / リンク公開ID={short_public_id(getattr(row, 'link_public_id', None))}"
+    public_id = short_public_id(getattr(row, "link_public_id", None))
+    return f"{row.title_name} > {row.subtitle_code}: {row.subtitle_name}（リンクID: {public_id}）"
 
 
 def _call_optional_role(function: Any, *args: Any, **kwargs: Any) -> Any:
