@@ -181,16 +181,16 @@ def test_operations_cancel_button_is_visible_only_while_busy(
 ) -> None:
     operations = _operations(_window_for_role("admin", monkeypatch))
 
-    assert not operations.cancel_operation_button.isVisible()
+    assert operations.cancel_operation_button.isHidden()
 
     operations._is_busy = True
     operations._apply_busy_state()
-    assert operations.cancel_operation_button.isVisible()
+    assert not operations.cancel_operation_button.isHidden()
     assert operations.cancel_operation_button.isEnabled()
 
     operations._is_busy = False
     operations._apply_busy_state()
-    assert not operations.cancel_operation_button.isVisible()
+    assert operations.cancel_operation_button.isHidden()
     assert not operations.cancel_operation_button.isEnabled()
 
 
