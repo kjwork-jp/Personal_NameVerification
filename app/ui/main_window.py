@@ -34,7 +34,10 @@ from app.ui.name_management_tab import NameManagementTab
 from app.ui.operations_log import OperationsJsonlLogger
 from app.ui.operations_tab import OperationLoggerLike, OperationsTab
 from app.ui.operations_tab_navigation import apply_operations_subtabs
-from app.ui.rbac_ui_guards import apply_operations_tab_role_guards
+from app.ui.rbac_ui_guards import (
+    apply_operations_tab_role_guards,
+    apply_tab_action_visibility_guards,
+)
 from app.ui.role_context import RoleContext
 from app.ui.search_tab import SearchTab
 from app.ui.tab_guides import apply_tab_guide
@@ -259,6 +262,7 @@ class MainWindow(QMainWindow):
         apply_operator_context(widget, self._role_context)
         apply_tab_guide(widget, title)
         apply_crud_list_first(widget, title)
+        apply_tab_action_visibility_guards(widget, self._role_context)
         self.tabs.addTab(widget, title)
         self._tabs_by_name[title] = widget
         for alias in _tab_aliases(title):
@@ -361,6 +365,7 @@ class MainWindow(QMainWindow):
         self._reapply_tab_role_guards(widget)
 
     def _reapply_tab_role_guards(self, widget: QWidget) -> None:
+        apply_tab_action_visibility_guards(widget, self._role_context)
         if isinstance(widget, OperationsTab):
             apply_operations_tab_role_guards(widget, self._role_context)
 
