@@ -116,8 +116,14 @@ def main() -> int:
     package_root = resolve_package_root()
     database_path = resolve_database_path(package_root=package_root)
     change_log_jsonl_path = resolve_change_log_jsonl_path(package_root=package_root)
-    operations_log_jsonl_path = resolve_operations_log_jsonl_path(package_root=package_root)
-    ensure_runtime_parent_dirs(database_path, change_log_jsonl_path, operations_log_jsonl_path)
+    operations_log_jsonl_path = resolve_operations_log_jsonl_path(
+        package_root=package_root
+    )
+    ensure_runtime_parent_dirs(
+        database_path,
+        change_log_jsonl_path,
+        operations_log_jsonl_path,
+    )
 
     connection = initialize_database(database_path)
     query_service = EnhancedQueryService(connection)
@@ -179,7 +185,10 @@ def main() -> int:
             query_service=query_service,
             core_service=core_service,
             role_context=role_context,
-            export_backup_service=ExportBackupService(connection, database_path=database_path),
+            export_backup_service=ExportBackupService(
+                connection,
+                database_path=database_path,
+            ),
             backup_restore_service=BackupRestoreService(),
             import_service=ImportService(connection, database_path=database_path),
             user_service=user_service,
@@ -201,7 +210,10 @@ def main() -> int:
             _append_operation_log(
                 action="account_switch",
                 role_context=current_role_context,
-                message=("Account switch requested by " f"{current_role_context.operator_id}"),
+                message=(
+                    "Account switch requested by "
+                    f"{current_role_context.operator_id}"
+                ),
             )
             _close_account_switch_widgets(app, current_window)
 
