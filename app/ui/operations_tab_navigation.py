@@ -12,26 +12,60 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-_GUIDE_TEXT = """
-データ入出力タブの操作ガイド
+_GUIDE_TEXT_BY_ROLE = {
+    "viewer": """
+データ入出力タブの操作ガイド（viewer）
+
+この権限では、実行ログの参照のみ利用できます。
+Export / Backup / Restore / Import は表示しません。
+
+1. Operations Log
+   データ入出力タブの実行ログを確認・絞り込みできます。
+   ログエクスポートは出力操作のため、viewerでは利用できません。
+
+補足:
+   viewerは参照専用です。DB更新、出力、バックアップ、復元、取込は行えません。
+""".strip(),
+    "editor": """
+データ入出力タブの操作ガイド（editor）
+
+この権限では、通常の出力とバックアップのみ利用できます。
+Restore / Import は破壊的操作のため表示しません。
 
 1. Export
-   CSV / JSON / SQL dump を出力します。editor / admin が利用できます。
+   CSV / JSON / SQL dump を出力します。
 
 2. Backup
-   現在のSQLite DBをバックアップします。editor / admin が利用できます。
+   現在のSQLite DBをバックアップします。
+
+3. Operations Log
+   データ入出力タブの実行ログを確認・絞り込み・エクスポートします。
+
+補足:
+   editorは通常作業向けです。DB置換や外部データ取込はadminで実行してください。
+""".strip(),
+    "admin": """
+データ入出力タブの操作ガイド（admin）
+
+この権限では、データ入出力の全操作を利用できます。
+Restore / Import は破壊的操作のため、実行前に必ずバックアップを取得してください。
+
+1. Export
+   CSV / JSON / SQL dump を出力します。
+
+2. Backup
+   現在のSQLite DBをバックアップします。
 
 3. Restore
-   バックアップDBで対象DBを置換します。destructive操作のためadmin専用です。
+   バックアップDBで対象DBを置換します。destructive操作です。
 
 4. Import
-   CSV / JSON からDBへ取り込みます。destructive操作のためadmin専用です。
+   CSV / JSON からDBへ取り込みます。destructive操作です。
 
 5. Operations Log
    データ入出力タブの実行ログを確認・絞り込み・エクスポートします。
-
-実行結果、キャンセル、履歴クリアは下部の共通エリアで確認します。
-""".strip()
+""".strip(),
+}
 
 
 def apply_operations_subtabs(widget: QWidget) -> None:
@@ -61,7 +95,8 @@ def apply_operations_subtabs(widget: QWidget) -> None:
 
     sub_tabs = QTabWidget(widget)
     sub_tabs.setObjectName("operationsSubTabs")
-    sub_tabs.addTab(_build_guide_page(), "ガイド")
+    role = str(getattr(widget, "_role", "admin"))
+    sub_tabs.addTab(_build_guide_page(role), "ガイド")
 
     section_order = [
         ("Export", "Export"),
@@ -82,12 +117,13 @@ def apply_operations_subtabs(widget: QWidget) -> None:
     widget.operations_subtabs = sub_tabs
 
 
-def _build_guide_page() -> QWidget:
+def _build_guide_page(role: str) -> QWidget:
     page = QWidget()
     layout = QVBoxLayout(page)
     layout.setContentsMargins(10, 10, 10, 10)
     layout.setSpacing(8)
-    label = QLabel(_GUIDE_TEXT)
+    label = QLabel(_GUIDE_TEXT_BY_ROLE.get(role, _GUIDE_TEXT_BY_ROLE["admin"]))
+    label.setObjectName("operationsRoleGuideLabel")
     label.setWordWrap(True)
     label.setTextInteractionFlags(label.textInteractionFlags())
     layout.addWidget(label)
