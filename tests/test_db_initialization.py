@@ -70,6 +70,158 @@ def test_initialize_database_preserves_existing_data_when_migrating(
         reopened.close()
 
 
+def test_initialize_database_repairs_legacy_public_id_columns(
+    tmp_path: Path,
+) -> None:
+    db_path = tmp_path / "legacy-public-id.db"
+    legacy = sqlite3.connect(db_path)
+    try:
+        legacy.executescript(
+            """
+            CREATE TABLE names (
+                id INTEGER PRIMARY KEY,
+                raw_name TEXT NOT NULL,
+                normalized_name TEXT NOT NULL,
+                note TEXT,
+                icon_path TEXT,
+                deleted_at TEXT,
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
+            INSERT INTO names(raw_name, normalized_name, note)
+            VALUES ('Legacy Name', 'legacy name', 'before public_id migration');
+            """
+        )
+        legacy.commit()
+    finally:
+        legacy.close()
+
+    migrated = initialize_database(db_path)
+    try:
+        columns = {
+            row[1] for row in migrated.execute("PRAGMA table_info(names)").fetchall()
+        }
+        assert "public_id" in columns
+        row = migrated.execute(
+            "SELECT raw_name, note, public_id FROM names WHERE id = 1"
+        ).fetchone()
+        assert row[0] == "Legacy Name"
+        assert row[1] == "before public_id migration"
+        assert isinstance(row[2], str)
+        assert row[2]
+        assert migrated.execute("PRAGMA integrity_check;").fetchone()[0] == "ok"
+    finally:
+        migrated.close()
+
+
+def test_initialize_database_repairs_legacy_user_auth_columns(
+    tmp_path: Path,
+) -> None:
+    db_path = tmp_path / "legacy-users.db"
+
+    connection = initialize_database(db_path)
+    try:
+        connection.execute(
+            """
+            INSERT INTO users(
+                operator_id,
+                role,
+                password_hash,
+                password_salt,
+                password_algorithm,
+                password_iterations,
+                password_updated_at
+            ) VALUES (?, 'admin', 'hash', 'salt', 'pbkdf2_sha256', 1000, CURRENT_TIMESTAMP)
+            """,
+            ("legacy-admin",),
+        )
+        connection.execute("ALTER TABLE users RENAME TO users_with_auth_columns")
+        connection.execute(
+            """
+            CREATE TABLE users (
+                id INTEGER PRIMARY KEY,
+                public_id TEXT,
+                operator_id TEXT NOT NULL UNIQUE,
+                display_name TEXT,
+                role TEXT NOT NULL CHECK(role IN ('viewer', 'editor', 'admin')),
+                password_hash TEXT NOT NULL,
+                password_salt TEXT NOT NULL,
+                password_algorithm TEXT NOT NULL DEFAULT 'pbkdf2_sha256',
+                password_iterations INTEGER NOT NULL,
+                password_updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                disabled_at TEXT,
+                failed_login_count INTEGER NOT NULL DEFAULT 0,
+                locked_until TEXT,
+                last_login_at TEXT,
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
+        connection.execute(
+            """
+            INSERT INTO users(
+                id,
+                public_id,
+                operator_id,
+                display_name,
+                role,
+                password_hash,
+                password_salt,
+                password_algorithm,
+                password_iterations,
+                password_updated_at,
+                disabled_at,
+                failed_login_count,
+                locked_until,
+                last_login_at,
+                created_at,
+                updated_at
+            )
+            SELECT
+                id,
+                public_id,
+                operator_id,
+                display_name,
+                role,
+                password_hash,
+                password_salt,
+                password_algorithm,
+                password_iterations,
+                password_updated_at,
+                disabled_at,
+                failed_login_count,
+                locked_until,
+                last_login_at,
+                created_at,
+                updated_at
+            FROM users_with_auth_columns
+            """
+        )
+        connection.execute("DROP TABLE users_with_auth_columns")
+        connection.commit()
+    finally:
+        connection.close()
+
+    migrated = initialize_database(db_path)
+    try:
+        columns = {
+            row[1] for row in migrated.execute("PRAGMA table_info(users)").fetchall()
+        }
+        assert {"auth_provider", "windows_account_name", "windows_sid"} <= columns
+        row = migrated.execute(
+            """
+            SELECT operator_id, auth_provider, windows_account_name, windows_sid
+            FROM users
+            WHERE operator_id = 'legacy-admin'
+            """
+        ).fetchone()
+        assert tuple(row) == ("legacy-admin", "local", None, None)
+        assert migrated.execute("PRAGMA integrity_check;").fetchone()[0] == "ok"
+    finally:
+        migrated.close()
+
+
 def test_check_database_integrity_accepts_ok_result() -> None:
     connection = sqlite3.connect(":memory:")
     try:
