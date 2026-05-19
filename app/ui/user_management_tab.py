@@ -155,7 +155,8 @@ class UserManagementTab(QWidget):
         compact_layout(layout, margins=8, spacing=8)
         layout.addWidget(
             QLabel(
-                "ローカル認証ユーザーを作成します。Windows認証ユーザーは初回ログイン時にviewerで自動登録されます。"
+                "ローカル認証ユーザーを作成します。"
+                "Windows認証ユーザーは初回ログイン時にviewerで自動登録されます。"
             )
         )
         layout.addWidget(_field_with_label("操作者ID（ログインID）", self.create_operator_input))
@@ -172,7 +173,8 @@ class UserManagementTab(QWidget):
         compact_layout(layout, margins=8, spacing=6)
         layout.addWidget(
             QLabel(
-                "登録済みユーザーの一覧です。認証方式 local/windows とWindows識別情報を確認できます。"
+                "登録済みユーザーの一覧です。"
+                "認証方式 local/windows とWindows識別情報を確認できます。"
             )
         )
         layout.addWidget(self.table, 1)
