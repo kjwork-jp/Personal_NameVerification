@@ -161,9 +161,13 @@ def test_title_subtitle_management_operations(monkeypatch: pytest.MonkeyPatch) -
     monkeypatch.setattr(ts_tab_module, "confirm_destructive_action", lambda *args, **kwargs: True)
     core = StubCoreService()
     query = StubQueryService()
-    tab = TitleSubtitleManagementTab(core_service=core, query_service=query)
+    tab = TitleSubtitleManagementTab(
+        core_service=core,
+        query_service=query,
+        role_context=RoleContext(role="admin", operator_id="op-1"),
+    )
 
-    tab.operator_input.setText("op-1")
+    assert tab.operator_input.isHidden()
 
     tab.title_name_input.setText("NewTitle")
     tab.title_link_name_combo.setCurrentIndex(1)
@@ -203,23 +207,44 @@ def test_title_subtitle_management_operations(monkeypatch: pytest.MonkeyPatch) -
     assert tab.subtitles_table.item(0, 3).text() == "Title1"
 
 
-def test_title_subtitle_management_requires_operator_id() -> None:
+def test_title_subtitle_management_requires_login_operator_id() -> None:
     _app()
     tab = TitleSubtitleManagementTab(
-        core_service=StubCoreService(), query_service=StubQueryService()
+        core_service=StubCoreService(),
+        query_service=StubQueryService(),
+        role_context=RoleContext(role="admin", operator_id=""),
     )
-    tab.operator_input.setText("")
     tab._create_title()
 
-    assert "操作者ID" in tab.message_label.text()
+    assert "ログイン中ユーザー" in tab.message_label.text()
+
+
+def test_title_subtitle_management_ignores_hidden_operator_input() -> None:
+    _app()
+    core = StubCoreService()
+    tab = TitleSubtitleManagementTab(
+        core_service=core,
+        query_service=StubQueryService(),
+        role_context=RoleContext(role="admin", operator_id="login-user"),
+    )
+
+    tab.operator_input.setText("manual-user")
+    tab.title_name_input.setText("NewTitle")
+    tab._create_title()
+
+    assert any(call.startswith("create_title:NewTitle:login-user:admin") for call in core.calls)
+    assert not any("manual-user" in call for call in core.calls)
 
 
 def test_title_subtitle_cancel_does_not_call_service(monkeypatch: pytest.MonkeyPatch) -> None:
     _app()
     monkeypatch.setattr(ts_tab_module, "confirm_destructive_action", lambda *args, **kwargs: False)
     core = StubCoreService()
-    tab = TitleSubtitleManagementTab(core_service=core, query_service=StubQueryService())
-    tab.operator_input.setText("op-1")
+    tab = TitleSubtitleManagementTab(
+        core_service=core,
+        query_service=StubQueryService(),
+        role_context=RoleContext(role="admin", operator_id="op-1"),
+    )
 
     tab.titles_table.selectRow(0)
     tab._delete_title()
@@ -294,8 +319,11 @@ def test_title_combo_selection_updates_table_selection() -> None:
 def test_cannot_create_or_update_subtitle_under_deleted_title() -> None:
     _app()
     core = StubCoreService()
-    tab = TitleSubtitleManagementTab(core_service=core, query_service=StubQueryService())
-    tab.operator_input.setText("op-1")
+    tab = TitleSubtitleManagementTab(
+        core_service=core,
+        query_service=StubQueryService(),
+        role_context=RoleContext(role="admin", operator_id="op-1"),
+    )
     tab.titles_table.selectRow(1)
 
     tab.subtitle_code_input.setText("S2-N")
