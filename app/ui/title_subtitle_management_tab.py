@@ -24,7 +24,7 @@ from PySide6.QtWidgets import (
 from app.application.core_services import SubtitleInput, TitleInput
 from app.application.read_models import NameSearchRow, NameTitleLinkRow, SubtitleDetail, TitleDetail
 from app.ui.dialogs import confirm_destructive_action
-from app.ui.input_defaults import default_operator_id, friendly_error_message, generate_subtitle_code
+from app.ui.input_defaults import friendly_error_message, generate_subtitle_code
 from app.ui.permissions import can_create_or_update, can_run_destructive_actions
 from app.ui.public_id_display import short_public_id
 from app.ui.role_context import RoleContext, UserRole
@@ -132,8 +132,8 @@ class TitleSubtitleManagementTab(QWidget):
         self._selected_title: _TitleSelection | None = None
         self._selected_subtitle: _SubtitleSelection | None = None
 
-        self.operator_input = QLineEdit(default_operator_id())
-        self.operator_input.setPlaceholderText("操作者（自動入力）")
+        self.operator_input = QLineEdit(self._role_context.operator_id)
+        self.operator_input.hide()
         self.title_selector_combo = QComboBox()
         self.title_selector_combo.setToolTip("登録済みタイトルを選択します")
         self.title_name_input = QLineEdit()
@@ -216,10 +216,6 @@ class TitleSubtitleManagementTab(QWidget):
         self.subtitle_restore_button.clicked.connect(self._restore_subtitle)
         self.subtitle_hard_delete_button.clicked.connect(self._hard_delete_subtitle)
 
-        top_form = QFormLayout()
-        compact_layout(top_form, margins=0, spacing=2)
-        top_form.addRow("操作者ID", self.operator_input)
-
         title_form = QFormLayout()
         compact_layout(title_form, margins=0, spacing=2)
         title_form.addRow("タイトル選択", self.title_selector_combo)
@@ -285,7 +281,6 @@ class TitleSubtitleManagementTab(QWidget):
 
         root = QVBoxLayout(self)
         compact_layout(root, margins=2, spacing=3)
-        root.addLayout(top_form)
         root.addWidget(self.message_label)
         root.addWidget(splitter, 1)
 
@@ -612,7 +607,7 @@ class TitleSubtitleManagementTab(QWidget):
         self.title_link_name_combo.clear()
         self.title_link_name_combo.addItem("関連付けなし", None)
         for row in self._name_rows:
-            label = f"{row.raw_name} / 公開ID={short_public_id(row.public_id)}"
+            label = f"名前: {row.raw_name}（公開ID: {short_public_id(row.public_id)}）"
             self.title_link_name_combo.addItem(label, row.id)
             item = QListWidgetItem(label)
             item.setData(0x0100, row.id)
@@ -653,9 +648,9 @@ class TitleSubtitleManagementTab(QWidget):
         return ""
 
     def _require_operator_id(self) -> str | None:
-        operator_id = self.operator_input.text().strip()
+        operator_id = self._role_context.operator_id.strip()
         if not operator_id:
-            self._set_message("操作者ID を入力してください", is_error=True)
+            self._set_message("ログイン中ユーザーを取得できません", is_error=True)
             return None
         return operator_id
 
@@ -690,7 +685,7 @@ class TitleSubtitleManagementTab(QWidget):
             return
         status = "削除済み" if title.deleted_at else "有効"
         self.selected_title_label.setText(
-            f"公開ID={short_public_id(title.public_id)} / {title.title_name} ({status})"
+            f"タイトル: {title.title_name}（公開ID: {short_public_id(title.public_id)} / 状態: {status}）"
         )
 
     def _update_action_states(self) -> None:
@@ -703,8 +698,12 @@ class TitleSubtitleManagementTab(QWidget):
         subtitle_deleted = bool(self._selected_subtitle and self._selected_subtitle.deleted)
 
         readonly = "viewerは参照専用です。追加・更新系の入力はできません"
-        self.operator_input.setEnabled(can_write or can_destructive)
-        for widget in (self.title_name_input, self.title_note_input, self.title_link_name_combo, self.title_link_names_list):
+        for widget in (
+            self.title_name_input,
+            self.title_note_input,
+            self.title_link_name_combo,
+            self.title_link_names_list,
+        ):
             widget.setEnabled(can_write)
             widget.setToolTip("入力できます" if can_write else readonly)
         subtitle_edit_enabled = can_write and has_title and not title_deleted
@@ -724,8 +723,12 @@ class TitleSubtitleManagementTab(QWidget):
         self.title_hard_delete_button.setEnabled(False)
         self.subtitle_refresh_button.setEnabled(has_title)
         self.subtitle_create_button.setEnabled(can_write and has_title and not title_deleted)
-        self.subtitle_update_button.setEnabled(can_write and has_title and has_subtitle and not title_deleted and not subtitle_deleted)
-        self.subtitle_delete_button.setEnabled(can_destructive and has_title and has_subtitle and not title_deleted and not subtitle_deleted)
+        self.subtitle_update_button.setEnabled(
+            can_write and has_title and has_subtitle and not title_deleted and not subtitle_deleted
+        )
+        self.subtitle_delete_button.setEnabled(
+            can_destructive and has_title and has_subtitle and not title_deleted and not subtitle_deleted
+        )
         self.subtitle_restore_button.setEnabled(False)
         self.subtitle_hard_delete_button.setEnabled(False)
         if not has_title:
@@ -738,15 +741,15 @@ class TitleSubtitleManagementTab(QWidget):
             self._set_message("viewerはタイトル/サブタイトルの追加・更新・削除を実行できません", is_error=True)
 
     def _configure_table_columns(self) -> None:
-        self.titles_table.setColumnWidth(1, 82)
+        self.titles_table.setColumnWidth(1, 230)
         self.titles_table.setColumnWidth(2, 150)
         self.titles_table.setColumnWidth(3, 58)
         self.titles_table.setColumnWidth(4, 135)
         self.titles_table.setColumnWidth(5, 105)
         self.titles_table.setColumnWidth(6, 155)
-        self.subtitles_table.setColumnWidth(1, 82)
+        self.subtitles_table.setColumnWidth(1, 230)
         self.subtitles_table.setColumnWidth(3, 125)
-        self.subtitles_table.setColumnWidth(4, 90)
+        self.subtitles_table.setColumnWidth(4, 110)
         self.subtitles_table.setColumnWidth(5, 145)
         self.subtitles_table.setColumnWidth(6, 58)
         self.subtitles_table.setColumnWidth(7, 60)
@@ -756,4 +759,4 @@ class TitleSubtitleManagementTab(QWidget):
 
 def _title_combo_label(row: TitleDetail) -> str:
     status = "削除済み" if row.deleted_at else "有効"
-    return f"{row.title_name} / 公開ID={short_public_id(row.public_id)} / {status}"
+    return f"タイトル: {row.title_name}（公開ID: {short_public_id(row.public_id)} / 状態: {status}）"
