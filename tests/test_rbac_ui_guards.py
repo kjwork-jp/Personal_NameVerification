@@ -176,6 +176,24 @@ def test_admin_rbac_allows_destructive_and_management_controls(
     assert operations.export_logs_button.isEnabled()
 
 
+def test_operations_cancel_button_is_visible_only_while_busy(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    operations = _operations(_window_for_role("admin", monkeypatch))
+
+    assert not operations.cancel_operation_button.isVisible()
+
+    operations._is_busy = True
+    operations._apply_busy_state()
+    assert operations.cancel_operation_button.isVisible()
+    assert operations.cancel_operation_button.isEnabled()
+
+    operations._is_busy = False
+    operations._apply_busy_state()
+    assert not operations.cancel_operation_button.isVisible()
+    assert not operations.cancel_operation_button.isEnabled()
+
+
 def test_user_management_tab_is_admin_only_when_user_service_is_available(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
