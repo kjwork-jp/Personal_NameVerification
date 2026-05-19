@@ -159,8 +159,8 @@ def _install_cancel_visibility_guard(tab: Any) -> None:
         original_apply_busy_state()
         _set_visible(cancel_button, bool(getattr(tab, "_is_busy", False)))
 
-    setattr(tab, "_apply_busy_state", _guarded_apply_busy_state)
-    setattr(tab, "_cancel_visibility_guard_installed", True)
+    tab._apply_busy_state = _guarded_apply_busy_state
+    tab._cancel_visibility_guard_installed = True
     _guarded_apply_busy_state()
 
 
