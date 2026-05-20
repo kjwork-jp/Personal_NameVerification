@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import os
 import re
+from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -133,66 +135,14 @@ class StubOperationLogger:
 
 
 class EmptyCoreService:
-    def create_name(self, *args: object, **kwargs: object) -> int:
-        _ = (args, kwargs)
-        return 0
+    def __getattr__(self, name: str) -> Callable[..., Any]:
+        _ = name
 
-    def update_name(self, *args: object, **kwargs: object) -> None:
-        _ = (args, kwargs)
+        def _stub(*args: object, **kwargs: object) -> int:
+            _ = (args, kwargs)
+            return 0
 
-    def delete_name(self, *args: object, **kwargs: object) -> None:
-        _ = (args, kwargs)
-
-    def restore_name(self, *args: object, **kwargs: object) -> None:
-        _ = (args, kwargs)
-
-    def hard_delete_name(self, *args: object, **kwargs: object) -> None:
-        _ = (args, kwargs)
-
-    def create_title(self, *args: object, **kwargs: object) -> int:
-        _ = (args, kwargs)
-        return 0
-
-    def update_title(self, *args: object, **kwargs: object) -> None:
-        _ = (args, kwargs)
-
-    def delete_title(self, *args: object, **kwargs: object) -> None:
-        _ = (args, kwargs)
-
-    def restore_title(self, *args: object, **kwargs: object) -> None:
-        _ = (args, kwargs)
-
-    def hard_delete_title(self, *args: object, **kwargs: object) -> None:
-        _ = (args, kwargs)
-
-    def create_subtitle(self, *args: object, **kwargs: object) -> int:
-        _ = (args, kwargs)
-        return 0
-
-    def update_subtitle(self, *args: object, **kwargs: object) -> None:
-        _ = (args, kwargs)
-
-    def delete_subtitle(self, *args: object, **kwargs: object) -> None:
-        _ = (args, kwargs)
-
-    def restore_subtitle(self, *args: object, **kwargs: object) -> None:
-        _ = (args, kwargs)
-
-    def hard_delete_subtitle(self, *args: object, **kwargs: object) -> None:
-        _ = (args, kwargs)
-
-    def link_name_to_subtitle(self, *args: object, **kwargs: object) -> int:
-        _ = (args, kwargs)
-        return 0
-
-    def unlink_name_from_subtitle(self, *args: object, **kwargs: object) -> None:
-        _ = (args, kwargs)
-
-    def restore_link(self, *args: object, **kwargs: object) -> None:
-        _ = (args, kwargs)
-
-    def hard_delete_link(self, *args: object, **kwargs: object) -> None:
-        _ = (args, kwargs)
+        return _stub
 
 
 def _get_app() -> QApplication:
@@ -290,19 +240,19 @@ def test_main_window_prefills_portable_operations_paths(
     window = _build_main_window(database_path=db_path)
     tab = _operations_tab(window)
 
-    assert Path(tab.csv_export_path_input.text()) == package_root / "60_exports" / "csv"
+    assert Path(tab.csv_export_path_input.text()) == Path("60_exports") / "csv"
     assert Path(tab.db_path_input.text()) == db_path
     assert Path(tab.restore_target_db_path_input.text()) == db_path
     assert tab.restore_backup_path_input.text() == ""
     assert tab.import_json_path_input.text() == ""
-    assert Path(tab.import_csv_dir_input.text()) == package_root / "60_exports" / "csv"
+    assert Path(tab.import_csv_dir_input.text()) == Path("60_exports") / "csv"
 
     json_path = Path(tab.json_export_path_input.text())
     sql_path = Path(tab.sql_dump_path_input.text())
     backup_path = Path(tab.backup_output_path_input.text())
-    assert json_path.parent == package_root / "60_exports" / "json"
-    assert sql_path.parent == package_root / "60_exports" / "sql"
-    assert backup_path.parent == package_root / "50_backups" / "daily"
+    assert json_path.parent == Path("60_exports") / "json"
+    assert sql_path.parent == Path("60_exports") / "sql"
+    assert backup_path.parent == Path("50_backups") / "daily"
     assert re.fullmatch(r"nameverification_export_\d{8}_\d{6}\.json", json_path.name)
     assert re.fullmatch(r"nameverification_dump_\d{8}_\d{6}\.sql", sql_path.name)
     assert re.fullmatch(r"nameverification_\d{8}_\d{6}\.db", backup_path.name)
@@ -363,33 +313,23 @@ def test_main_window_passes_runtime_paths_to_help_settings(
     )
 
 
-def test_main_window_prefills_nonportable_operations_paths_from_safe_tmp(
+def test_main_window_prefills_nonportable_operations_paths_as_relative_layout(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     _get_app()
     _patch_operations_dependencies(monkeypatch)
-    fallback_base = tmp_path / "safe-tmp" / "NameVerification v3"
-    monkeypatch.setattr(
-        main_window_module,
-        "_operations_fallback_base_dir",
-        lambda: fallback_base,
-    )
     db_path = tmp_path / "dev.db"
 
     window = _build_main_window(database_path=db_path)
     tab = _operations_tab(window)
 
-    assert Path(tab.csv_export_path_input.text()) == fallback_base / "60_exports" / "csv"
+    assert Path(tab.csv_export_path_input.text()) == Path("60_exports") / "csv"
     assert Path(tab.db_path_input.text()) == db_path
-    assert Path(tab.json_export_path_input.text()).parent == (
-        fallback_base / "60_exports" / "json"
-    )
-    assert Path(tab.sql_dump_path_input.text()).parent == (
-        fallback_base / "60_exports" / "sql"
-    )
+    assert Path(tab.json_export_path_input.text()).parent == Path("60_exports") / "json"
+    assert Path(tab.sql_dump_path_input.text()).parent == Path("60_exports") / "sql"
     assert Path(tab.backup_output_path_input.text()).parent == (
-        fallback_base / "50_backups" / "daily"
+        Path("50_backups") / "daily"
     )
 
 
