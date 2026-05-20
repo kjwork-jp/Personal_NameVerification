@@ -271,20 +271,24 @@ class MainWindow(QMainWindow):
     def _prefill_operations_paths(self, operations_tab: OperationsTab) -> None:
         timestamp = _timestamp_suffix()
         package_root = self._resolve_operations_package_root()
-        defaults = self._relative_operations_defaults(
-            timestamp,
-            package_root=package_root,
-        )
+        if package_root is not None:
+            defaults = self._portable_operations_defaults(
+                package_root.resolve(strict=False),
+                timestamp,
+            )
+        else:
+            defaults = self._fallback_operations_defaults(timestamp)
         operations_tab.apply_default_paths(defaults, replace_history_prefills=True)
 
     def _resolve_operations_package_root(self) -> Path | None:
-        if self._package_root is not None and _looks_like_operations_package_root(
-            self._package_root
-        ):
+        if self._package_root is not None:
             return self._package_root
         if self._database_path is None:
             return None
-        return resolve_package_root_from_database_path(self._database_path)
+        portable_root = resolve_package_root_from_database_path(self._database_path)
+        if portable_root is not None:
+            return portable_root
+        return self._database_path.expanduser().resolve(strict=False).parent
 
     def _portable_operations_defaults(
         self,
@@ -301,6 +305,10 @@ class MainWindow(QMainWindow):
         database_path = self._database_path or (
             package_root / "30_prod_db" / "nameverification.db"
         )
+        if database_path.is_absolute():
+            database_path = database_path.resolve(strict=False)
+        else:
+            database_path = (package_root / database_path).resolve(strict=False)
         json_export_file = json_dir / f"nameverification_export_{timestamp}.json"
         backup_output_file = backup_dir / f"nameverification_{timestamp}.db"
         defaults: dict[str, Path | str] = {
