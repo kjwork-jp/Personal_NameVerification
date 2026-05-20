@@ -269,15 +269,9 @@ class MainWindow(QMainWindow):
             self._tabs_by_name[alias] = widget
 
     def _prefill_operations_paths(self, operations_tab: OperationsTab) -> None:
-        package_root = self._resolve_operations_package_root()
         timestamp = _timestamp_suffix()
-        if package_root is not None:
-            defaults = self._portable_operations_defaults(package_root, timestamp)
-            operations_tab.apply_default_paths(defaults, replace_history_prefills=True)
-            return
-
-        defaults = self._fallback_operations_defaults(timestamp)
-        operations_tab.apply_default_paths(defaults)
+        defaults = self._relative_operations_defaults(timestamp)
+        operations_tab.apply_default_paths(defaults, replace_history_prefills=True)
 
     def _resolve_operations_package_root(self) -> Path | None:
         if self._package_root is not None and _looks_like_operations_package_root(
@@ -316,6 +310,37 @@ class MainWindow(QMainWindow):
             "import_json_file": "",
         }
         return defaults
+
+    def _relative_operations_defaults(self, timestamp: str) -> dict[str, Path | str]:
+        csv_dir = Path("60_exports") / "csv"
+        json_dir = Path("60_exports") / "json"
+        sql_dir = Path("60_exports") / "sql"
+        backup_dir = Path("50_backups") / "daily"
+        database_path = self._operation_relative_path(
+            self._database_path or Path("nameverification.db")
+        )
+        return {
+            "csv_export_dir": csv_dir,
+            "json_export_file": json_dir
+            / f"nameverification_export_{timestamp}.json",
+            "sql_dump_file": sql_dir / f"nameverification_dump_{timestamp}.sql",
+            "db_file": database_path,
+            "backup_output_file": backup_dir / f"nameverification_{timestamp}.db",
+            "restore_backup_file": "",
+            "restore_target_file": database_path,
+            "import_csv_dir": csv_dir,
+            "import_json_file": "",
+        }
+
+    def _operation_relative_path(self, path: Path) -> Path:
+        if self._package_root is None:
+            return path
+        try:
+            return path.resolve(strict=False).relative_to(
+                self._package_root.resolve(strict=False)
+            )
+        except ValueError:
+            return path
 
     def _fallback_operations_defaults(self, timestamp: str) -> dict[str, Path | str]:
         base_dir = _operations_fallback_base_dir()
