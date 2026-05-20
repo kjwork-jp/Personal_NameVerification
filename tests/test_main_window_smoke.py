@@ -240,20 +240,22 @@ def test_main_window_prefills_portable_operations_paths(
     window = _build_main_window(database_path=db_path)
     tab = _operations_tab(window)
 
-    expected_db_path = Path("30_prod_db") / "nameverification.db"
-    assert Path(tab.csv_export_path_input.text()) == Path("60_exports") / "csv"
+    expected_db_path = db_path.resolve(strict=False)
+    assert Path(tab.csv_export_path_input.text()) == (
+        package_root / "60_exports" / "csv"
+    )
     assert Path(tab.db_path_input.text()) == expected_db_path
     assert Path(tab.restore_target_db_path_input.text()) == expected_db_path
-    assert Path(tab.import_csv_dir_input.text()) == Path("60_exports") / "csv"
+    assert Path(tab.import_csv_dir_input.text()) == package_root / "60_exports" / "csv"
 
     json_path = Path(tab.json_export_path_input.text())
     sql_path = Path(tab.sql_dump_path_input.text())
     backup_path = Path(tab.backup_output_path_input.text())
     restore_backup_path = Path(tab.restore_backup_path_input.text())
     import_json_path = Path(tab.import_json_path_input.text())
-    assert json_path.parent == Path("60_exports") / "json"
-    assert sql_path.parent == Path("60_exports") / "sql"
-    assert backup_path.parent == Path("50_backups") / "daily"
+    assert json_path.parent == package_root / "60_exports" / "json"
+    assert sql_path.parent == package_root / "60_exports" / "sql"
+    assert backup_path.parent == package_root / "50_backups" / "daily"
     assert restore_backup_path == backup_path
     assert import_json_path == json_path
     assert re.fullmatch(r"nameverification_export_\d{8}_\d{6}\.json", json_path.name)
@@ -316,7 +318,7 @@ def test_main_window_passes_runtime_paths_to_help_settings(
     )
 
 
-def test_main_window_prefills_nonportable_operations_paths_as_relative_layout(
+def test_main_window_prefills_nonportable_operations_paths_as_absolute_layout(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -327,12 +329,12 @@ def test_main_window_prefills_nonportable_operations_paths_as_relative_layout(
     window = _build_main_window(database_path=db_path)
     tab = _operations_tab(window)
 
-    assert Path(tab.csv_export_path_input.text()) == Path("60_exports") / "csv"
+    assert Path(tab.csv_export_path_input.text()) == tmp_path / "60_exports" / "csv"
     assert Path(tab.db_path_input.text()) == db_path
-    assert Path(tab.json_export_path_input.text()).parent == Path("60_exports") / "json"
-    assert Path(tab.sql_dump_path_input.text()).parent == Path("60_exports") / "sql"
+    assert Path(tab.json_export_path_input.text()).parent == tmp_path / "60_exports" / "json"
+    assert Path(tab.sql_dump_path_input.text()).parent == tmp_path / "60_exports" / "sql"
     assert Path(tab.backup_output_path_input.text()).parent == (
-        Path("50_backups") / "daily"
+        tmp_path / "50_backups" / "daily"
     )
 
 
