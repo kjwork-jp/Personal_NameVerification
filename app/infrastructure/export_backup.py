@@ -5,6 +5,7 @@ from __future__ import annotations
 import csv
 import json
 import sqlite3
+from os import PathLike
 from pathlib import Path
 
 from app.domain.errors import ValidationError
@@ -21,12 +22,12 @@ EXPORT_TABLES: tuple[str, ...] = (
 
 def export_tables_to_csv(
     connection: sqlite3.Connection,
-    output_dir: Path,
+    output_dir: Path | PathLike[str],
     *,
     table_names: tuple[str, ...] = EXPORT_TABLES,
 ) -> dict[str, Path]:
     """Export each table into a dedicated CSV file under output_dir."""
-    output_dir = output_dir.resolve()
+    output_dir = Path(output_dir).resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
     if not output_dir.is_dir():
         raise ValidationError(f"output path is not a directory: {output_dir}")
@@ -55,7 +56,7 @@ def export_tables_to_csv(
 
 def export_tables_to_json(
     connection: sqlite3.Connection,
-    output_path: Path,
+    output_path: Path | PathLike[str],
     *,
     table_names: tuple[str, ...] = EXPORT_TABLES,
 ) -> Path:
@@ -70,7 +71,7 @@ def export_tables_to_json(
     return validated
 
 
-def export_sql_dump(connection: sqlite3.Connection, output_path: Path) -> Path:
+def export_sql_dump(connection: sqlite3.Connection, output_path: Path | PathLike[str]) -> Path:
     """Write SQLite SQL dump output to output_path."""
     validated = _validated_output_file_path(output_path)
     dump_text = "\n".join(connection.iterdump()) + "\n"
@@ -78,14 +79,14 @@ def export_sql_dump(connection: sqlite3.Connection, output_path: Path) -> Path:
     return validated
 
 
-def create_backup_file(db_path: Path, backup_path: Path) -> Path:
+def create_backup_file(db_path: Path | PathLike[str], backup_path: Path | PathLike[str]) -> Path:
     """Create a consistent SQLite backup file.
 
     Use SQLite's online backup API instead of copying the database file directly.
     This avoids incomplete backups when the source DB has an open connection or
     uses journal/WAL sidecar files.
     """
-    source = db_path.resolve()
+    source = Path(db_path).resolve()
     if not source.exists() or not source.is_file():
         raise ValidationError(f"database file does not exist: {source}")
 
@@ -114,8 +115,8 @@ def create_backup_file(db_path: Path, backup_path: Path) -> Path:
     return target
 
 
-def _validated_output_file_path(path: Path) -> Path:
-    resolved = path.resolve()
+def _validated_output_file_path(path: Path | PathLike[str]) -> Path:
+    resolved = Path(path).resolve()
     if resolved.exists() and resolved.is_dir():
         raise ValidationError(f"output path points to a directory: {resolved}")
 
