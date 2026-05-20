@@ -139,6 +139,7 @@ def _page_with_group(group: QGroupBox) -> QWidget:
     group.setParent(page)
     layout.addWidget(group)
     layout.addStretch(1)
+    group.show()
     return page
 
 
@@ -162,8 +163,8 @@ def _take_group_boxes_from_grid(grid: QGridLayout) -> dict[str, QGroupBox]:
             continue
         group = item.widget()
         if isinstance(group, QGroupBox):
+            group.hide()
             grid.removeWidget(group)
-            group.setParent(None)
             groups[group.title()] = group
     return groups
 
@@ -175,7 +176,7 @@ def _take_group_box_by_title(layout: QLayout, title_prefix: str) -> QGroupBox | 
             continue
         group = item.widget()
         if isinstance(group, QGroupBox) and group.title().startswith(title_prefix):
+            group.hide()
             layout.takeAt(index)
-            group.setParent(None)
             return group
     return None
