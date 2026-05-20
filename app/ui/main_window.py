@@ -270,7 +270,11 @@ class MainWindow(QMainWindow):
 
     def _prefill_operations_paths(self, operations_tab: OperationsTab) -> None:
         timestamp = _timestamp_suffix()
-        defaults = self._relative_operations_defaults(timestamp)
+        package_root = self._resolve_operations_package_root()
+        defaults = self._relative_operations_defaults(
+            timestamp,
+            package_root=package_root,
+        )
         operations_tab.apply_default_paths(defaults, replace_history_prefills=True)
 
     def _resolve_operations_package_root(self) -> Path | None:
@@ -297,48 +301,60 @@ class MainWindow(QMainWindow):
         database_path = self._database_path or (
             package_root / "30_prod_db" / "nameverification.db"
         )
+        json_export_file = json_dir / f"nameverification_export_{timestamp}.json"
+        backup_output_file = backup_dir / f"nameverification_{timestamp}.db"
         defaults: dict[str, Path | str] = {
             "csv_export_dir": csv_dir,
-            "json_export_file": json_dir
-            / f"nameverification_export_{timestamp}.json",
+            "json_export_file": json_export_file,
             "sql_dump_file": sql_dir / f"nameverification_dump_{timestamp}.sql",
             "db_file": database_path,
-            "backup_output_file": backup_dir / f"nameverification_{timestamp}.db",
-            "restore_backup_file": "",
+            "backup_output_file": backup_output_file,
+            "restore_backup_file": backup_output_file,
             "restore_target_file": database_path,
             "import_csv_dir": csv_dir,
-            "import_json_file": "",
+            "import_json_file": json_export_file,
         }
         return defaults
 
-    def _relative_operations_defaults(self, timestamp: str) -> dict[str, Path | str]:
+    def _relative_operations_defaults(
+        self,
+        timestamp: str,
+        *,
+        package_root: Path | None = None,
+    ) -> dict[str, Path | str]:
         csv_dir = Path("60_exports") / "csv"
         json_dir = Path("60_exports") / "json"
         sql_dir = Path("60_exports") / "sql"
         backup_dir = Path("50_backups") / "daily"
         database_path = self._operation_relative_path(
-            self._database_path or Path("nameverification.db")
+            self._database_path or Path("nameverification.db"),
+            package_root=package_root,
         )
+        json_export_file = json_dir / f"nameverification_export_{timestamp}.json"
+        backup_output_file = backup_dir / f"nameverification_{timestamp}.db"
         return {
             "csv_export_dir": csv_dir,
-            "json_export_file": json_dir
-            / f"nameverification_export_{timestamp}.json",
+            "json_export_file": json_export_file,
             "sql_dump_file": sql_dir / f"nameverification_dump_{timestamp}.sql",
             "db_file": database_path,
-            "backup_output_file": backup_dir / f"nameverification_{timestamp}.db",
-            "restore_backup_file": "",
+            "backup_output_file": backup_output_file,
+            "restore_backup_file": backup_output_file,
             "restore_target_file": database_path,
             "import_csv_dir": csv_dir,
-            "import_json_file": "",
+            "import_json_file": json_export_file,
         }
 
-    def _operation_relative_path(self, path: Path) -> Path:
-        if self._package_root is None:
+    def _operation_relative_path(
+        self,
+        path: Path,
+        *,
+        package_root: Path | None = None,
+    ) -> Path:
+        root = package_root or self._package_root
+        if root is None:
             return path
         try:
-            return path.resolve(strict=False).relative_to(
-                self._package_root.resolve(strict=False)
-            )
+            return path.resolve(strict=False).relative_to(root.resolve(strict=False))
         except ValueError:
             return path
 
@@ -351,16 +367,17 @@ class MainWindow(QMainWindow):
         backup_dir = base_dir / "50_backups" / "daily"
         for directory in (csv_dir, json_dir, sql_dir, backup_dir):
             directory.mkdir(parents=True, exist_ok=True)
+        json_export_file = json_dir / f"nameverification_export_{timestamp}.json"
+        backup_output_file = backup_dir / f"nameverification_{timestamp}.db"
         defaults: dict[str, Path | str] = {
             "csv_export_dir": csv_dir,
-            "json_export_file": json_dir
-            / f"nameverification_export_{timestamp}.json",
+            "json_export_file": json_export_file,
             "sql_dump_file": sql_dir / f"nameverification_dump_{timestamp}.sql",
-            "backup_output_file": backup_dir / f"nameverification_{timestamp}.db",
-            "restore_backup_file": "",
+            "backup_output_file": backup_output_file,
+            "restore_backup_file": backup_output_file,
             "restore_target_file": base_dir / "restore_target_nameverification.db",
             "import_csv_dir": csv_dir,
-            "import_json_file": "",
+            "import_json_file": json_export_file,
         }
         if self._database_path is not None:
             defaults["db_file"] = self._database_path
