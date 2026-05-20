@@ -10,6 +10,12 @@ Date: 2026-05-20
 - Portable smoke: PASS after retry
 - Portable GUI basic check: PASS
 - Quality gates: PASS
+- P1 authentication negative-path UAT: PASS
+- P1 last active admin protection UAT: PASS for role demotion and disable protection. User delete operation was not applicable in the current UI.
+- P1 Data I/O file-output UAT: PASS for admin and editor export/backup/operations-log evidence.
+- P1 audit-log UAT: PASS for login failure, role change, disable, and enable evidence.
+- P1 restore UAT: BLOCKED/FAIL for restoring the currently opened DB from GUI. The operation logged WinError 5 access denied when replacing `30_prod_db/nameverification.db`.
+- P1 import UAT: PARTIAL PASS. JSON import from exported JSON completed with before-import backup; invalid import coverage remains to be confirmed if required.
 
 ## Package
 
@@ -52,10 +58,54 @@ Date: 2026-05-20
 - Restore defaults pointed to `50_backups/daily` and `30_prod_db/nameverification.db`.
 - Import defaults pointed to `60_exports/csv` and `60_exports/json`.
 
-## Remaining checks
+## P1 UAT evidence
 
-- Authentication negative-path UAT
-- Last active admin protection UAT
-- Data I/O file-output UAT
-- Restore and import UAT on a disposable copy
-- Audit-log negative-path UAT
+### AUTH-002
+
+- Initial admin setup: PASS.
+- Correct admin login: PASS.
+- Incorrect admin password: PASS. The login was rejected and `login_failure` was recorded with `reason=credential_mismatch`.
+- Unknown local operator: PASS. The login was rejected and `login_failure` was recorded with `reason=not_found`.
+- Empty operator id: PASS by GUI evidence. The login dialog requested an operator id.
+- Disabled user login: PASS. The login was rejected and `login_failure` was recorded with `reason=disabled`.
+- Password material in user audit logs: PASS. `user_audit_logs` before/after JSON does not include `password`, `password_hash`, `password_salt`, or `password_iterations` values.
+
+### ADMIN-001
+
+- Last active admin demotion protection: PASS. GUI displayed `cannot demote the last active admin`.
+- Last active admin disable protection: PASS. GUI displayed `cannot disable the last active admin`.
+- Last active admin delete protection: not applicable in the current user-management UI because user delete is not exposed as a tested operation.
+
+### DATAIO-002
+
+- Admin CSV export: PASS. CSV files were created under `60_exports/csv`.
+- Admin JSON export: PASS. JSON export was created under `60_exports/json`.
+- Admin SQL dump export: PASS. SQL dump was created under `60_exports/sql`.
+- Admin backup: PASS. Backup DB was created under `50_backups/daily`.
+- Editor backup: PASS. Backup DB was created under `50_backups/daily` with role `editor`.
+- Editor CSV/JSON/SQL export: PASS. Export logs show success with role `editor`.
+- Operations Log persistence: PASS. `40_logs/operations_events.jsonl` existed and included export/backup/import/restore entries.
+- Note: SQL dump is a full DB dump and contains the `users` table schema/data including password hash/salt fields. This is expected for a full DB dump but the generated SQL file must be treated as protected material.
+
+### RESTORE-001 / Import
+
+- Restore to current DB from GUI: FAIL/BLOCKED. Restore logged `status=error` with WinError 5 access denied while replacing `30_prod_db/nameverification.db` from `.restore_tmp`.
+- Restore before-backup path: evidence exists under `50_backups/before_restore`.
+- JSON import from exported JSON: PASS. Import completed with zero data rows and created a before-import backup under `50_backups/before_import`.
+- Invalid restore/import input: not fully evidenced in the provided log set.
+
+### AUDIT-002
+
+- login_failure audit: PASS.
+- user_disable audit: PASS.
+- user_enable audit: PASS by screenshot evidence.
+- user_role_change audit: PASS by screenshot evidence.
+- password non-recording in audit log: PASS for user audit JSON fields. Full SQL dump remains protected material as noted above.
+
+## Current blockers / follow-up checks
+
+- `RESTORE-001`: decide and implement one of the following behaviors for restoring the currently opened DB:
+  - close/release the active DB connection and reopen after restore, or
+  - explicitly block in-app restore of the currently opened DB and provide an offline restore flow with clear UI guidance.
+- Confirm invalid restore/import inputs do not create before-operation backups unless already covered by automated tests.
+- Decide whether SQL dump should remain a full DB dump or whether a sanitized application-data-only export mode is needed for sharing.
