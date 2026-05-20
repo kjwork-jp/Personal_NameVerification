@@ -61,6 +61,8 @@ def _set_enabled(widget: QWidget | None, enabled: bool, tooltip: str | None = No
 def _set_visible(widget: QWidget | None, visible: bool) -> None:
     if widget is None:
         return
+    if visible and widget.parentWidget() is None:
+        return
     widget.setVisible(visible)
 
 
