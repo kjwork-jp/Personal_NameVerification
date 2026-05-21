@@ -1,6 +1,6 @@
 # 97_open_issues_and_constraints.md
 
-## 2026-05-19追記: v0.2.0 auth / RBAC / UI hardening / UAT時点の補足
+## 2026-05-21追記: v0.2.0 RESTORE-LOCK-001対応後の補足
 
 - 認証・ユーザー管理は、初回admin setup、local password login、Windows認証ログイン、DB role取得、user management、user audit log、RBAC UI hardeningまで進行済み。
 - 現行ログイン画面は、旧来の「操作者IDとroleを利用者が任意選択する暫定導線」ではない。現在は local認証では `operator_id` + password、Windows認証ではOSユーザー情報でログインし、roleはDB上の `users.role` から取得する。
@@ -13,37 +13,23 @@
 - タイトル管理とサブタイトル管理は `タイトル/サブタイトル管理` タブへ統合済み。
 - データ入出力はロール別に表示サブタブを絞る方針へ更新済み。
 - 関連付け画面の `名前/公開ID` 表記、検索/一覧の公開ID省略問題は改善済み。
-- 品質ゲートは 2026-05-19 時点で `black --check .` / `ruff check .` / `mypy app` / `pytest -q` 全OKを確認済み。ただし `02f65c4` / 本docs更新後の再確認は必要。
-- アカウント切替導線は実装済みだが、一部環境で「白い一瞬のログインウィンドウ」「全ウィンドウ終了」「GUIを閉じてもプロセスが戻らない」挙動が残るため、`ACC-WHITE-001` として後回し管理する。
+- アカウント切替時の白画面・小窓・プロセス残存はportable GUIで再確認済み。
+- 現在利用中DBへのGUI restoreは `RESTORE-LOCK-001` として、destructive confirmation前かつrestore service呼出前にブロックする実装へ変更済み。
+- 品質ゲートは 2026-05-21 時点で `pytest -q` / `ruff check .` / `black --check .` / `mypy app` 全OKを確認済み。
 - 最新状況の横断台帳は `docs/75_v0_2_0_current_status_and_improvement_ledger.md` を参照する。
 
 ## 未解決事項
 
-### P0: v0.2.0 UAT / release blocker
-
-- `GATE-001` 最新main品質ゲート再確認
-  - `02f65c4` と本docs更新後に、`black --check .` / `ruff check .` / `mypy app` / `pytest -q` を再実行する。
-- `GUI-001` 最新main GUI起動・終了確認
-  - `python -m app.pyside6_main` で通常起動・通常終了し、PowerShellへ制御が戻ることを確認する。
-- `ACC-WHITE-001` アカウント切替時の白画面/終了/プロセス残存
-  - 一旦後回し。Qt event loop / LoginDialog再表示方式 / app.exec単一化のいずれかで再設計する。
-- `AUTH-002` login異常系UAT
-  - 誤password、未登録operator_id、disabled user、password confirmation不一致、空operator_id等を確認する。
-- `ADMIN-001` 最後の有効admin保護UAT
-  - 最後の有効adminの降格・無効化・削除が拒否されることを確認する。
-- `PORTABLE-001` v0.2.0-rc1 portable package / smoke
-  - release package生成、manifest/checksum、portable起動、portable smokeを確認する。
-
 ### P1: UAT / release evidence
 
-- `DATAIO-002` Export / Backup / Operations Log 実行UAT
-  - editor/adminで実ファイル出力、バックアップ作成、Operations Log記録を確認する。
-- `RESTORE-001` Restore / Import destructive操作UAT
-  - adminのみ表示/実行できること、実行前backup、invalid input時に退避DBを作成しないことを確認する。
-- `AUDIT-002` 監査ログ異常系・ユーザー管理系UAT
-  - login_failure、role_change、disable、enableの記録を確認する。
-- `RELEASE-001` release evidence更新
-  - v0.2.0-rc1候補の証跡、checksum、portable smoke結果を固定する。
+- `INVALID-IO-001` invalid restore/import input再確認
+  - invalid restore/import input時に退避DBを作成しないことを確認する。
+  - invalid restore/import input時にOperations Logへ失敗が残ることを確認する。
+- `EXPORT-SEC-001` SQL dumpの機微情報扱い整理
+  - SQL dumpはfull DB dumpであり、`users` table schema/data、password hash/salt系フィールドを含み得る。
+  - 保護警告を追加するか、共有用のsanitized application-data-only exportを追加するかを決定する。
+- `RELEASE-001` release evidence最終更新
+  - v0.2.0-rc1候補の証跡、checksum、portable smoke結果、RESTORE-LOCK-001対応後の状態を固定する。
 
 ### P2: UI / usability改善
 
@@ -64,10 +50,17 @@
 
 ## 解消済み・実装済み扱い
 
-- 品質ゲートは 2026-05-19 時点で一度全OK確認済み。
+- `GATE-001` 最新main品質ゲート再確認は、2026-05-21時点で `pytest -q` / `ruff check .` / `black --check .` / `mypy app` 全OK確認済み。
+- `GUI-001` 最新main GUI起動・終了確認は完了扱い。
+- `ACC-WHITE-001` アカウント切替時の白画面/小窓/プロセス残存はportable GUI再確認済み。
+- `PORTABLE-001` v0.2.0-rc1 portable package / smokeは完了扱い。
+- `AUTH-002` login異常系UATは完了扱い。
+- `ADMIN-001` 最後の有効admin保護UATは完了扱い。
+- `DATAIO-002` Export / Backup / Operations Log 実行UATは完了扱い。
+- `AUDIT-002` 監査ログ異常系・ユーザー管理系UATは完了扱い。
+- `RESTORE-LOCK-001` 現在利用中DBへのGUI restoreブロックは完了扱い。現在利用中DBとrestore targetが同一の場合、confirm前・restore service呼出前にブロックする。
 - 既存DB migration確認は自動テストで補強済み。
 - MainWindowからログアウト/アカウント切替を実行し、LoginDialogへ戻す導線は実装済み。
-- ただし `ACC-WHITE-001` の体感不具合は未解決として残す。
 - 初回admin setup、password login、Windows認証、role自由選択廃止、DB role取得は実装済み。
 - user management tab、user audit log tab、監査ログ統合tabは実装済み。
 - MainWindow title/status barへのログイン中operator_id/role表示は実装済み。
@@ -110,6 +103,7 @@
 - 単一拠点利用前提。
 - ローカルSQLite DB/backup/export/logは、OSユーザーが読める場所ではアプリを迂回して参照され得る。
 - restore/import はadmin専用操作であり、実施前後のバックアップ証跡確認を運用で必須とする。
+- 現在利用中DBへのGUI restoreはアプリ起動中には実行しない。必要な場合はアプリ終了後にoffline restore手順で対応する。
 - v0.1.0系ではCSV/JSON importは空DB限定とし、非空DBへのmerge/overwrite/upsert importは扱わない。
 - v0.1.0系ではSQL importは扱わず、DB全体復旧はrestoreで扱う。
 - v0.1.0系ではアイコン・画像資産は実装対象外とし、将来扱う場合はassets配下の相対パス管理を第一候補とする。
