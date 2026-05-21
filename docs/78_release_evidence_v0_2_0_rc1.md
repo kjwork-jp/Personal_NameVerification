@@ -1,6 +1,7 @@
 # v0.2.0-rc1 Release Evidence
 
 Date: 2026-05-20
+Updated: 2026-05-21
 
 ## Summary
 
@@ -14,7 +15,7 @@ Date: 2026-05-20
 - P1 last active admin protection UAT: PASS for role demotion and disable protection. User delete operation was not applicable in the current UI.
 - P1 Data I/O file-output UAT: PASS for admin and editor export/backup/operations-log evidence.
 - P1 audit-log UAT: PASS for login failure, role change, disable, and enable evidence.
-- P1 restore UAT: BLOCKED/FAIL for restoring the currently opened DB from GUI. The operation logged WinError 5 access denied when replacing `30_prod_db/nameverification.db`.
+- P1 restore current-DB handling: PASS by `RESTORE-LOCK-001`. GUI restore to the currently opened DB is now blocked before destructive confirmation and before the restore service is called.
 - P1 import UAT: PARTIAL PASS. JSON import from exported JSON completed with before-import backup; invalid import coverage remains to be confirmed if required.
 
 ## Package
@@ -89,10 +90,19 @@ Date: 2026-05-20
 
 ### RESTORE-001 / Import
 
-- Restore to current DB from GUI: FAIL/BLOCKED. Restore logged `status=error` with WinError 5 access denied while replacing `30_prod_db/nameverification.db` from `.restore_tmp`.
-- Restore before-backup path: evidence exists under `50_backups/before_restore`.
+- Restore to current DB from GUI: previously FAIL/BLOCKED with WinError 5 while replacing `30_prod_db/nameverification.db` from `.restore_tmp`.
+- `RESTORE-LOCK-001`: PASS. Current-DB restore is now blocked in the GUI before `confirm_destructive_action` and before `backup_restore_service.restore_database` is called.
+- Restore before-backup path: evidence exists under `50_backups/before_restore` from the earlier failing restore attempt.
 - JSON import from exported JSON: PASS. Import completed with zero data rows and created a before-import backup under `50_backups/before_import`.
 - Invalid restore/import input: not fully evidenced in the provided log set.
+
+### RESTORE-LOCK-001 validation
+
+- `pytest -q`: PASS.
+- `ruff check .`: PASS.
+- `black --check .`: PASS.
+- `mypy app`: PASS.
+- Regression tests added for block / allow / no-op / idempotent behavior.
 
 ### AUDIT-002
 
@@ -104,8 +114,5 @@ Date: 2026-05-20
 
 ## Current blockers / follow-up checks
 
-- `RESTORE-001`: decide and implement one of the following behaviors for restoring the currently opened DB:
-  - close/release the active DB connection and reopen after restore, or
-  - explicitly block in-app restore of the currently opened DB and provide an offline restore flow with clear UI guidance.
 - Confirm invalid restore/import inputs do not create before-operation backups unless already covered by automated tests.
 - Decide whether SQL dump should remain a full DB dump or whether a sanitized application-data-only export mode is needed for sharing.
