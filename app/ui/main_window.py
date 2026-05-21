@@ -38,6 +38,7 @@ from app.ui.rbac_ui_guards import (
     apply_operations_tab_role_guards,
     apply_tab_action_visibility_guards,
 )
+from app.ui.restore_current_db_guard import apply_restore_current_db_guard
 from app.ui.role_context import RoleContext
 from app.ui.search_tab import SearchTab
 from app.ui.tab_guides import apply_tab_guide
@@ -169,6 +170,7 @@ class MainWindow(QMainWindow):
                 role_context=self._role_context,
                 operation_logger=operation_logger,
             )
+            apply_restore_current_db_guard(operations_tab, self._database_path)
             self._prefill_operations_paths(operations_tab)
             apply_operations_subtabs(operations_tab)
             apply_operations_tab_role_guards(operations_tab, self._role_context)
