@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import os
+from collections.abc import Callable
 from pathlib import Path
 from types import MethodType
-from typing import Any, Callable
+from typing import Any
 
 
 def apply_restore_current_db_guard(
