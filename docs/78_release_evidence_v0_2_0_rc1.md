@@ -10,14 +10,14 @@ Updated: 2026-05-21
 - EXE freshness check during packaging: PASS
 - Portable smoke: PASS after retry
 - Portable GUI basic check: PASS
-- Quality gates: PASS before INVALID-IO-001 evidence-test addition; re-run required after latest direct push
+- Quality gates: PASS after RESTORE-LOCK-001 and INVALID-IO-001 additions
 - P1 authentication negative-path UAT: PASS
 - P1 last active admin protection UAT: PASS for role demotion and disable protection. User delete operation was not applicable in the current UI.
 - P1 Data I/O file-output UAT: PASS for admin and editor export/backup/operations-log evidence.
 - P1 audit-log UAT: PASS for login failure, role change, disable, and enable evidence.
-- P1 restore current-DB handling: PASS by `RESTORE-LOCK-001`. GUI restore to the currently opened DB is now blocked before destructive confirmation and before the restore service is called.
-- P1 invalid destructive I/O evidence: tests added for invalid restore/import input to verify no before-operation backup is created and Operations Log records error. Quality gate re-run is pending.
-- P1 import UAT: PARTIAL PASS. JSON import from exported JSON completed with before-import backup.
+- P1 restore current-DB handling: PASS by `RESTORE-LOCK-001`. GUI restore to the currently opened DB is blocked before destructive confirmation and before the restore service is called.
+- P1 invalid destructive I/O evidence: PASS by `INVALID-IO-001`. Invalid restore/import input cases verify no before-operation backup is created and Operations Log records error.
+- P1 import UAT: PASS for JSON import from exported JSON, plus invalid-input evidence tests.
 
 ## Package
 
@@ -95,7 +95,7 @@ Updated: 2026-05-21
 - `RESTORE-LOCK-001`: PASS. Current-DB restore is now blocked in the GUI before `confirm_destructive_action` and before `backup_restore_service.restore_database` is called.
 - Restore before-backup path: evidence exists under `50_backups/before_restore` from the earlier failing restore attempt.
 - JSON import from exported JSON: PASS. Import completed with zero data rows and created a before-import backup under `50_backups/before_import`.
-- `INVALID-IO-001`: evidence tests added. Invalid restore/import input cases verify before-operation backup directories are not created and UI Operations Log records `error` events.
+- `INVALID-IO-001`: PASS. Invalid restore/import input cases verify before-operation backup directories are not created and UI Operations Log records `error` events.
 
 ### RESTORE-LOCK-001 validation
 
@@ -108,7 +108,10 @@ Updated: 2026-05-21
 ### INVALID-IO-001 validation
 
 - Evidence tests added in `tests/test_invalid_io_evidence.py`.
-- Local quality gate re-run is pending after this direct push.
+- `pytest -q`: PASS.
+- `ruff check .`: PASS.
+- `black --check .`: PASS.
+- `mypy app`: PASS.
 
 ### AUDIT-002
 
@@ -120,5 +123,5 @@ Updated: 2026-05-21
 
 ## Current blockers / follow-up checks
 
-- Re-run quality gates after INVALID-IO-001 evidence-test addition.
 - Decide whether SQL dump should remain a full DB dump or whether a sanitized application-data-only export mode is needed for sharing.
+- After the SQL dump policy is fixed, perform final release evidence sync and Go/No-Go review.
