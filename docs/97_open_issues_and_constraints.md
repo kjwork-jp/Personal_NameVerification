@@ -1,6 +1,6 @@
 # 97_open_issues_and_constraints.md
 
-## 2026-05-21追記: v0.2.0 INVALID-IO-001証跡テスト追加後の補足
+## 2026-05-21追記: v0.2.0 INVALID-IO-001品質ゲートPASS後の補足
 
 - 認証・ユーザー管理は、初回admin setup、local password login、Windows認証ログイン、DB role取得、user management、user audit log、RBAC UI hardeningまで進行済み。
 - 現行ログイン画面は、旧来の「操作者IDとroleを利用者が任意選択する暫定導線」ではない。現在は local認証では `operator_id` + password、Windows認証ではOSユーザー情報でログインし、roleはDB上の `users.role` から取得する。
@@ -16,20 +16,18 @@
 - アカウント切替時の白画面・小窓・プロセス残存はportable GUIで再確認済み。
 - 現在利用中DBへのGUI restoreは `RESTORE-LOCK-001` として、destructive confirmation前かつrestore service呼出前にブロックする実装へ変更済み。
 - invalid restore/import inputは `INVALID-IO-001` として、before-operation backupを作成しないこと、およびOperations Logへerrorを記録することの証跡テストを追加済み。
-- 品質ゲートは 2026-05-21 時点で `pytest -q` / `ruff check .` / `black --check .` / `mypy app` 全OKを確認済み。ただし `INVALID-IO-001` 証跡テスト追加後の再実行は必要。
+- 品質ゲートは 2026-05-21 時点で `pytest -q` / `ruff check .` / `black --check .` / `mypy app` 全OKを確認済み。
 - 最新状況の横断台帳は `docs/75_v0_2_0_current_status_and_improvement_ledger.md` を参照する。
 
 ## 未解決事項
 
 ### P1: release evidence / security hardening
 
-- `GATE-INVALID-IO-001` INVALID-IO-001追加後の品質ゲート再確認
-  - `pytest -q` / `ruff check .` / `black --check .` / `mypy app` を再実行する。
 - `EXPORT-SEC-001` SQL dumpの機微情報扱い整理
   - SQL dumpはfull DB dumpであり、`users` table schema/data、password hash/salt系フィールドを含み得る。
   - 保護警告を追加するか、共有用のsanitized application-data-only exportを追加するかを決定する。
 - `RELEASE-001` release evidence最終更新
-  - v0.2.0-rc1候補の証跡、checksum、portable smoke結果、RESTORE-LOCK-001 / INVALID-IO-001対応後の状態を固定する。
+  - v0.2.0-rc1候補の証跡、checksum、portable smoke結果、RESTORE-LOCK-001 / INVALID-IO-001 / EXPORT-SEC-001対応後の状態を固定する。
 
 ### P2: UI / usability改善
 
@@ -51,6 +49,7 @@
 ## 解消済み・実装済み扱い
 
 - `GATE-001` 最新main品質ゲート再確認は、2026-05-21時点で `pytest -q` / `ruff check .` / `black --check .` / `mypy app` 全OK確認済み。
+- `GATE-INVALID-IO-001` INVALID-IO-001追加後の品質ゲート再確認は、2026-05-21時点で全OK確認済み。
 - `GUI-001` 最新main GUI起動・終了確認は完了扱い。
 - `ACC-WHITE-001` アカウント切替時の白画面/小窓/プロセス残存はportable GUI再確認済み。
 - `PORTABLE-001` v0.2.0-rc1 portable package / smokeは完了扱い。
@@ -59,7 +58,7 @@
 - `DATAIO-002` Export / Backup / Operations Log 実行UATは完了扱い。
 - `AUDIT-002` 監査ログ異常系・ユーザー管理系UATは完了扱い。
 - `RESTORE-LOCK-001` 現在利用中DBへのGUI restoreブロックは完了扱い。現在利用中DBとrestore targetが同一の場合、confirm前・restore service呼出前にブロックする。
-- `INVALID-IO-001` invalid restore/import input証跡テストは追加済み。invalid input時にbefore_restore / before_import backupが作られないこと、およびUI Operations Logにerrorが残ることをテスト対象にした。
+- `INVALID-IO-001` invalid restore/import input証跡テストは完了扱い。invalid input時にbefore_restore / before_import backupが作られないこと、およびUI Operations Logにerrorが残ることをテスト対象にした。
 - 既存DB migration確認は自動テストで補強済み。
 - MainWindowからログアウト/アカウント切替を実行し、LoginDialogへ戻す導線は実装済み。
 - 初回admin setup、password login、Windows認証、role自由選択廃止、DB role取得は実装済み。
