@@ -10,15 +10,16 @@ Updated: 2026-05-21
 - EXE freshness check during packaging: PASS
 - Portable smoke: PASS after retry
 - Portable GUI basic check: PASS
-- Quality gates: PASS after RESTORE-LOCK-001 and INVALID-IO-001 additions; re-run required after EXPORT-SEC-001 warning addition
+- Quality gates: PASS after RESTORE-LOCK-001, INVALID-IO-001, and EXPORT-SEC-001 additions
 - P1 authentication negative-path UAT: PASS
 - P1 last active admin protection UAT: PASS for role demotion and disable protection. User delete operation was not applicable in the current UI.
 - P1 Data I/O file-output UAT: PASS for admin and editor export/backup/operations-log evidence.
 - P1 audit-log UAT: PASS for login failure, role change, disable, and enable evidence.
 - P1 restore current-DB handling: PASS by `RESTORE-LOCK-001`. GUI restore to the currently opened DB is blocked before destructive confirmation and before the restore service is called.
 - P1 invalid destructive I/O evidence: PASS by `INVALID-IO-001`. Invalid restore/import input cases verify no before-operation backup is created and Operations Log records error.
-- P1 SQL dump protection: warning added by `EXPORT-SEC-001`. v0.2.0 keeps full SQL dump behavior and explicitly treats SQL dump output as protected material. Sanitized export is deferred.
+- P1 SQL dump protection: PASS by `EXPORT-SEC-001`. v0.2.0 keeps full SQL dump behavior and explicitly treats SQL dump output as protected material. Sanitized export is deferred.
 - P1 import UAT: PASS for JSON import from exported JSON, plus invalid-input evidence tests.
+- Current release blocker: none identified after the latest quality gates.
 
 ## Package
 
@@ -96,7 +97,11 @@ Updated: 2026-05-21
 - SQL dump path input tooltip: implemented.
 - SQL dump execution-time warning message: implemented before export execution.
 - Sanitized application-data-only export: deferred to a future version.
-- Validation: tests added in `tests/test_sql_dump_protection_warning.py`; local quality gate re-run is pending.
+- `tests/test_sql_dump_protection_warning.py`: added.
+- `pytest -q`: PASS.
+- `ruff check .`: PASS.
+- `black --check .`: PASS.
+- `mypy app`: PASS.
 
 ### RESTORE-001 / Import
 
@@ -108,15 +113,15 @@ Updated: 2026-05-21
 
 ### RESTORE-LOCK-001 validation
 
+- `tests/test_restore_current_db_guard.py`: added.
 - `pytest -q`: PASS.
 - `ruff check .`: PASS.
 - `black --check .`: PASS.
 - `mypy app`: PASS.
-- Regression tests added for block / allow / no-op / idempotent behavior.
 
 ### INVALID-IO-001 validation
 
-- Evidence tests added in `tests/test_invalid_io_evidence.py`.
+- `tests/test_invalid_io_evidence.py`: added.
 - `pytest -q`: PASS.
 - `ruff check .`: PASS.
 - `black --check .`: PASS.
@@ -130,7 +135,14 @@ Updated: 2026-05-21
 - user_role_change audit: PASS by screenshot evidence.
 - password non-recording in audit log: PASS for user audit JSON fields. Full SQL dump remains protected material as noted above.
 
-## Current blockers / follow-up checks
+## Go / No-Go review
 
-- Re-run quality gates after EXPORT-SEC-001 warning/test addition.
-- After quality gates pass, perform final release evidence sync and Go/No-Go review.
+- Functional release blockers: none identified.
+- Quality gate blockers: none identified.
+- Security caveat: SQL dump is intentionally a full DB dump and must be treated as protected material.
+- Deferred items: sanitized application-data-only export, broader DB/backup/export/log protection diagnostics, additional role visual differentiation, CRUD UX restructuring.
+
+## Current follow-up
+
+- Final Go/No-Go decision for v0.2.0-rc1.
+- If Go, proceed to final release tagging/packaging policy confirmation.
