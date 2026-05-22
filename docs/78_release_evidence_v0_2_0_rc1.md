@@ -10,13 +10,14 @@ Updated: 2026-05-21
 - EXE freshness check during packaging: PASS
 - Portable smoke: PASS after retry
 - Portable GUI basic check: PASS
-- Quality gates: PASS after RESTORE-LOCK-001 and INVALID-IO-001 additions
+- Quality gates: PASS after RESTORE-LOCK-001 and INVALID-IO-001 additions; re-run required after EXPORT-SEC-001 warning addition
 - P1 authentication negative-path UAT: PASS
 - P1 last active admin protection UAT: PASS for role demotion and disable protection. User delete operation was not applicable in the current UI.
 - P1 Data I/O file-output UAT: PASS for admin and editor export/backup/operations-log evidence.
 - P1 audit-log UAT: PASS for login failure, role change, disable, and enable evidence.
 - P1 restore current-DB handling: PASS by `RESTORE-LOCK-001`. GUI restore to the currently opened DB is blocked before destructive confirmation and before the restore service is called.
 - P1 invalid destructive I/O evidence: PASS by `INVALID-IO-001`. Invalid restore/import input cases verify no before-operation backup is created and Operations Log records error.
+- P1 SQL dump protection: warning added by `EXPORT-SEC-001`. v0.2.0 keeps full SQL dump behavior and explicitly treats SQL dump output as protected material. Sanitized export is deferred.
 - P1 import UAT: PASS for JSON import from exported JSON, plus invalid-input evidence tests.
 
 ## Package
@@ -87,7 +88,15 @@ Updated: 2026-05-21
 - Editor backup: PASS. Backup DB was created under `50_backups/daily` with role `editor`.
 - Editor CSV/JSON/SQL export: PASS. Export logs show success with role `editor`.
 - Operations Log persistence: PASS. `40_logs/operations_events.jsonl` existed and included export/backup/import/restore entries.
-- Note: SQL dump is a full DB dump and contains the `users` table schema/data including password hash/salt fields. This is expected for a full DB dump but the generated SQL file must be treated as protected material.
+- SQL dump policy: v0.2.0 keeps SQL dump as full DB dump. It may include `users` table schema/data, `password_hash`, `password_salt`, and related authentication fields; therefore it must be treated as protected material.
+
+### EXPORT-SEC-001
+
+- SQL dump button tooltip: implemented.
+- SQL dump path input tooltip: implemented.
+- SQL dump execution-time warning message: implemented before export execution.
+- Sanitized application-data-only export: deferred to a future version.
+- Validation: tests added in `tests/test_sql_dump_protection_warning.py`; local quality gate re-run is pending.
 
 ### RESTORE-001 / Import
 
@@ -123,5 +132,5 @@ Updated: 2026-05-21
 
 ## Current blockers / follow-up checks
 
-- Decide whether SQL dump should remain a full DB dump or whether a sanitized application-data-only export mode is needed for sharing.
-- After the SQL dump policy is fixed, perform final release evidence sync and Go/No-Go review.
+- Re-run quality gates after EXPORT-SEC-001 warning/test addition.
+- After quality gates pass, perform final release evidence sync and Go/No-Go review.
