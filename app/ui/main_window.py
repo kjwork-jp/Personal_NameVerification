@@ -41,6 +41,7 @@ from app.ui.rbac_ui_guards import (
 from app.ui.restore_current_db_guard import apply_restore_current_db_guard
 from app.ui.role_context import RoleContext
 from app.ui.search_tab import SearchTab
+from app.ui.sql_dump_protection_warning import apply_sql_dump_protection_warning
 from app.ui.tab_guides import apply_tab_guide
 from app.ui.title_subtitle_unified_tab import TitleSubtitleUnifiedTab
 from app.ui.trash_tab import TrashTab
@@ -171,6 +172,7 @@ class MainWindow(QMainWindow):
                 operation_logger=operation_logger,
             )
             apply_restore_current_db_guard(operations_tab, self._database_path)
+            apply_sql_dump_protection_warning(operations_tab)
             self._prefill_operations_paths(operations_tab)
             apply_operations_subtabs(operations_tab)
             apply_operations_tab_role_guards(operations_tab, self._role_context)
