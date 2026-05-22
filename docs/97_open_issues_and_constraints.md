@@ -1,6 +1,6 @@
 # 97_open_issues_and_constraints.md
 
-## 2026-05-21追記: v0.2.0 EXPORT-SEC-001保護警告追加後の補足
+## 2026-05-21追記: v0.2.0-rc1 Go/No-Go直前状態
 
 - 認証・ユーザー管理は、初回admin setup、local password login、Windows認証ログイン、DB role取得、user management、user audit log、RBAC UI hardeningまで進行済み。
 - 現行ログイン画面は、旧来の「操作者IDとroleを利用者が任意選択する暫定導線」ではない。現在は local認証では `operator_id` + password、Windows認証ではOSユーザー情報でログインし、roleはDB上の `users.role` から取得する。
@@ -17,17 +17,17 @@
 - 現在利用中DBへのGUI restoreは `RESTORE-LOCK-001` として、destructive confirmation前かつrestore service呼出前にブロックする実装へ変更済み。
 - invalid restore/import inputは `INVALID-IO-001` として、before-operation backupを作成しないこと、およびOperations Logへerrorを記録することの証跡テストを追加済み。
 - SQL dumpはv0.2.0ではfull DB dumpを維持し、`users` table、`password_hash`、`password_salt`等を含み得る保護対象ファイルとしてUI上に警告を表示する方針へ決定済み。
-- 品質ゲートは 2026-05-21 時点で `pytest -q` / `ruff check .` / `black --check .` / `mypy app` 全OKを確認済み。ただし `EXPORT-SEC-001` 警告追加後の再実行は必要。
+- 品質ゲートは 2026-05-21 時点で `pytest -q` / `ruff check .` / `black --check .` / `mypy app` 全OKを確認済み。
 - 最新状況の横断台帳は `docs/75_v0_2_0_current_status_and_improvement_ledger.md` を参照する。
+- v0.2.0-rc1 release evidenceは `docs/78_release_evidence_v0_2_0_rc1.md` を参照する。
 
 ## 未解決事項
 
-### P1: release evidence / security hardening
+### P1: release decision
 
-- `GATE-EXPORT-SEC-001` EXPORT-SEC-001追加後の品質ゲート再確認
-  - `pytest -q` / `ruff check .` / `black --check .` / `mypy app` を再実行する。
-- `RELEASE-001` release evidence最終更新
-  - v0.2.0-rc1候補の証跡、checksum、portable smoke結果、RESTORE-LOCK-001 / INVALID-IO-001 / EXPORT-SEC-001対応後の状態を固定する。
+- `RELEASE-001` release Go/No-Go判定
+  - v0.2.0-rc1 release evidenceを確認し、Go/No-Goを決定する。
+  - Goの場合、final release tagging / package再生成要否 / 配布対象zipの確定方針を決める。
 
 ### P2: UI / usability改善
 
@@ -52,6 +52,7 @@
 
 - `GATE-001` 最新main品質ゲート再確認は、2026-05-21時点で `pytest -q` / `ruff check .` / `black --check .` / `mypy app` 全OK確認済み。
 - `GATE-INVALID-IO-001` INVALID-IO-001追加後の品質ゲート再確認は、2026-05-21時点で全OK確認済み。
+- `GATE-EXPORT-SEC-001` EXPORT-SEC-001追加後の品質ゲート再確認は、2026-05-21時点で全OK確認済み。
 - `GUI-001` 最新main GUI起動・終了確認は完了扱い。
 - `ACC-WHITE-001` アカウント切替時の白画面/小窓/プロセス残存はportable GUI再確認済み。
 - `PORTABLE-001` v0.2.0-rc1 portable package / smokeは完了扱い。
@@ -61,7 +62,7 @@
 - `AUDIT-002` 監査ログ異常系・ユーザー管理系UATは完了扱い。
 - `RESTORE-LOCK-001` 現在利用中DBへのGUI restoreブロックは完了扱い。現在利用中DBとrestore targetが同一の場合、confirm前・restore service呼出前にブロックする。
 - `INVALID-IO-001` invalid restore/import input証跡テストは完了扱い。invalid input時にbefore_restore / before_import backupが作られないこと、およびUI Operations Logにerrorが残ることをテスト対象にした。
-- `EXPORT-SEC-001` SQL dump保護方針はv0.2.0範囲で決定済み。SQL dumpはfull DB dumpとして維持し、保護警告をUIに表示する。sanitized exportは将来課題。
+- `EXPORT-SEC-001` SQL dump保護方針はv0.2.0範囲で完了扱い。SQL dumpはfull DB dumpとして維持し、保護警告をUIに表示する。sanitized exportは将来課題。
 - 既存DB migration確認は自動テストで補強済み。
 - MainWindowからログアウト/アカウント切替を実行し、LoginDialogへ戻す導線は実装済み。
 - 初回admin setup、password login、Windows認証、role自由選択廃止、DB role取得は実装済み。
@@ -79,7 +80,7 @@
 - portable配布時のoperations log JSONL既定先は `40_logs/operations_events.jsonl` に寄せる実装済み。
 - restore/import 実行前のDB退避は実装済み。
 - invalid restore/import input は退避DB作成前に validation で止める方針へ整合済み。
-- import service は file-backed DB path の fallback 解決を実装済み。
+- import service は file-backed DB path の fallback解決を実装済み。
 - SQLite DB 初期化時の親ディレクトリ作成保証は実装済み。
 - SQLite `PRAGMA integrity_check` は初期化時に実行済み。
 - portable release smoke script は実装済み。
