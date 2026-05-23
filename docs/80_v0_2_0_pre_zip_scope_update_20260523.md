@@ -21,15 +21,34 @@ The final zip creation flow is deferred until the remaining future-improvement i
 
 ## Items to complete before the next zip
 
-| ID | Priority | Scope | Expected outcome |
-|---|---:|---|---|
-| SANITIZED-EXPORT-001 | P1 | Export/security | Add a sharing-oriented export that excludes authentication-related data |
-| HELP-001 | P1 | Help/Settings | Split diagnostics, path information, protection warnings, and operation notes |
-| STYLE-001 | P1 | RBAC/UI | Make viewer/editor/admin role differences visually clearer |
-| CRUD-UX-001 | P1 | CRUD/UI | Reorganize CRUD screens around list-first workflows |
-| DB-SEC-OPS-001 | P1 | Security/operations | Add DB/backup/export/log protection diagnostics and guidance |
-| RELEASE-REPACK-001 | P1 | Release | Rebuild, repackage, smoke-test, and regenerate manifest/checksum after all P1 items |
-| DOC-SYNC-001 | P1 | Docs/external ledgers | Sync GitHub docs and external ledgers after each implemented item |
+| ID | Priority | Scope | Status | Expected outcome |
+|---|---:|---|---|---|
+| SANITIZED-EXPORT-001 | P1 | Export/security | Implemented / gate pending | Add a sharing-oriented export that excludes authentication, admin, settings, and schema-management tables |
+| HELP-001 | P1 | Help/Settings | Not started | Split diagnostics, path information, protection warnings, and operation notes |
+| STYLE-001 | P1 | RBAC/UI | Not started | Make viewer/editor/admin role differences visually clearer |
+| CRUD-UX-001 | P1 | CRUD/UI | Not started | Reorganize CRUD screens around list-first workflows |
+| DB-SEC-OPS-001 | P1 | Security/operations | Not started | Add DB/backup/export/log protection diagnostics and guidance |
+| RELEASE-REPACK-001 | P1 | Release | Not started | Rebuild, repackage, smoke-test, and regenerate manifest/checksum after all P1 items |
+| DOC-SYNC-001 | P1 | Docs/external ledgers | In progress | Sync GitHub docs and external ledgers after each implemented item |
+
+## SANITIZED-EXPORT-001 progress
+
+Implemented on main:
+
+- `app/infrastructure/export_backup.py`
+  - Added allowlist-based sanitized JSON export helper.
+- `app/application/export_backup_services.py`
+  - Added `ExportBackupService.export_sanitized_json()`.
+- `app/ui/sanitized_export_ui.py`
+  - Added Operations UI hook for `共有用JSON出力`.
+- `app/ui/main_window.py`
+  - Applies sanitized export UI hook when creating `OperationsTab`.
+- `tests/test_sanitized_export.py`
+  - Covers allowlisted export tables, service entrypoint, UI action, and idempotency.
+
+Pending:
+
+- Local quality gate re-run.
 
 ## Tagging policy
 
@@ -51,7 +70,7 @@ The external ledger source of truth for this decision is:
 
 ## Next action
 
-Start with `SANITIZED-EXPORT-001`, then proceed one item at a time. After each item, run:
+Run the local gates for `SANITIZED-EXPORT-001`:
 
 ```powershell
 pytest -q
@@ -59,5 +78,7 @@ ruff check .
 black --check .
 mypy app
 ```
+
+If all pass, mark `SANITIZED-EXPORT-001` complete and continue to `HELP-001`.
 
 After all P1 items are complete, create a new tag and regenerate the portable zip.
