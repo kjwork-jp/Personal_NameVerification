@@ -139,7 +139,11 @@ def _make_connection() -> sqlite3.Connection:
         CREATE TABLE names (id INTEGER PRIMARY KEY, display_name TEXT);
         CREATE TABLE titles (id INTEGER PRIMARY KEY, name TEXT);
         CREATE TABLE subtitles (id INTEGER PRIMARY KEY, name TEXT);
-        CREATE TABLE name_subtitle_links (id INTEGER PRIMARY KEY, name_id INTEGER, subtitle_id INTEGER);
+        CREATE TABLE name_subtitle_links (
+            id INTEGER PRIMARY KEY,
+            name_id INTEGER,
+            subtitle_id INTEGER
+        );
         CREATE TABLE name_title_links (id INTEGER PRIMARY KEY, name_id INTEGER, title_id INTEGER);
         CREATE TABLE change_logs (id INTEGER PRIMARY KEY, message TEXT);
         CREATE TABLE users (id INTEGER PRIMARY KEY, operator_id TEXT, password_hash TEXT);
@@ -197,7 +201,7 @@ def test_sanitized_export_ui_adds_button_and_runs_export() -> None:
     apply_sanitized_export_ui(tab)
     tab._run_export_sanitized_json()
 
-    assert tab.export_sanitized_json_button.tooltip == SANITIZED_EXPORT_TOOLTIP
+    assert tab.export_sanitized_json_button.toolTip() == SANITIZED_EXPORT_TOOLTIP
     assert tab.started_actions == ["export_sanitized_json"]
     assert tab._export_backup_service.called_with == (Path("sharing.json"), "editor")
     assert tab.recent_paths == [("json_export_file", "sharing.json")]
