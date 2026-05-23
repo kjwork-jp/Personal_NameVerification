@@ -10,6 +10,7 @@ from pathlib import Path
 from app.application.authorization import ServiceRole, require_editor_or_admin
 from app.infrastructure.export_backup import (
     create_backup_file,
+    export_sanitized_tables_to_json,
     export_sql_dump,
     export_tables_to_csv,
     export_tables_to_json,
@@ -46,6 +47,11 @@ class ExportBackupService:
         require_editor_or_admin(role, action="export_json")
         with self._operation_connection() as connection:
             return export_tables_to_json(connection, output_path)
+
+    def export_sanitized_json(self, output_path: Path, role: ServiceRole = "admin") -> Path:
+        require_editor_or_admin(role, action="export_sanitized_json")
+        with self._operation_connection() as connection:
+            return export_sanitized_tables_to_json(connection, output_path)
 
     def export_sql_dump(self, output_path: Path, role: ServiceRole = "admin") -> Path:
         require_editor_or_admin(role, action="export_sql_dump")
