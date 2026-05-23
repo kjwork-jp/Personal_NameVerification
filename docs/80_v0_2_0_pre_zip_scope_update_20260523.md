@@ -23,7 +23,7 @@ The final zip creation flow is deferred until the remaining future-improvement i
 
 | ID | Priority | Scope | Status | Expected outcome |
 |---|---:|---|---|---|
-| SANITIZED-EXPORT-001 | P1 | Export/security | Implemented / gate pending | Add a sharing-oriented export that excludes authentication, admin, settings, and schema-management tables |
+| SANITIZED-EXPORT-001 | P1 | Export/security | Done | Add a sharing-oriented export that excludes authentication, admin, settings, and schema-management tables |
 | HELP-001 | P1 | Help/Settings | Not started | Split diagnostics, path information, protection warnings, and operation notes |
 | STYLE-001 | P1 | RBAC/UI | Not started | Make viewer/editor/admin role differences visually clearer |
 | CRUD-UX-001 | P1 | CRUD/UI | Not started | Reorganize CRUD screens around list-first workflows |
@@ -31,9 +31,9 @@ The final zip creation flow is deferred until the remaining future-improvement i
 | RELEASE-REPACK-001 | P1 | Release | Not started | Rebuild, repackage, smoke-test, and regenerate manifest/checksum after all P1 items |
 | DOC-SYNC-001 | P1 | Docs/external ledgers | In progress | Sync GitHub docs and external ledgers after each implemented item |
 
-## SANITIZED-EXPORT-001 progress
+## SANITIZED-EXPORT-001 completion
 
-Implemented on main:
+Implemented and validated on main:
 
 - `app/infrastructure/export_backup.py`
   - Added allowlist-based sanitized JSON export helper.
@@ -46,9 +46,12 @@ Implemented on main:
 - `tests/test_sanitized_export.py`
   - Covers allowlisted export tables, service entrypoint, UI action, and idempotency.
 
-Pending:
+Validation:
 
-- Local quality gate re-run.
+- `pytest -q`: PASS
+- `ruff check .`: PASS
+- `black --check .`: PASS
+- `mypy app`: PASS
 
 ## Tagging policy
 
@@ -64,13 +67,16 @@ External ledgers should treat the generated v0.2.0-rc1 zip as a checkpoint and s
 
 The external ledger source of truth for this decision is:
 
-- `Personal_NameVerification_外部台帳一括更新マスター_v20260523.xlsx`
-- `Personal_NameVerification_新規チャット初回プロンプト_v20260523.md`
-- `Personal_NameVerification_最終見直しレビュー_v20260523.txt`
+- `Personal_NameVerification_成果物一覧マスター_v1.3_20260523.xlsx`
+- `Personal_NameVerification_WBS_工程管理台帳_v20260523_SANITIZED完了反映版.xlsx`
+- `Personal_NameVerification_引継ぎマスター_v20260523_SANITIZED完了反映版.xlsx`
+- `Personal_NameVerification_新規チャット初回プロンプト_v20260523_SANITIZED完了反映版.md`
 
 ## Next action
 
-Run the local gates for `SANITIZED-EXPORT-001`:
+Continue to `HELP-001`.
+
+After each item, run:
 
 ```powershell
 pytest -q
@@ -78,7 +84,5 @@ ruff check .
 black --check .
 mypy app
 ```
-
-If all pass, mark `SANITIZED-EXPORT-001` complete and continue to `HELP-001`.
 
 After all P1 items are complete, create a new tag and regenerate the portable zip.
