@@ -24,7 +24,7 @@ The final zip creation flow is deferred until the remaining future-improvement i
 | ID | Priority | Scope | Status | Expected outcome |
 |---|---:|---|---|---|
 | SANITIZED-EXPORT-001 | P1 | Export/security | Done | Add a sharing-oriented export that excludes authentication, admin, settings, and schema-management tables |
-| HELP-001 | P1 | Help/Settings | Not started | Split diagnostics, path information, protection warnings, and operation notes |
+| HELP-001 | P1 | Help/Settings | Implemented / gate pending | Split diagnostics, path information, protection warnings, and operation notes |
 | STYLE-001 | P1 | RBAC/UI | Not started | Make viewer/editor/admin role differences visually clearer |
 | CRUD-UX-001 | P1 | CRUD/UI | Not started | Reorganize CRUD screens around list-first workflows |
 | DB-SEC-OPS-001 | P1 | Security/operations | Not started | Add DB/backup/export/log protection diagnostics and guidance |
@@ -53,6 +53,21 @@ Validation:
 - `black --check .`: PASS
 - `mypy app`: PASS
 
+## HELP-001 progress
+
+Implemented on main:
+
+- `app/ui/help_settings_tab.py`
+  - Keeps the Help / Settings tab split into `基本情報`, `パス診断`, `保護警告`, and `操作メモ`.
+  - Strengthens the protection warning text for SQL dump, shared JSON export, backup/export/log files, and OS-level access control.
+  - Adds operation memo guidance for using shared JSON export versus full SQL dump.
+- `tests/test_help_settings_tab.py`
+  - Covers required Help / Settings sections, path diagnostics, protection warnings, shared JSON guidance, and refresh behavior.
+
+Pending:
+
+- Local quality gate re-run.
+
 ## Tagging policy
 
 Because `v0.2.0-rc1` is already pushed, do not overwrite it.
@@ -74,9 +89,7 @@ The external ledger source of truth for this decision is:
 
 ## Next action
 
-Continue to `HELP-001`.
-
-After each item, run:
+Run the local gates for `HELP-001`:
 
 ```powershell
 pytest -q
@@ -84,5 +97,7 @@ ruff check .
 black --check .
 mypy app
 ```
+
+If all pass, mark `HELP-001` complete and continue to `STYLE-001`.
 
 After all P1 items are complete, create a new tag and regenerate the portable zip.
