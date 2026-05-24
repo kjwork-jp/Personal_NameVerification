@@ -8,16 +8,20 @@ Record the scope update made after v0.2.0-rc1 tag/package/smoke.
 
 v0.2.0-rc1 was tagged, built, packaged, and smoke-tested successfully, but it is now treated as a checkpoint rather than the final distribution candidate.
 
-The final zip creation flow is deferred until the remaining future-improvement items are completed inside the v0.2.0 scope.
+The final zip creation flow was deferred until the remaining future-improvement items were completed inside the v0.2.0 scope. Those implementation P1 items are now complete, and v0.2.0-rc2 packaging/smoke has completed successfully.
 
-## Current checkpoint
+## Current checkpoint and release candidate
 
-- Tag: v0.2.0-rc1
+- Previous checkpoint tag: v0.2.0-rc1
+- Previous checkpoint status: hold / checkpoint only
+- Current release candidate: v0.2.0-rc2
 - Build: PASS
 - Package: PASS
 - Portable smoke: PASS
-- Final evidence: docs/79_release_final_v0_2_0_rc1_20260523.md
-- Distribution status: hold / checkpoint only
+- Final zip: `release/NameVerification-v0.2.0-rc2-portable.zip`
+- Manifest: `release/v0.2.0-rc2/00_manifest_v0.2.0-rc2_20260525.csv`
+- Checksums: `release/v0.2.0-rc2/70_release_evidence/checksums_sha256_v0.2.0-rc2_20260525.txt`
+- Final rc2 evidence: docs/81_release_final_v0_2_0_rc2_20260525.md
 
 ## Items to complete before the next zip
 
@@ -28,8 +32,8 @@ The final zip creation flow is deferred until the remaining future-improvement i
 | STYLE-001 | P1 | RBAC/UI | Done | Make viewer/editor/admin role differences visually clearer |
 | CRUD-UX-001 | P1 | CRUD/UI | Done | Reorganize CRUD screens around list-first workflows |
 | DB-SEC-OPS-001 | P1 | Security/operations | Done | Add DB/backup/export/log protection diagnostics and guidance |
-| RELEASE-REPACK-001 | P1 | Release | Not started | Rebuild, repackage, smoke-test, and regenerate manifest/checksum after all P1 items |
-| DOC-SYNC-001 | P1 | Docs/external ledgers | In progress | Sync GitHub docs and external ledgers after each implemented item |
+| RELEASE-REPACK-001 | P1 | Release | Done | Rebuild, repackage, smoke-test, and regenerate manifest/checksum after all P1 items |
+| DOC-SYNC-001 | P1 | Docs/external ledgers | In progress | Sync GitHub docs and external ledgers after rc2 packaging |
 
 ## SANITIZED-EXPORT-001 completion
 
@@ -130,11 +134,39 @@ Validation:
 - `black --check .`: PASS
 - `mypy app`: PASS
 
+## RELEASE-REPACK-001 completion
+
+Validated on local Windows environment:
+
+- `pytest -q`: PASS
+- `ruff check .`: PASS
+- `black --check .`: PASS
+- `mypy app`: PASS
+- `scripts/build_exe_windows.ps1`: PASS
+- `scripts/package_release_windows.ps1 -ReleaseName v0.2.0-rc2`: PASS
+- `scripts/smoke_test_portable_windows.ps1 -ReleaseDir .\release\v0.2.0-rc2`: PASS
+
+Generated artifacts:
+
+- `release/NameVerification-v0.2.0-rc2-portable.zip`
+- `release/v0.2.0-rc2/00_manifest_v0.2.0-rc2_20260525.csv`
+- `release/v0.2.0-rc2/70_release_evidence/checksums_sha256_v0.2.0-rc2_20260525.txt`
+- `release/v0.2.0-rc2/70_release_evidence/validation_log_template_v0.2.0-rc2_20260525.txt`
+
+Portable smoke runtime confirmed:
+
+- Release name: `v0.2.0-rc2`
+- Portable root: `tmp/portable_smoke/v0.2.0-rc2/extracted/v0.2.0-rc2`
+- Portable DB: `30_prod_db/nameverification.db`
+- Runtime tables: `app_settings`, `schema_migrations`, `user_audit_logs`, `users`
+- Change log path: `40_logs/change_logs.jsonl`
+- Operations log path: `40_logs/operations_events.jsonl`
+
 ## Tagging policy
 
 Because `v0.2.0-rc1` is already pushed, do not overwrite it.
 
-Recommended next tag after the remaining P1 items are completed:
+Recommended new tag:
 
 - `v0.2.0-rc2`
 
@@ -142,28 +174,16 @@ Recommended next tag after the remaining P1 items are completed:
 
 External ledgers should treat the generated v0.2.0-rc1 zip as a checkpoint and should not mark it as final distribution.
 
-The external ledger source of truth for this decision will be updated to:
+The external ledger source of truth for rc2 will be updated to:
 
-- `Personal_NameVerification_成果物一覧マスター_v1.7_20260523.xlsx`
-- `Personal_NameVerification_WBS_工程管理台帳_v20260523_DBSEC完了反映版.xlsx`
-- `Personal_NameVerification_引継ぎマスター_v20260523_DBSEC完了反映版.xlsx`
-- `Personal_NameVerification_新規チャット初回プロンプト_v20260523_DBSEC完了反映版.md`
+- `Personal_NameVerification_成果物一覧マスター_v1.8_20260525.xlsx`
+- `Personal_NameVerification_WBS_工程管理台帳_v20260525_RC2完了反映版.xlsx`
+- `Personal_NameVerification_引継ぎマスター_v20260525_RC2完了反映版.xlsx`
+- `Personal_NameVerification_新規チャット初回プロンプト_v20260525_RC2完了反映版.md`
 
 ## Next action
 
-Continue to `DOC-SYNC-001`, then `RELEASE-REPACK-001`.
-
-Recommended local sequence:
-
-```powershell
-git pull
-pytest -q
-ruff check .
-black --check .
-mypy app
-.\scripts\build_exe_windows.ps1
-.\scripts\package_release_windows.ps1 -ReleaseName v0.2.0-rc2
-.\scripts\smoke_test_portable_windows.ps1 -ReleaseDir .\release\v0.2.0-rc2
-```
-
-After all packaging verification passes, create and push a new `v0.2.0-rc2` tag.
+1. Create and push `v0.2.0-rc2` tag.
+2. Optionally create a GitHub Release for `v0.2.0-rc2` and upload zip/checksum/manifest.
+3. Clean local generated folders after artifact retention is confirmed.
+4. Delete merged/obsolete remote branches.
