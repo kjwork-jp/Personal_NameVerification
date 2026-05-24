@@ -28,9 +28,15 @@ def _app() -> QApplication:
 
 
 def test_role_visual_identity_texts_are_role_specific() -> None:
-    viewer = role_visual_identity(RoleContext(role="viewer", operator_id="v", auth_provider="local"))
-    editor = role_visual_identity(RoleContext(role="editor", operator_id="e", auth_provider="local"))
-    admin = role_visual_identity(RoleContext(role="admin", operator_id="a", auth_provider="local"))
+    viewer = role_visual_identity(
+        RoleContext(role="viewer", operator_id="v", auth_provider="local")
+    )
+    editor = role_visual_identity(
+        RoleContext(role="editor", operator_id="e", auth_provider="local")
+    )
+    admin = role_visual_identity(
+        RoleContext(role="admin", operator_id="a", auth_provider="local")
+    )
 
     assert viewer.label == "VIEWER / 参照専用"
     assert "登録・更新・削除" in viewer.summary
