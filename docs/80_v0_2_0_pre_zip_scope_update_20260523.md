@@ -25,7 +25,7 @@ The final zip creation flow is deferred until the remaining future-improvement i
 |---|---:|---|---|---|
 | SANITIZED-EXPORT-001 | P1 | Export/security | Done | Add a sharing-oriented export that excludes authentication, admin, settings, and schema-management tables |
 | HELP-001 | P1 | Help/Settings | Done | Split diagnostics, path information, protection warnings, and operation notes |
-| STYLE-001 | P1 | RBAC/UI | Implemented / gate pending | Make viewer/editor/admin role differences visually clearer |
+| STYLE-001 | P1 | RBAC/UI | Done | Make viewer/editor/admin role differences visually clearer |
 | CRUD-UX-001 | P1 | CRUD/UI | Not started | Reorganize CRUD screens around list-first workflows |
 | DB-SEC-OPS-001 | P1 | Security/operations | Not started | Add DB/backup/export/log protection diagnostics and guidance |
 | RELEASE-REPACK-001 | P1 | Release | Not started | Rebuild, repackage, smoke-test, and regenerate manifest/checksum after all P1 items |
@@ -71,9 +71,9 @@ Validation:
 - `black --check .`: PASS
 - `mypy app`: PASS
 
-## STYLE-001 progress
+## STYLE-001 completion
 
-Implemented on main:
+Implemented and validated on main:
 
 - `app/ui/role_visual_identity.py`
   - Adds viewer/editor/admin visual identities, role banner text, and role-specific label styling.
@@ -82,10 +82,15 @@ Implemented on main:
   - Applies role-specific styling to the status bar login label.
 - `tests/test_role_visual_identity.py`
   - Covers role-specific copy, styling metadata, banner creation, and status label styling.
+- `tests/test_main_window_smoke.py`
+  - Covers the updated role-banner layout and role-specific banner text.
 
-Pending:
+Validation:
 
-- Local quality gate re-run.
+- `pytest -q`: PASS
+- `ruff check .`: PASS
+- `black --check .`: PASS
+- `mypy app`: PASS
 
 ## Tagging policy
 
@@ -101,14 +106,16 @@ External ledgers should treat the generated v0.2.0-rc1 zip as a checkpoint and s
 
 The external ledger source of truth for this decision is:
 
-- `Personal_NameVerification_成果物一覧マスター_v1.4_20260523.xlsx`
-- `Personal_NameVerification_WBS_工程管理台帳_v20260523_HELP完了反映版.xlsx`
-- `Personal_NameVerification_引継ぎマスター_v20260523_HELP完了反映版.xlsx`
-- `Personal_NameVerification_新規チャット初回プロンプト_v20260523_HELP完了反映版.md`
+- `Personal_NameVerification_成果物一覧マスター_v1.5_20260523.xlsx`
+- `Personal_NameVerification_WBS_工程管理台帳_v20260523_STYLE完了反映版.xlsx`
+- `Personal_NameVerification_引継ぎマスター_v20260523_STYLE完了反映版.xlsx`
+- `Personal_NameVerification_新規チャット初回プロンプト_v20260523_STYLE完了反映版.md`
 
 ## Next action
 
-Run the local gates for `STYLE-001`:
+Continue to `CRUD-UX-001`.
+
+After each item, run:
 
 ```powershell
 pytest -q
@@ -116,7 +123,5 @@ ruff check .
 black --check .
 mypy app
 ```
-
-If all pass, mark `STYLE-001` complete and continue to `CRUD-UX-001`.
 
 After all P1 items are complete, create a new tag and regenerate the portable zip.
