@@ -26,7 +26,7 @@ The final zip creation flow is deferred until the remaining future-improvement i
 | SANITIZED-EXPORT-001 | P1 | Export/security | Done | Add a sharing-oriented export that excludes authentication, admin, settings, and schema-management tables |
 | HELP-001 | P1 | Help/Settings | Done | Split diagnostics, path information, protection warnings, and operation notes |
 | STYLE-001 | P1 | RBAC/UI | Done | Make viewer/editor/admin role differences visually clearer |
-| CRUD-UX-001 | P1 | CRUD/UI | Not started | Reorganize CRUD screens around list-first workflows |
+| CRUD-UX-001 | P1 | CRUD/UI | Implemented / gate pending | Reorganize CRUD screens around list-first workflows |
 | DB-SEC-OPS-001 | P1 | Security/operations | Not started | Add DB/backup/export/log protection diagnostics and guidance |
 | RELEASE-REPACK-001 | P1 | Release | Not started | Rebuild, repackage, smoke-test, and regenerate manifest/checksum after all P1 items |
 | DOC-SYNC-001 | P1 | Docs/external ledgers | In progress | Sync GitHub docs and external ledgers after each implemented item |
@@ -92,6 +92,21 @@ Validation:
 - `black --check .`: PASS
 - `mypy app`: PASS
 
+## CRUD-UX-001 progress
+
+Implemented on main:
+
+- `app/ui/crud_list_first.py`
+  - Extends list-first guidance to `名前を管理`, `タイトル/サブタイトル管理`, `タイトルを管理`, `サブタイトルを管理`, and `関連付け`.
+  - Ensures the unified title/subtitle tab also applies list-first handling to child title/subtitle editors.
+  - Adds workflow hint labels so each CRUD screen communicates `一覧 → 選択 → 編集/操作`.
+- `tests/test_crud_list_first.py`
+  - Covers table movement, unified title/subtitle child editors, relationship workflow guidance, and idempotency.
+
+Pending:
+
+- Local quality gate re-run.
+
 ## Tagging policy
 
 Because `v0.2.0-rc1` is already pushed, do not overwrite it.
@@ -113,9 +128,7 @@ The external ledger source of truth for this decision is:
 
 ## Next action
 
-Continue to `CRUD-UX-001`.
-
-After each item, run:
+Run the local gates for `CRUD-UX-001`:
 
 ```powershell
 pytest -q
@@ -123,5 +136,7 @@ ruff check .
 black --check .
 mypy app
 ```
+
+If all pass, mark `CRUD-UX-001` complete and continue to `DB-SEC-OPS-001`.
 
 After all P1 items are complete, create a new tag and regenerate the portable zip.
