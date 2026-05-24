@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QPushButton,
     QTabWidget,
+    QVBoxLayout,
     QWidget,
 )
 
@@ -40,6 +41,7 @@ from app.ui.rbac_ui_guards import (
 )
 from app.ui.restore_current_db_guard import apply_restore_current_db_guard
 from app.ui.role_context import RoleContext
+from app.ui.role_visual_identity import apply_role_status_style, make_role_banner
 from app.ui.sanitized_export_ui import apply_sanitized_export_ui
 from app.ui.search_tab import SearchTab
 from app.ui.sql_dump_protection_warning import apply_sql_dump_protection_warning
@@ -189,7 +191,14 @@ class MainWindow(QMainWindow):
             "ヘルプ / 設定",
         )
         self.tabs.currentChanged.connect(self._refresh_current_tab)
-        self.setCentralWidget(self.tabs)
+        self.role_banner = make_role_banner(self._role_context)
+        central = QWidget(self)
+        central_layout = QVBoxLayout(central)
+        central_layout.setContentsMargins(4, 4, 4, 4)
+        central_layout.setSpacing(4)
+        central_layout.addWidget(self.role_banner)
+        central_layout.addWidget(self.tabs, 1)
+        self.setCentralWidget(central)
         apply_searchable_comboboxes(self)
 
     @property
@@ -210,16 +219,7 @@ class MainWindow(QMainWindow):
         self.login_status_label.setToolTip(
             "現在ログイン中の操作者IDと権限です。権限により利用可能な操作が変わります。"
         )
-        self.login_status_label.setStyleSheet(
-            "QLabel#loginStatusLabel {"
-            "padding: 2px 8px;"
-            "font-weight: 600;"
-            "color: #dbeafe;"
-            "background-color: #1e3a8a;"
-            "border: 1px solid #60a5fa;"
-            "border-radius: 4px;"
-            "}"
-        )
+        apply_role_status_style(self.login_status_label, self._role_context)
         self.statusBar().setSizeGripEnabled(False)
         self.statusBar().showMessage("Ready")
         self.statusBar().addPermanentWidget(self.login_status_label, 0)
