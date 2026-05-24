@@ -69,6 +69,10 @@ class EmptyExportBackupService:
         _ = (args, kwargs)
         return ""
 
+    def export_sanitized_json(self, *args: object, **kwargs: object) -> object:
+        _ = (args, kwargs)
+        return ""
+
     def export_sql_dump(self, *args: object, **kwargs: object) -> object:
         _ = (args, kwargs)
         return ""
@@ -196,10 +200,10 @@ def test_main_window_has_required_tabs() -> None:
         import_service=EmptyImportService(),
         database_path=Path("test-nameverification.db"),
     )
-    tab_widget = window.centralWidget()
-    assert tab_widget is not None
-    assert tab_widget.count() == 8
-    assert [tab_widget.tabText(i) for i in range(tab_widget.count())] == [
+    central_widget = window.centralWidget()
+    assert central_widget is not None
+    assert window.tabs.count() == 8
+    assert [window.tabs.tabText(i) for i in range(window.tabs.count())] == [
         "検索",
         "名前を管理",
         "タイトル/サブタイトル管理",
@@ -209,6 +213,9 @@ def test_main_window_has_required_tabs() -> None:
         "データ入出力",
         "ヘルプ / 設定",
     ]
+    assert window.role_banner.objectName() == "roleVisualBanner"
+    assert window.role_banner.property("operatorRole") == "admin"
+    assert "ADMIN / 管理者" in window.role_banner.text()
     assert window._tabs_by_name["タイトルを管理"] is window._tabs_by_name[
         "タイトル/サブタイトル管理"
     ]
@@ -349,3 +356,5 @@ def test_main_window_accepts_role_context() -> None:
         import_service=EmptyImportService(),
     )
     assert window.centralWidget() is not None
+    assert window.role_banner.property("operatorRole") == "viewer"
+    assert "VIEWER / 参照専用" in window.role_banner.text()
