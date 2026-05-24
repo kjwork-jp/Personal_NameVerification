@@ -27,7 +27,7 @@ The final zip creation flow is deferred until the remaining future-improvement i
 | HELP-001 | P1 | Help/Settings | Done | Split diagnostics, path information, protection warnings, and operation notes |
 | STYLE-001 | P1 | RBAC/UI | Done | Make viewer/editor/admin role differences visually clearer |
 | CRUD-UX-001 | P1 | CRUD/UI | Done | Reorganize CRUD screens around list-first workflows |
-| DB-SEC-OPS-001 | P1 | Security/operations | Implemented / gate pending | Add DB/backup/export/log protection diagnostics and guidance |
+| DB-SEC-OPS-001 | P1 | Security/operations | Done | Add DB/backup/export/log protection diagnostics and guidance |
 | RELEASE-REPACK-001 | P1 | Release | Not started | Rebuild, repackage, smoke-test, and regenerate manifest/checksum after all P1 items |
 | DOC-SYNC-001 | P1 | Docs/external ledgers | In progress | Sync GitHub docs and external ledgers after each implemented item |
 
@@ -111,9 +111,9 @@ Validation:
 - `black --check .`: PASS
 - `mypy app`: PASS
 
-## DB-SEC-OPS-001 progress
+## DB-SEC-OPS-001 completion
 
-Implemented on main:
+Implemented and validated on main:
 
 - `app/ui/help_settings_tab.py`
   - Adds `保護対象パス診断` to the existing `保護警告` section.
@@ -123,9 +123,12 @@ Implemented on main:
 - `tests/test_help_settings_tab.py`
   - Covers DB/backup/export/log protected-location diagnostics and refresh behavior.
 
-Pending:
+Validation:
 
-- Local quality gate re-run.
+- `pytest -q`: PASS
+- `ruff check .`: PASS
+- `black --check .`: PASS
+- `mypy app`: PASS
 
 ## Tagging policy
 
@@ -139,24 +142,28 @@ Recommended next tag after the remaining P1 items are completed:
 
 External ledgers should treat the generated v0.2.0-rc1 zip as a checkpoint and should not mark it as final distribution.
 
-The external ledger source of truth for this decision is:
+The external ledger source of truth for this decision will be updated to:
 
-- `Personal_NameVerification_成果物一覧マスター_v1.6_20260523.xlsx`
-- `Personal_NameVerification_WBS_工程管理台帳_v20260523_CRUD完了反映版.xlsx`
-- `Personal_NameVerification_引継ぎマスター_v20260523_CRUD完了反映版.xlsx`
-- `Personal_NameVerification_新規チャット初回プロンプト_v20260523_CRUD完了反映版.md`
+- `Personal_NameVerification_成果物一覧マスター_v1.7_20260523.xlsx`
+- `Personal_NameVerification_WBS_工程管理台帳_v20260523_DBSEC完了反映版.xlsx`
+- `Personal_NameVerification_引継ぎマスター_v20260523_DBSEC完了反映版.xlsx`
+- `Personal_NameVerification_新規チャット初回プロンプト_v20260523_DBSEC完了反映版.md`
 
 ## Next action
 
-Run the local gates for `DB-SEC-OPS-001`:
+Continue to `DOC-SYNC-001`, then `RELEASE-REPACK-001`.
+
+Recommended local sequence:
 
 ```powershell
+git pull
 pytest -q
 ruff check .
 black --check .
 mypy app
+.\scripts\build_exe_windows.ps1
+.\scripts\package_release_windows.ps1 -ReleaseName v0.2.0-rc2
+.\scripts\smoke_test_portable_windows.ps1 -ReleaseDir .\release\v0.2.0-rc2
 ```
 
-If all pass, mark `DB-SEC-OPS-001` complete and continue to `DOC-SYNC-001` / `RELEASE-REPACK-001`.
-
-After all P1 items are complete, create a new tag and regenerate the portable zip.
+After all packaging verification passes, create and push a new `v0.2.0-rc2` tag.
