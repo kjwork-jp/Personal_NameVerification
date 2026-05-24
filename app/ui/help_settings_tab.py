@@ -113,6 +113,8 @@ class HelpSettingsTab(QWidget):
         self.path_diagnostics_text.setReadOnly(True)
         self.security_warning_text = QTextEdit()
         self.security_warning_text.setReadOnly(True)
+        self.protection_diagnostics_text = QTextEdit()
+        self.protection_diagnostics_text.setReadOnly(True)
         self.audit_safety_text = QTextEdit()
         self.audit_safety_text.setReadOnly(True)
         self.guide_text = QTextEdit()
@@ -172,6 +174,8 @@ class HelpSettingsTab(QWidget):
         layout = QVBoxLayout(page)
         layout.addWidget(QLabel("DB / backup / export / log 保護警告"))
         layout.addWidget(self.security_warning_text, 1)
+        layout.addWidget(QLabel("保護対象パス診断"))
+        layout.addWidget(self.protection_diagnostics_text, 1)
         layout.addWidget(QLabel("passwordログ非記録確認"))
         layout.addWidget(self.audit_safety_text, 1)
         return page
@@ -250,6 +254,7 @@ class HelpSettingsTab(QWidget):
     def _refresh_diagnostics_texts(self) -> None:
         self.path_diagnostics_text.setPlainText(self._path_diagnostics_text())
         self.security_warning_text.setPlainText(self._security_warning_text())
+        self.protection_diagnostics_text.setPlainText(self._protection_diagnostics_text())
         self.audit_safety_text.setPlainText(_audit_safety_text())
 
     def _copy_database_path(self) -> None:
@@ -300,6 +305,46 @@ class HelpSettingsTab(QWidget):
                 ]
             )
         return "\n".join(lines)
+
+    def _protection_diagnostics_text(self) -> str:
+        lines = [
+            "保護対象パス診断",
+            "以下はDB/backup/export/logの配置候補です。",
+            "parent writable=True はアプリが出力できることを示すだけで、閲覧制限済みとは限りません。",
+            "共有・添付・外部保存前にOS ACL/BitLocker/EFS/共有権限を確認してください。",
+        ]
+        for label, path, kind in self._protected_locations():
+            expanded = path.expanduser()
+            target = expanded if kind == "directory" else expanded.parent
+            lines.extend(
+                [
+                    f"- {label}: {self._path_text(path)}",
+                    f"  - kind: {kind}",
+                    f"  - exists: {expanded.exists()}",
+                    f"  - parent exists: {target.exists()}",
+                    f"  - parent writable: {os.access(target, os.W_OK) if target.exists() else False}",
+                ]
+            )
+        return "\n".join(lines)
+
+    def _protected_locations(self) -> list[tuple[str, Path, str]]:
+        locations = [
+            ("DBファイル", self.database_path, "file"),
+            ("DBフォルダ", self.database_path.parent, "directory"),
+            ("DB変更JSONLログ", self.change_log_jsonl_path, "file"),
+            ("Operations実行JSONLログ", self._operations_log_path_for_display(), "file"),
+        ]
+        if self.package_root is not None:
+            locations.extend(
+                [
+                    ("backupフォルダ", self.package_root / "50_backups", "directory"),
+                    ("daily backupフォルダ", self.package_root / "50_backups" / "daily", "directory"),
+                    ("CSV exportフォルダ", self.package_root / "60_exports" / "csv", "directory"),
+                    ("JSON exportフォルダ", self.package_root / "60_exports" / "json", "directory"),
+                    ("SQL dumpフォルダ", self.package_root / "60_exports" / "sql", "directory"),
+                ]
+            )
+        return locations
 
     def _security_warning_text(self) -> str:
         return "\n".join(
