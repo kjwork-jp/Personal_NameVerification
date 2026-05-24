@@ -6,8 +6,14 @@ from PySide6.QtWidgets import QLabel, QTableWidget, QVBoxLayout, QWidget
 
 
 _LIST_FIRST_MESSAGES: dict[str, str] = {
-    "名前を管理": "一覧から名前を選択し、下の入力欄で内容確認・更新・操作します。新規作成時は選択状態を気にせず入力してください。",
-    "タイトル/サブタイトル管理": "一覧からタイトルまたはサブタイトルを選択し、入力欄で内容確認・更新します。復元と完全削除は削除データタブで行います。",
+    "名前を管理": (
+        "一覧から名前を選択し、下の入力欄で内容確認・更新・操作します。"
+        "新規作成時は選択状態を気にせず入力してください。"
+    ),
+    "タイトル/サブタイトル管理": (
+        "一覧からタイトルまたはサブタイトルを選択し、入力欄で内容確認・更新します。"
+        "復元と完全削除は削除データタブで行います。"
+    ),
     "タイトルを管理": "一覧からタイトルを選択し、入力欄で内容確認・更新します。",
     "サブタイトルを管理": "一覧からタイトルとサブタイトルを選択し、入力欄で内容確認・更新します。",
     "関連付け": "登録/解除対象を上から順に選択して操作します。再読込で候補を最新化します。",
@@ -89,7 +95,7 @@ def _move_child_table_to_top(
     *,
     parent_attr: str | None = None,
 ) -> None:
-    parent = getattr(owner, parent_attr) if parent_attr is not None else owner
+    parent = getattr(owner, parent_attr, None) if parent_attr is not None else owner
     table = getattr(owner, table_attr, None)
     if not isinstance(parent, QWidget) or not isinstance(table, QTableWidget):
         return
