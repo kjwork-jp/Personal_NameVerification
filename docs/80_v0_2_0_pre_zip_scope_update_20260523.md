@@ -24,7 +24,7 @@ The final zip creation flow is deferred until the remaining future-improvement i
 | ID | Priority | Scope | Status | Expected outcome |
 |---|---:|---|---|---|
 | SANITIZED-EXPORT-001 | P1 | Export/security | Done | Add a sharing-oriented export that excludes authentication, admin, settings, and schema-management tables |
-| HELP-001 | P1 | Help/Settings | Implemented / gate pending | Split diagnostics, path information, protection warnings, and operation notes |
+| HELP-001 | P1 | Help/Settings | Done | Split diagnostics, path information, protection warnings, and operation notes |
 | STYLE-001 | P1 | RBAC/UI | Not started | Make viewer/editor/admin role differences visually clearer |
 | CRUD-UX-001 | P1 | CRUD/UI | Not started | Reorganize CRUD screens around list-first workflows |
 | DB-SEC-OPS-001 | P1 | Security/operations | Not started | Add DB/backup/export/log protection diagnostics and guidance |
@@ -53,9 +53,9 @@ Validation:
 - `black --check .`: PASS
 - `mypy app`: PASS
 
-## HELP-001 progress
+## HELP-001 completion
 
-Implemented on main:
+Implemented and validated on main:
 
 - `app/ui/help_settings_tab.py`
   - Keeps the Help / Settings tab split into `基本情報`, `パス診断`, `保護警告`, and `操作メモ`.
@@ -64,9 +64,12 @@ Implemented on main:
 - `tests/test_help_settings_tab.py`
   - Covers required Help / Settings sections, path diagnostics, protection warnings, shared JSON guidance, and refresh behavior.
 
-Pending:
+Validation:
 
-- Local quality gate re-run.
+- `pytest -q`: PASS
+- `ruff check .`: PASS
+- `black --check .`: PASS
+- `mypy app`: PASS
 
 ## Tagging policy
 
@@ -82,14 +85,16 @@ External ledgers should treat the generated v0.2.0-rc1 zip as a checkpoint and s
 
 The external ledger source of truth for this decision is:
 
-- `Personal_NameVerification_成果物一覧マスター_v1.3_20260523.xlsx`
-- `Personal_NameVerification_WBS_工程管理台帳_v20260523_SANITIZED完了反映版.xlsx`
-- `Personal_NameVerification_引継ぎマスター_v20260523_SANITIZED完了反映版.xlsx`
-- `Personal_NameVerification_新規チャット初回プロンプト_v20260523_SANITIZED完了反映版.md`
+- `Personal_NameVerification_成果物一覧マスター_v1.4_20260523.xlsx`
+- `Personal_NameVerification_WBS_工程管理台帳_v20260523_HELP完了反映版.xlsx`
+- `Personal_NameVerification_引継ぎマスター_v20260523_HELP完了反映版.xlsx`
+- `Personal_NameVerification_新規チャット初回プロンプト_v20260523_HELP完了反映版.md`
 
 ## Next action
 
-Run the local gates for `HELP-001`:
+Continue to `STYLE-001`.
+
+After each item, run:
 
 ```powershell
 pytest -q
@@ -97,7 +102,5 @@ ruff check .
 black --check .
 mypy app
 ```
-
-If all pass, mark `HELP-001` complete and continue to `STYLE-001`.
 
 After all P1 items are complete, create a new tag and regenerate the portable zip.
