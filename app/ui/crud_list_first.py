@@ -5,8 +5,8 @@ from __future__ import annotations
 from PySide6.QtWidgets import (
     QLabel,
     QTableWidget,
-    QVBoxLayout,
     QWidget,
+    QVBoxLayout,
 )
 
 
