@@ -2,12 +2,10 @@
 
 from __future__ import annotations
 
-from PySide6.QtWidgets import (
-    QLabel,
-    QTableWidget,
-    QWidget,
-    QVBoxLayout,
-)
+from PySide6.QtWidgets import QLabel
+from PySide6.QtWidgets import QTableWidget
+from PySide6.QtWidgets import QVBoxLayout
+from PySide6.QtWidgets import QWidget
 
 
 _LIST_FIRST_MESSAGES: dict[str, str] = {
