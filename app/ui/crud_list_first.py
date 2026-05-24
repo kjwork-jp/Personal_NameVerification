@@ -1,3 +1,4 @@
+# ruff: noqa: I001
 """Helpers that move CRUD screens toward list-first navigation."""
 
 from __future__ import annotations
