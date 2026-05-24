@@ -1,5 +1,6 @@
 param(
     [string]$ReleaseName = "v0.2.0-rc1",
+    [string]$ReleaseDir = "",
     [int]$StartupSeconds = 5
 )
 
@@ -10,8 +11,14 @@ $ScriptRoot = $PSScriptRoot
 . (Join-Path $ScriptRoot "common_windows.ps1")
 
 $ReleaseRoot = Join-Path $ProjectRoot "release"
+if (-not [string]::IsNullOrWhiteSpace($ReleaseDir)) {
+    $PackageDir = (Resolve-Path -Path $ReleaseDir).Path
+    $ReleaseName = Split-Path -Leaf $PackageDir
+    $ReleaseRoot = Split-Path -Parent $PackageDir
+} else {
+    $PackageDir = Join-Path $ReleaseRoot $ReleaseName
+}
 $ZipPath = Join-Path $ReleaseRoot ("NameVerification-" + $ReleaseName + "-portable.zip")
-$PackageDir = Join-Path $ReleaseRoot $ReleaseName
 $SmokeRoot = Join-Path $ProjectRoot ("tmp\portable_smoke\" + $ReleaseName)
 $ExtractRoot = Join-Path $SmokeRoot "extracted"
 $TableCheckScriptPath = Join-Path $SmokeRoot "check_portable_tables.py"
@@ -157,6 +164,7 @@ if __name__ == "__main__":
 }
 
 Write-Host "[9/9] Portable smoke complete"
+Write-Host "Release name: $ReleaseName"
 Write-Host "Portable root: $PortableRoot"
 Write-Host "Portable DB: $PortableDbPath"
 Write-Host "Change log path: $ChangeLogPath"
