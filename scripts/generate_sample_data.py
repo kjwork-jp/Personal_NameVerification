@@ -320,7 +320,7 @@ def _insert_demo_users(connection: sqlite3.Connection) -> None:
     rows = []
     for index, (operator_id, display_name, role) in enumerate(users, start=1):
         password = DEMO_PASSWORDS[operator_id]
-        salt = f"demo-salt-{index:06d}".encode("utf-8")
+        salt = f"demo-salt-{index:06d}".encode()
         hashed = hash_password(password, salt_bytes=salt)
         rows.append(
             (
