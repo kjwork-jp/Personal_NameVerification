@@ -11,7 +11,7 @@
 
 | ID | Priority | Area | Status | Candidate |
 |---|---:|---|---|---|
-| V030-OPS-001 | P1 | Release | Implemented / gate pending | Automate stable release packaging flow |
+| V030-OPS-001 | P1 | Release | Done | Automate stable release packaging flow |
 | V030-OPS-002 | P1 | Release | Not started | Generate release verification checklist |
 | V030-TEST-001 | P1 | Test | Not started | Add richer portable smoke coverage |
 | V030-UX-001 | P1 | UI | Not started | Redesign CRUD screens as native list-first flows |
@@ -20,9 +20,9 @@
 | V030-DATA-001 | P2 | Data | Not started | Add sample database generation mode |
 | V030-MAINT-001 | P2 | Maintenance | Not started | Review obsolete checkpoint docs |
 
-## V030-OPS-001 progress
+## V030-OPS-001 completion
 
-Implemented on main:
+Implemented and validated on main:
 
 - `scripts/run_release_windows.ps1`
   - Orchestrates build, package, and portable smoke for a requested release name.
@@ -32,16 +32,19 @@ Implemented on main:
 - `tests/test_release_script_contract.py`
   - Statically verifies script existence, orchestration order, release artifact checks, and optional GitHub Release support.
 
-Pending:
+Validation:
 
-- Local quality gate re-run.
+- `pytest -q`: PASS
+- `ruff check .`: PASS
+- `black --check .`: PASS
+- `mypy app`: PASS
 
 ## Suggested first iteration
 
-1. V030-OPS-001
-2. V030-TEST-001
-3. V030-UX-001
-4. V030-SEC-001
+1. V030-TEST-001
+2. V030-UX-001
+3. V030-SEC-001
+4. V030-OPS-002
 
 ## Policy
 
@@ -51,13 +54,9 @@ Pending:
 
 ## Next action
 
-Run local gates:
+Continue to `V030-TEST-001`.
 
-```powershell
-pytest -q
-ruff check .
-black --check .
-mypy app
-```
+Target:
 
-If all pass, mark `V030-OPS-001` complete and continue to `V030-TEST-001`.
+- Expand portable smoke from basic EXE/process/table checks to a richer contract that validates login/bootstrap readiness and major runtime paths.
+- Keep the first pass low-risk and script/test oriented.
