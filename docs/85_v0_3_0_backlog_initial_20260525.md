@@ -11,7 +11,7 @@
 
 | ID | Priority | Area | Status | Candidate |
 |---|---:|---|---|---|
-| V030-DATA-001 | P2 | Data | Not started | Add sample database generation mode |
+| V030-DATA-001 | P2 | Data | Implemented / Actions pending | Add sample database generation mode |
 | V030-MAINT-001 | P2 | Maintenance | Review pending | Review obsolete checkpoint docs |
 
 ## Completed items summary
@@ -23,12 +23,17 @@
 - V030-OPS-002: release verification checklist generator added.
 - V030-DOC-001: user manuals and release/development ledgers separated.
 
-## V030-DOC-001 completion
+## V030-DATA-001 progress
 
-- Added `docs/manuals/00_user_manual_index.md` as the user-facing document entry point.
-- Added `docs/release_ledger/00_release_ledger_index.md` as the release/development ledger entry point.
-- Updated `README.md` to route users to manuals and developers/release operators to ledgers.
-- This was docs-only and did not require local quality gates.
+- Added `--preset demo` to `scripts/generate_sample_data.py`.
+- Demo SQLite mode generates a small UAT/demo DB with business data and demo users.
+- Demo CSV mode generates small CSV files for import/export demonstrations.
+- Added tests in `tests/test_generate_sample_data_demo.py`.
+- Updated README sample data generation commands.
+
+Pending:
+
+- GitHub Actions quality gate result.
 
 ## GitHub Actions policy
 
@@ -41,4 +46,4 @@
 
 ## Next action
 
-Pull the latest docs update and continue to `V030-DATA-001`.
+Pull the latest commits and check GitHub Actions.
