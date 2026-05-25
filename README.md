@@ -156,6 +156,28 @@ black --check .
 mypy app
 ```
 
+## Sample data generation
+
+UAT / デモ用の小規模DB:
+
+```powershell
+python .\scripts\generate_sample_data.py --preset demo --format sqlite --output tmp\demo.db
+```
+
+CSV確認用の小規模データ:
+
+```powershell
+python .\scripts\generate_sample_data.py --preset demo --format csv --output tmp\demo_csv
+```
+
+大量検証用データ:
+
+```powershell
+python .\scripts\generate_sample_data.py --format sqlite --output tmp\sample.db --names 1000000
+```
+
+デモDBには `demo-viewer` / `demo-editor` / `demo-admin` を含みます。デモ用パスワードはローカル検証専用の固定値です。
+
 ## Windows release workflow
 
 ```powershell
