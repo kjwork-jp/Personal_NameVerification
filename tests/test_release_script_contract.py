@@ -1,3 +1,4 @@
+# ruff: noqa: I001
 """Static contract tests for Windows release orchestration scripts."""
 
 from __future__ import annotations
