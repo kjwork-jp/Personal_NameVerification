@@ -16,7 +16,7 @@
 | V030-TEST-001 | P1 | Test | Done | Add richer portable smoke coverage |
 | V030-UX-001 | P1 | UI | Done | Redesign CRUD screens as native list-first flows |
 | V030-SEC-001 | P1 | Security/Ops | Done | Add optional Windows file-permission diagnostics |
-| V030-DOC-001 | P2 | Docs | Not started | Split user manual from release ledger |
+| V030-DOC-001 | P2 | Docs | Implemented / docs-only | Split user manual from release ledger |
 | V030-DATA-001 | P2 | Data | Not started | Add sample database generation mode |
 | V030-MAINT-001 | P2 | Maintenance | Review pending | Review obsolete checkpoint docs |
 
@@ -54,6 +54,15 @@
 - `tests/test_release_script_contract.py` covers checklist generation and workflow integration.
 - `Quality Gates`: PASS.
 
+## In progress items
+
+### V030-DOC-001
+
+- Added `docs/manuals/00_user_manual_index.md` as the user-facing document entry point.
+- Added `docs/release_ledger/00_release_ledger_index.md` as the release/development ledger entry point.
+- Updated `README.md` to route users to manuals and developers/release operators to ledgers.
+- This is docs-only and should not require local quality gates.
+
 ## GitHub Actions policy
 
 | Workflow | Auto on push/PR | Manual | Purpose |
@@ -65,10 +74,9 @@
 
 ## Suggested next items
 
-1. V030-DOC-001
-2. V030-DATA-001
-3. V030-MAINT-001
+1. V030-DATA-001
+2. V030-MAINT-001
 
 ## Next action
 
-Pull the latest docs update and continue to `V030-DOC-001`.
+Pull the latest docs update and decide whether to mark `V030-DOC-001` done after review.
