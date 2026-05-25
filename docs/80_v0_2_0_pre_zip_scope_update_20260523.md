@@ -8,7 +8,7 @@ Record the scope update made after v0.2.0-rc1 tag/package/smoke.
 
 v0.2.0-rc1 was tagged, built, packaged, and smoke-tested successfully, but it is now treated as a checkpoint rather than the final distribution candidate.
 
-The final zip creation flow was deferred until the remaining future-improvement items were completed inside the v0.2.0 scope. Those implementation P1 items are now complete, and v0.2.0-rc2 packaging/smoke has completed successfully.
+The final zip creation flow was deferred until the remaining future-improvement items were completed inside the v0.2.0 scope. Those implementation P1 items are now complete, v0.2.0-rc2 packaging/smoke has completed successfully, the GitHub Release has been published as a pre-release, and external ledgers have been synchronized.
 
 ## Current checkpoint and release candidate
 
@@ -18,10 +18,14 @@ The final zip creation flow was deferred until the remaining future-improvement 
 - Build: PASS
 - Package: PASS
 - Portable smoke: PASS
+- Tag: pushed
+- GitHub Release: published / pre-release
+- Remote branches: `main` only after cleanup
 - Final zip: `release/NameVerification-v0.2.0-rc2-portable.zip`
 - Manifest: `release/v0.2.0-rc2/00_manifest_v0.2.0-rc2_20260525.csv`
 - Checksums: `release/v0.2.0-rc2/70_release_evidence/checksums_sha256_v0.2.0-rc2_20260525.txt`
 - Final rc2 evidence: docs/81_release_final_v0_2_0_rc2_20260525.md
+- External ledger evidence: docs/82_external_ledger_sync_v0_2_0_rc2_20260525.md
 
 ## Items to complete before the next zip
 
@@ -33,7 +37,7 @@ The final zip creation flow was deferred until the remaining future-improvement 
 | CRUD-UX-001 | P1 | CRUD/UI | Done | Reorganize CRUD screens around list-first workflows |
 | DB-SEC-OPS-001 | P1 | Security/operations | Done | Add DB/backup/export/log protection diagnostics and guidance |
 | RELEASE-REPACK-001 | P1 | Release | Done | Rebuild, repackage, smoke-test, and regenerate manifest/checksum after all P1 items |
-| DOC-SYNC-001 | P1 | Docs/external ledgers | In progress | Sync GitHub docs and external ledgers after rc2 packaging |
+| DOC-SYNC-001 | P1 | Docs/external ledgers | Done | Sync GitHub docs and external ledgers after rc2 packaging/release |
 
 ## SANITIZED-EXPORT-001 completion
 
@@ -162,28 +166,32 @@ Portable smoke runtime confirmed:
 - Change log path: `40_logs/change_logs.jsonl`
 - Operations log path: `40_logs/operations_events.jsonl`
 
-## Tagging policy
+## DOC-SYNC-001 completion
 
-Because `v0.2.0-rc1` is already pushed, do not overwrite it.
+External ledger pack generated and synchronized:
 
-Recommended new tag:
-
-- `v0.2.0-rc2`
-
-## External ledger update
-
-External ledgers should treat the generated v0.2.0-rc1 zip as a checkpoint and should not mark it as final distribution.
-
-The external ledger source of truth for rc2 will be updated to:
-
+- `Personal_NameVerification_都度更新資料パック_RC2完了反映版_v20260525.zip`
 - `Personal_NameVerification_成果物一覧マスター_v1.8_20260525.xlsx`
 - `Personal_NameVerification_WBS_工程管理台帳_v20260525_RC2完了反映版.xlsx`
+- `Personal_NameVerification_v0.2.0_統合UATチェックリスト_v1.6_20260525_RC2完了反映版.xlsx`
+- `Personal_NameVerification_設計書_更新管理台帳_v20260525_RC2完了反映版.xlsx`
+- `Personal_NameVerification_管理台帳_統合版_v20260525_RC2完了反映版.xlsx`
 - `Personal_NameVerification_引継ぎマスター_v20260525_RC2完了反映版.xlsx`
+- `Personal_NameVerification_運用操作マニュアル_v2.7_20260525_RC2完了反映版.xlsx`
 - `Personal_NameVerification_新規チャット初回プロンプト_v20260525_RC2完了反映版.md`
+- `Personal_NameVerification_old不要一覧_v20260525_RC2完了反映版.xlsx`
+
+## Tagging policy
+
+- `v0.2.0-rc1`: checkpoint only
+- `v0.2.0-rc2`: current release candidate / GitHub pre-release published
 
 ## Next action
 
-1. Create and push `v0.2.0-rc2` tag.
-2. Optionally create a GitHub Release for `v0.2.0-rc2` and upload zip/checksum/manifest.
-3. Clean local generated folders after artifact retention is confirmed.
-4. Delete merged/obsolete remote branches.
+No P1 items remain for rc2.
+
+Optional next actions:
+
+1. Run user-level acceptance on rc2.
+2. Decide whether to promote rc2 to final `v0.2.0`.
+3. Start a new backlog for v0.3.0.
