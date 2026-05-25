@@ -1,0 +1,48 @@
+name: Release Dry Run
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_name:
+        description: "Temporary local release name used for package/smoke validation"
+        required: true
+        default: "v0.3.0-smoke-dryrun"
+      startup_seconds:
+        description: "Seconds to wait after launching the portable EXE"
+        required: true
+        default: "5"
+
+jobs:
+  release-dry-run:
+    name: Build / package / portable smoke
+    runs-on: windows-latest
+    timeout-minutes: 45
+    env:
+      QT_QPA_PLATFORM: offscreen
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Run release dry run
+        shell: pwsh
+        run: |
+          .\scripts\run_release_windows.ps1 `
+            -ReleaseName "${{ inputs.release_name }}" `
+            -StartupSeconds ([int]"${{ inputs.startup_seconds }}")
+
+      - name: Upload dry-run release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.release_name }}-portable-artifacts
+          path: |
+            release/NameVerification-${{ inputs.release_name }}-portable.zip
+            release/${{ inputs.release_name }}/00_manifest_${{ inputs.release_name }}_*.csv
+            release/${{ inputs.release_name }}/70_release_evidence/checksums_sha256_${{ inputs.release_name }}_*.txt
+            release/${{ inputs.release_name }}/70_release_evidence/validation_log_template_${{ inputs.release_name }}_*.txt
+          if-no-files-found: error
