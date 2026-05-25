@@ -2,14 +2,11 @@ name: Windows EXE Build
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
 
 jobs:
   build-windows-exe:
     runs-on: windows-latest
+    timeout-minutes: 45
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -17,7 +14,14 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: "3.13"
+          cache: pip
+
+      - name: Install package with dev dependencies
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
 
       - name: Build EXE
         shell: pwsh
@@ -34,9 +38,13 @@ jobs:
           path: dist/NameVerification.exe
           if-no-files-found: error
 
-      - name: Upload release zip artifact
+      - name: Upload release artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: NameVerification-windows-release-zip
-          path: release/NameVerification-windows.zip
+          name: NameVerification-windows-release
+          path: |
+            release/NameVerification-*-portable.zip
+            release/*/00_manifest_*.csv
+            release/*/70_release_evidence/checksums_sha256_*.txt
+            release/*/70_release_evidence/validation_log_template_*.txt
           if-no-files-found: error
