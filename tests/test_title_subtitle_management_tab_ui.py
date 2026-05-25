@@ -12,6 +12,8 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 qt_widgets = pytest.importorskip("PySide6.QtWidgets", exc_type=ImportError)
 QApplication = qt_widgets.QApplication
+QFormLayout = qt_widgets.QFormLayout
+QHBoxLayout = qt_widgets.QHBoxLayout
 
 from app.ui import title_subtitle_management_tab as ts_tab_module  # noqa: E402
 from app.ui.role_context import RoleContext  # noqa: E402
@@ -154,6 +156,41 @@ def _app() -> QApplication:
     if app is None:
         app = QApplication([])
     return app
+
+
+def _child_layout_index(widget, layout_type: type) -> int:  # type: ignore[no-untyped-def]
+    layout = widget.layout()
+    assert layout is not None
+    for index in range(layout.count()):
+        item = layout.itemAt(index)
+        child_layout = item.layout() if item is not None else None
+        if isinstance(child_layout, layout_type):
+            return index
+    raise AssertionError(f"{layout_type.__name__} was not found")
+
+
+def test_title_subtitle_native_list_first_layout() -> None:
+    _app()
+    tab = TitleSubtitleManagementTab(
+        core_service=StubCoreService(),
+        query_service=StubQueryService(),
+    )
+
+    title_layout = tab.title_panel.layout()
+    subtitle_layout = tab.subtitle_panel.layout()
+    assert title_layout is not None
+    assert subtitle_layout is not None
+
+    assert tab.property("native_list_first_layout") is True
+    assert tab.property("has_list_first_layout") is True
+    assert title_layout.indexOf(tab.titles_table) < _child_layout_index(tab.title_panel, QFormLayout)
+    assert title_layout.indexOf(tab.titles_table) < _child_layout_index(tab.title_panel, QHBoxLayout)
+    assert subtitle_layout.indexOf(tab.subtitles_table) < _child_layout_index(
+        tab.subtitle_panel, QFormLayout
+    )
+    assert subtitle_layout.indexOf(tab.subtitles_table) < _child_layout_index(
+        tab.subtitle_panel, QHBoxLayout
+    )
 
 
 def test_title_subtitle_management_operations(monkeypatch: pytest.MonkeyPatch) -> None:
