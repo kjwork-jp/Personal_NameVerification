@@ -5,13 +5,40 @@
 - Stable baseline: v0.2.0
 - Stable release status: complete
 - Required v0.2.0 P1 items: complete
-- Next development target: v0.3.0
+- Current development line: v0.3.0+
 
-## Remaining backlog
+## Backlog references
+
+| Scope | Document |
+|---|---|
+| Immediate v0.3.x work | this file |
+| Future roadmap / remaining backlog | `docs/86_future_roadmap_and_remaining_backlog_20260525.md` |
+| Open issues / constraints | `docs/97_open_issues_and_constraints.md` |
+| Release/development ledger index | `docs/release_ledger/00_release_ledger_index.md` |
+
+## Immediate remaining backlog
 
 | ID | Priority | Area | Status | Candidate |
 |---|---:|---|---|---|
 | V030-MAINT-001 | P2 | Maintenance | Review pending | Review obsolete checkpoint docs |
+| V030-UX-002 | P2 | UI | Candidate | Extend native list-first layout beyond name management |
+| V030-DOC-002 | P2 | Docs | Candidate | Refresh existing manuals to match latest tabs/RBAC/data operations |
+| V030-OPS-003 | P2 | CI/Release | Candidate | Verify manual-only heavy workflows and release dry-run artifacts |
+| V030-UAT-001 | P2 | UAT | Candidate | Run demo DB based UAT for viewer/editor/admin flows |
+
+## Later roadmap snapshot
+
+| ID | Horizon | Priority | Area | Status | Candidate |
+|---|---|---:|---|---|---|
+| V040-EXPORT-001 | v0.4.x | P2 | Data/Security | Candidate | Expand sanitized application-data-only export policy and tests |
+| V040-IMPORT-001 | v0.4.x | P2 | Data/Ops | Candidate | Improve import validation, preview, and rollback evidence |
+| V040-AUDIT-001 | v0.4.x | P2 | Audit | Candidate | Strengthen audit log review/export workflow for operations |
+| V040-SEC-001 | v0.4.x | P2 | Security/Ops | Candidate | Add deeper OS file protection guidance and operator checklist |
+| V040-UX-001 | v0.4.x | P2 | UI | Candidate | Improve role-specific visual cues and dashboard readability |
+| V050-PERF-001 | v0.5.x | P3 | Performance | Candidate | Re-check large data performance and table pagination/search behavior |
+| V050-ASSET-001 | v0.5.x | P3 | Assets | Candidate | Revisit icon/image asset storage and relative path handling |
+| V050-MULTI-001 | v0.5.x | P3 | Architecture | Candidate | Revisit single-user/local SQLite constraints before multi-user use |
+| V100-REL-001 | v1.0 | P1 | Release | Candidate | Prepare v1.0 release criteria, final UAT, and distribution policy |
 
 ## Completed items summary
 
@@ -22,23 +49,6 @@
 - V030-OPS-002: release verification checklist generator added.
 - V030-DOC-001: user manuals and release/development ledgers separated.
 - V030-DATA-001: demo sample SQLite/CSV generation mode added.
-
-## V030-DATA-001 completion
-
-- Added `--preset demo` to `scripts/generate_sample_data.py`.
-- Demo SQLite mode generates a small UAT/demo DB with business data and demo users.
-- Demo CSV mode generates small CSV files for import/export demonstrations.
-- Added tests in `tests/test_generate_sample_data_demo.py`.
-- Updated README sample data generation commands.
-- Fixed ruff `UP012` by removing the unnecessary explicit UTF-8 argument from demo salt encoding.
-
-Validation:
-
-- `Quality Gates`: PASS.
-- `pytest`: PASS through Actions.
-- `ruff`: PASS through Actions.
-- `black`: PASS through Actions.
-- `mypy`: PASS through Actions.
 
 ## GitHub Actions policy
 
