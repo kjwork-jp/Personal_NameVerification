@@ -11,7 +11,6 @@
 
 | ID | Priority | Area | Status | Candidate |
 |---|---:|---|---|---|
-| V030-DATA-001 | P2 | Data | Implemented / Actions pending | Add sample database generation mode |
 | V030-MAINT-001 | P2 | Maintenance | Review pending | Review obsolete checkpoint docs |
 
 ## Completed items summary
@@ -22,18 +21,24 @@
 - V030-SEC-001: Windows ACL guidance added to Help / Settings diagnostics.
 - V030-OPS-002: release verification checklist generator added.
 - V030-DOC-001: user manuals and release/development ledgers separated.
+- V030-DATA-001: demo sample SQLite/CSV generation mode added.
 
-## V030-DATA-001 progress
+## V030-DATA-001 completion
 
 - Added `--preset demo` to `scripts/generate_sample_data.py`.
 - Demo SQLite mode generates a small UAT/demo DB with business data and demo users.
 - Demo CSV mode generates small CSV files for import/export demonstrations.
 - Added tests in `tests/test_generate_sample_data_demo.py`.
 - Updated README sample data generation commands.
+- Fixed ruff `UP012` by removing the unnecessary explicit UTF-8 argument from demo salt encoding.
 
-Pending:
+Validation:
 
-- GitHub Actions quality gate result.
+- `Quality Gates`: PASS.
+- `pytest`: PASS through Actions.
+- `ruff`: PASS through Actions.
+- `black`: PASS through Actions.
+- `mypy`: PASS through Actions.
 
 ## GitHub Actions policy
 
@@ -46,4 +51,4 @@ Pending:
 
 ## Next action
 
-Pull the latest commits and check GitHub Actions.
+Pull the latest docs update and continue to `V030-MAINT-001`.
