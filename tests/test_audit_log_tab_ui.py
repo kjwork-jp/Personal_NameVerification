@@ -92,6 +92,10 @@ def _datetime(value: str) -> QDateTime:
     return QDateTime.fromString(value, "yyyy-MM-dd HH:mm:ss")
 
 
+def _datetime_utc_string(value: str) -> str:
+    return _datetime(value).toUTC().toString("yyyy-MM-ddTHH:mm:ssZ")
+
+
 def test_audit_log_tab_reload_with_filters_and_detail() -> None:
     _app()
     query = StubQueryService()
@@ -113,8 +117,8 @@ def test_audit_log_tab_reload_with_filters_and_detail() -> None:
         "entity_type": "names",
         "action": "update",
         "operator_id": "op-1",
-        "created_from": "2025-12-31T15:00:00Z",
-        "created_to": "2026-01-31T14:59:59Z",
+        "created_from": _datetime_utc_string("2026-01-01 00:00:00"),
+        "created_to": _datetime_utc_string("2026-01-31 23:59:59"),
         "limit": 50,
     }
     assert tab.logs_table.rowCount() == 1
