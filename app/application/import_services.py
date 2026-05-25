@@ -8,8 +8,10 @@ import shutil
 import sqlite3
 from collections.abc import Iterator
 from contextlib import contextmanager
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 from app.application.authorization import ServiceRole, require_admin
 from app.application.runtime_paths import resolve_destructive_backup_dir
@@ -20,6 +22,19 @@ from app.infrastructure.import_data import (
     import_from_json_file,
     read_table_counts,
 )
+
+
+@dataclass(frozen=True)
+class ImportSourcePreview:
+    """Non-destructive import source diagnostics."""
+
+    source_type: str
+    source_path: str
+    table_counts: dict[str, int]
+    missing_tables: tuple[str, ...]
+    invalid_tables: tuple[str, ...]
+    unknown_tables: tuple[str, ...]
+    ready: bool
 
 
 class ImportService:
@@ -58,6 +73,93 @@ class ImportService:
     def preview_import_target_state(self) -> dict[str, int]:
         with self._operation_connection() as connection:
             return read_table_counts(connection, IMPORT_TABLES)
+
+    def preview_csv_source(self, csv_dir: Path) -> ImportSourcePreview:
+        """Preview CSV source counts and structural readiness without importing."""
+
+        target_dir = csv_dir.expanduser().resolve()
+        if not target_dir.exists() or not target_dir.is_dir():
+            raise ValidationError(f"csv directory does not exist: {target_dir}")
+
+        table_counts: dict[str, int] = {}
+        missing_tables: list[str] = []
+        invalid_tables: list[str] = []
+        expected_files = {f"{table_name}.csv" for table_name in IMPORT_TABLES}
+        actual_files = {path.name for path in target_dir.glob("*.csv") if path.is_file()}
+        unknown_tables = tuple(
+            sorted(path_name.removesuffix(".csv") for path_name in actual_files - expected_files)
+        )
+
+        for table_name in IMPORT_TABLES:
+            file_path = target_dir / f"{table_name}.csv"
+            if not file_path.exists() or not file_path.is_file():
+                missing_tables.append(table_name)
+                continue
+            try:
+                with file_path.open("r", encoding="utf-8", newline="") as fp:
+                    reader = csv.DictReader(fp)
+                    if reader.fieldnames is None:
+                        invalid_tables.append(table_name)
+                        table_counts[table_name] = 0
+                        continue
+                    table_counts[table_name] = sum(1 for _ in reader)
+            except csv.Error:
+                invalid_tables.append(table_name)
+                table_counts[table_name] = 0
+
+        ready = not missing_tables and not invalid_tables
+        return ImportSourcePreview(
+            source_type="csv",
+            source_path=str(target_dir),
+            table_counts=table_counts,
+            missing_tables=tuple(missing_tables),
+            invalid_tables=tuple(invalid_tables),
+            unknown_tables=unknown_tables,
+            ready=ready,
+        )
+
+    def preview_json_source(self, json_path: Path) -> ImportSourcePreview:
+        """Preview JSON source counts and structural readiness without importing."""
+
+        source = json_path.expanduser().resolve()
+        if not source.exists() or not source.is_file():
+            raise ValidationError(f"json file does not exist: {source}")
+        try:
+            payload = json.loads(source.read_text("utf-8"))
+        except json.JSONDecodeError as exc:
+            raise ValidationError("json file is invalid") from exc
+        if not isinstance(payload, dict):
+            raise ValidationError("json payload must be an object")
+
+        table_counts: dict[str, int] = {}
+        missing_tables: list[str] = []
+        invalid_tables: list[str] = []
+        expected_tables = set(IMPORT_TABLES)
+        unknown_tables = tuple(sorted(str(key) for key in payload.keys() - expected_tables))
+
+        for table_name in IMPORT_TABLES:
+            if table_name not in payload:
+                missing_tables.append(table_name)
+                continue
+            rows = payload[table_name]
+            if not isinstance(rows, list):
+                invalid_tables.append(table_name)
+                table_counts[table_name] = 0
+                continue
+            if any(not isinstance(row, dict) for row in rows):
+                invalid_tables.append(table_name)
+            table_counts[table_name] = len(rows)
+
+        ready = not missing_tables and not invalid_tables
+        return ImportSourcePreview(
+            source_type="json",
+            source_path=str(source),
+            table_counts=table_counts,
+            missing_tables=tuple(missing_tables),
+            invalid_tables=tuple(invalid_tables),
+            unknown_tables=unknown_tables,
+            ready=ready,
+        )
 
     def create_before_import_backup(self) -> Path:
         source = self._resolve_database_path()
