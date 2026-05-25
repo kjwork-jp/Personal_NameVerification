@@ -28,7 +28,7 @@
 | ID | Priority | Area | Status | Candidate |
 |---|---:|---|---|---|
 | V030-UX-002 | P2 | UI | Implemented / Actions pending | Extend native list-first layout beyond name management |
-| V030-DOC-002 | P2 | Docs | Candidate | Refresh existing manuals to match latest tabs/RBAC/data operations |
+| V030-DOC-002 | P2 | Docs | Implemented / docs-only | Refresh existing manuals to match latest tabs/RBAC/data operations |
 | V030-OPS-003 | P2 | CI/Release | Candidate | Verify manual-only heavy workflows and release dry-run artifact definitions without publishing |
 | V040-EXPORT-001 | P2 | Data/Security | Candidate | Expand sanitized application-data-only export policy and tests |
 
@@ -68,6 +68,14 @@ Pending:
 
 - GitHub Actions quality gate result.
 
+## V030-DOC-002 progress
+
+- Refreshed `docs/manuals/NameVerification_初回教育用_簡易マニュアル.md`.
+- Refreshed `docs/manuals/NameVerification_運用操作マニュアル_機能説明.md`.
+- Refreshed `docs/manuals/NameVerification_運用手順書_詳細版.md`.
+- Updated manual wording for latest tabs, RBAC, data operations, Help / Settings diagnostics, demo sample data, and UAT/release deferral.
+- This is docs-only and does not require local quality gates.
+
 ## GitHub Actions policy
 
 | Workflow | Auto on push/PR | Manual | Purpose |
@@ -79,4 +87,4 @@ Pending:
 
 ## Next action
 
-Check GitHub Actions for `V030-UX-002`. If `Quality Gates` passes, mark it done and continue to `V030-DOC-002`.
+If `V030-DOC-002` review is acceptable, mark it done and continue to `V030-OPS-003`.
