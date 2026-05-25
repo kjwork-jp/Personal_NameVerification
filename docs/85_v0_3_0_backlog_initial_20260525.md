@@ -16,6 +16,12 @@
 | Open issues / constraints | `docs/97_open_issues_and_constraints.md` |
 | Release/development ledger index | `docs/release_ledger/00_release_ledger_index.md` |
 
+## Execution policy
+
+- UAT is deferred until the implementation / documentation / maintenance backlog is complete.
+- Release preparation is deferred until UAT is complete and release blockers are cleared.
+- Release-like scripts and CI definitions can still be maintained, but publishing/release preparation is not immediate work.
+
 ## Immediate remaining backlog
 
 | ID | Priority | Area | Status | Candidate |
@@ -23,14 +29,13 @@
 | V030-MAINT-001 | P2 | Maintenance | Review pending | Review obsolete checkpoint docs |
 | V030-UX-002 | P2 | UI | Candidate | Extend native list-first layout beyond name management |
 | V030-DOC-002 | P2 | Docs | Candidate | Refresh existing manuals to match latest tabs/RBAC/data operations |
-| V030-OPS-003 | P2 | CI/Release | Candidate | Verify manual-only heavy workflows and release dry-run artifacts |
-| V030-UAT-001 | P2 | UAT | Candidate | Run demo DB based UAT for viewer/editor/admin flows |
+| V030-OPS-003 | P2 | CI/Release | Candidate | Verify manual-only heavy workflows and release dry-run artifact definitions without publishing |
+| V040-EXPORT-001 | P2 | Data/Security | Candidate | Expand sanitized application-data-only export policy and tests |
 
 ## Later roadmap snapshot
 
 | ID | Horizon | Priority | Area | Status | Candidate |
 |---|---|---:|---|---|---|
-| V040-EXPORT-001 | v0.4.x | P2 | Data/Security | Candidate | Expand sanitized application-data-only export policy and tests |
 | V040-IMPORT-001 | v0.4.x | P2 | Data/Ops | Candidate | Improve import validation, preview, and rollback evidence |
 | V040-AUDIT-001 | v0.4.x | P2 | Audit | Candidate | Strengthen audit log review/export workflow for operations |
 | V040-SEC-001 | v0.4.x | P2 | Security/Ops | Candidate | Add deeper OS file protection guidance and operator checklist |
@@ -38,7 +43,8 @@
 | V050-PERF-001 | v0.5.x | P3 | Performance | Candidate | Re-check large data performance and table pagination/search behavior |
 | V050-ASSET-001 | v0.5.x | P3 | Assets | Candidate | Revisit icon/image asset storage and relative path handling |
 | V050-MULTI-001 | v0.5.x | P3 | Architecture | Candidate | Revisit single-user/local SQLite constraints before multi-user use |
-| V100-REL-001 | v1.0 | P1 | Release | Candidate | Prepare v1.0 release criteria, final UAT, and distribution policy |
+| V900-UAT-001 | post-backlog | P1 | UAT | Deferred until all backlog complete | Run demo DB based UAT for viewer/editor/admin flows |
+| V100-REL-001 | post-UAT | P1 | Release | Deferred until all backlog complete | Prepare v1.0 release criteria, final UAT, and distribution policy |
 
 ## Completed items summary
 
