@@ -126,6 +126,32 @@ def test_help_settings_protection_diagnostics_covers_runtime_locations(
     assert "OS ACL/BitLocker/EFS/共有権限" in diagnostics
 
 
+def test_help_settings_protection_diagnostics_mentions_windows_acl_commands(
+    tmp_path: Path,
+) -> None:
+    _app()
+    package_root = tmp_path / "v0.3.0"
+    (package_root / "30_prod_db").mkdir(parents=True)
+    db_path = package_root / "30_prod_db" / "nameverification.db"
+    db_path.write_text("dummy", encoding="utf-8")
+
+    tab = HelpSettingsTab(
+        package_root=package_root,
+        database_path=db_path,
+        change_log_jsonl_path=package_root / "40_logs" / "change_logs.jsonl",
+        operations_log_jsonl_path=package_root / "40_logs" / "operations_events.jsonl",
+    )
+
+    diagnostics = tab.protection_diagnostics_text.toPlainText()
+    assert "Windows権限確認コマンド例" in diagnostics
+    assert "Get-Acl" in diagnostics
+    assert "Format-List" in diagnostics
+    assert "icacls" in diagnostics
+    assert "Users / Authenticated Users / Everyone" in diagnostics
+    assert "ACL hardening済みの証明ではありません" in diagnostics
+    assert str(db_path.resolve(strict=False)) in diagnostics
+
+
 def test_help_settings_operation_memo_mentions_sanitized_export(tmp_path: Path) -> None:
     _app()
     tab = HelpSettingsTab(package_root=tmp_path, database_path=tmp_path / "db.sqlite3")
