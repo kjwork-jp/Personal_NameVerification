@@ -28,8 +28,8 @@ It intentionally includes more than the immediate P2 items so that the remaining
 | V030-OPS-003 | v0.3.x | P2 | CI/Release | Implemented / Actions pending | Verify manual-only heavy workflows and release dry-run artifact definitions without publishing |
 | V040-EXPORT-001 | v0.4.x | P2 | Data/Security | Implemented / Actions pending | Expand sanitized application-data-only export policy and tests |
 | V040-IMPORT-001 | v0.4.x | P2 | Data/Ops | Implemented / Actions pending | Improve import validation, preview, and rollback evidence |
-| V040-AUDIT-001 | v0.4.x | P2 | Audit | Candidate | Strengthen audit log review/export workflow for operations |
-| V040-SEC-001 | v0.4.x | P2 | Security/Ops | Candidate | Add deeper OS file protection guidance and operator checklist |
+| V040-AUDIT-001 | v0.4.x | P2 | Audit | Implemented / Actions pending | Strengthen audit log review/export workflow for operations |
+| V040-SEC-001 | v0.4.x | P2 | Security/Ops | Implemented / Actions pending | Add deeper OS file protection guidance and operator checklist |
 | V040-UX-001 | v0.4.x | P2 | UI | Candidate | Improve role-specific visual cues and dashboard readability |
 | V050-PERF-001 | v0.5.x | P3 | Performance | Candidate | Re-check large data performance and table pagination/search behavior |
 | V050-ASSET-001 | v0.5.x | P3 | Assets | Candidate | Revisit icon/image asset storage and relative path handling |
@@ -44,11 +44,10 @@ It intentionally includes more than the immediate P2 items so that the remaining
 
 ## Immediate next items
 
-1. V040-AUDIT-001
-2. V040-SEC-001
-3. V040-UX-001
-4. V050-PERF-001
-5. V050-ASSET-001
+1. V040-UX-001
+2. V050-PERF-001
+3. V050-ASSET-001
+4. V050-MULTI-001
 
 ## Deferred gates
 
