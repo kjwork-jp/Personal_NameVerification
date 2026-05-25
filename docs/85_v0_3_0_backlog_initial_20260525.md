@@ -13,6 +13,7 @@
 |---|---|
 | Immediate v0.3.x work | this file |
 | Future roadmap / remaining backlog | `docs/86_future_roadmap_and_remaining_backlog_20260525.md` |
+| Large data performance review | `docs/88_large_data_performance_review_20260525.md` |
 | Document maintenance review | `docs/87_doc_maintenance_review_20260525.md` |
 | Open issues / constraints | `docs/97_open_issues_and_constraints.md` |
 | Release/development ledger index | `docs/release_ledger/00_release_ledger_index.md` |
@@ -33,13 +34,13 @@
 | V040-IMPORT-001 | P2 | Data/Ops | Implemented / Actions pending | Improve import validation, preview, and rollback evidence |
 | V040-AUDIT-001 | P2 | Audit | Implemented / Actions pending | Strengthen audit log review/export workflow for operations |
 | V040-SEC-001 | P2 | Security/Ops | Implemented / Actions pending | Add deeper OS file protection guidance and operator checklist |
+| V040-UX-001 | P2 | UI | Implemented / Actions pending | Improve role-specific visual cues and dashboard readability |
+| V050-PERF-001 | P3 | Performance | Implemented / Actions pending | Re-check large data performance and table pagination/search behavior |
 
 ## Later roadmap snapshot
 
 | ID | Horizon | Priority | Area | Status | Candidate |
 |---|---|---:|---|---|---|
-| V040-UX-001 | v0.4.x | P2 | UI | Candidate | Improve role-specific visual cues and dashboard readability |
-| V050-PERF-001 | v0.5.x | P3 | Performance | Candidate | Re-check large data performance and table pagination/search behavior |
 | V050-ASSET-001 | v0.5.x | P3 | Assets | Candidate | Revisit icon/image asset storage and relative path handling |
 | V050-MULTI-001 | v0.5.x | P3 | Architecture | Candidate | Revisit single-user/local SQLite constraints before multi-user use |
 | V900-UAT-001 | post-backlog | P1 | UAT | Deferred until all backlog complete | Run demo DB based UAT for viewer/editor/admin flows |
@@ -65,22 +66,26 @@
 - V040-IMPORT-001: CSV/JSON import source preview diagnostics added.
 - V040-AUDIT-001: operation history review JSON export added.
 - V040-SEC-001: operator file protection checklist added to Help / Settings.
+- V040-UX-001: structured role capability summary added.
+- V050-PERF-001: large data performance review plan and bulk generator contract tests added.
 
-## V040-AUDIT-001 progress
+## V040-UX-001 progress
 
-- Added visible-row audit review JSON export to `app/ui/audit_log_tab.py`.
-- Export payload includes current filters, row count, row metadata, parsed before/after values, and diff text.
-- Added `tests/test_audit_log_tab_ui.py` coverage for review JSON export.
+- Added structured role capability summaries in `app/ui/role_visual_identity.py`.
+- Role banner now includes allowed/restricted action summaries.
+- Role banner/status labels expose structured properties for dashboard/help reuse.
+- Added `tests/test_role_visual_identity.py` coverage.
 
 Pending:
 
 - GitHub Actions quality gate result.
 
-## V040-SEC-001 progress
+## V050-PERF-001 progress
 
-- Added an operator file protection checklist to `app/ui/help_settings_tab.py`.
-- Checklist covers DB, backup, export, SQL dump, shared JSON, JSONL logs, Windows ACL checks, BitLocker/EFS, and external sharing review.
-- Added `tests/test_help_settings_tab.py` coverage for the checklist.
+- Added `docs/88_large_data_performance_review_20260525.md`.
+- Fixed small/medium/large bulk data generation commands and review checklist.
+- Added bulk sample generator contract tests in `tests/test_generate_sample_data_demo.py`.
+- No generated DB/CSV data was committed.
 
 Pending:
 
@@ -97,4 +102,4 @@ Pending:
 
 ## Next action
 
-Check GitHub Actions for implemented code changes. If `Quality Gates` passes, mark completed items done and continue to `V040-UX-001` and `V050-PERF-001`.
+Check GitHub Actions for implemented code changes. If `Quality Gates` passes, mark completed items done and continue to `V050-ASSET-001` and `V050-MULTI-001`.
