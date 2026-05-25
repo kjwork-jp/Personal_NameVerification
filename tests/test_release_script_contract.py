@@ -8,18 +8,27 @@ from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 RUN_RELEASE_SCRIPT = PROJECT_ROOT / "scripts" / "run_release_windows.ps1"
+PORTABLE_SMOKE_SCRIPT = PROJECT_ROOT / "scripts" / "smoke_test_portable_windows.ps1"
 
 
-def _script_text() -> str:
+def _run_release_script_text() -> str:
     return RUN_RELEASE_SCRIPT.read_text(encoding="utf-8")
+
+
+def _portable_smoke_script_text() -> str:
+    return PORTABLE_SMOKE_SCRIPT.read_text(encoding="utf-8")
 
 
 def test_run_release_script_exists() -> None:
     assert RUN_RELEASE_SCRIPT.exists()
 
 
+def test_portable_smoke_script_exists() -> None:
+    assert PORTABLE_SMOKE_SCRIPT.exists()
+
+
 def test_run_release_script_orchestrates_expected_steps() -> None:
-    text = _script_text()
+    text = _run_release_script_text()
 
     assert "build_exe_windows.ps1" in text
     assert "package_release_windows.ps1" in text
@@ -29,7 +38,7 @@ def test_run_release_script_orchestrates_expected_steps() -> None:
 
 
 def test_run_release_script_checks_release_assets() -> None:
-    text = _script_text()
+    text = _run_release_script_text()
 
     assert "NameVerification-" in text
     assert "-portable.zip" in text
@@ -43,7 +52,7 @@ def test_run_release_script_checks_release_assets() -> None:
 
 
 def test_run_release_script_supports_optional_github_release() -> None:
-    text = _script_text()
+    text = _run_release_script_text()
 
     assert "CreateGitHubRelease" in text
     assert "Prerelease" in text
@@ -51,3 +60,52 @@ def test_run_release_script_supports_optional_github_release() -> None:
     assert "release" in text
     assert "create" in text
     assert "--prerelease" in text
+
+
+def test_portable_smoke_checks_runtime_directories() -> None:
+    text = _portable_smoke_script_text()
+
+    assert "Assert-WritableDirectory" in text
+    assert "30_prod_db" in text
+    assert "40_logs" in text
+    assert "50_backups\\daily" in text
+    assert "50_backups\\before_restore" in text
+    assert "50_backups\\before_import" in text
+    assert "60_exports\\csv" in text
+    assert "60_exports\\json" in text
+    assert "60_exports\\sql" in text
+
+
+def test_portable_smoke_checks_readme_release_name() -> None:
+    text = _portable_smoke_script_text()
+
+    assert "Assert-TextContains" in text
+    assert "README_before_start.txt" in text
+    assert "$ReleaseName" in text
+
+
+def test_portable_smoke_checks_all_bootstrap_tables() -> None:
+    text = _portable_smoke_script_text()
+
+    for table_name in [
+        "users",
+        "user_audit_logs",
+        "app_settings",
+        "schema_migrations",
+        "names",
+        "titles",
+        "subtitles",
+        "name_title_links",
+        "name_subtitle_links",
+        "change_logs",
+    ]:
+        assert f'"{table_name}"' in text
+
+
+def test_portable_smoke_uses_ten_step_flow() -> None:
+    text = _portable_smoke_script_text()
+
+    assert "[1/10] Check portable release inputs" in text
+    assert "[4/10] Validate portable runtime directories" in text
+    assert "[8/10] Check required runtime tables" in text
+    assert "[10/10] Portable smoke complete" in text
