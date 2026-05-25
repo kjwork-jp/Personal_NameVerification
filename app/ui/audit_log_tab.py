@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Protocol
 
 from PySide6.QtCore import QDateTime
@@ -114,10 +115,17 @@ class AuditLogTab(QWidget):
         self.limit_input.setValue(200)
         self.limit_input.setSingleStep(50)
 
+        self.audit_export_path_input = QLineEdit("audit_logs_review.json")
+        self.audit_export_path_input.setToolTip(
+            "現在表示中の操作履歴だけをレビュー証跡JSONとして出力します。"
+        )
+
         self.message_label = QLabel("")
 
         self.reload_button = QPushButton("一覧を更新")
         self.reload_button.clicked.connect(self._reload)
+        self.export_visible_rows_button = QPushButton("表示中履歴JSON出力")
+        self.export_visible_rows_button.clicked.connect(self._export_visible_rows_json)
 
         self.logs_table = QTableWidget(0, 6)
         self.logs_table.setHorizontalHeaderLabels(
@@ -151,10 +159,12 @@ class AuditLogTab(QWidget):
         form.addRow(self.created_from_enabled, self.created_from_input)
         form.addRow(self.created_to_enabled, self.created_to_input)
         form.addRow("表示件数", self.limit_input)
+        form.addRow("レビューJSON出力先", self.audit_export_path_input)
 
         actions = QHBoxLayout()
         compact_layout(actions, margins=0, spacing=4)
         actions.addWidget(self.reload_button)
+        actions.addWidget(self.export_visible_rows_button)
 
         detail_panel = QWidget()
         detail_layout = QVBoxLayout(detail_panel)
@@ -267,6 +277,40 @@ class AuditLogTab(QWidget):
         self.after_json_view.setPlainText(_format_json_like(row.after_json, after))
         self.diff_view.setPlainText(_format_diff(before, after))
 
+    def _export_visible_rows_json(self) -> None:
+        output_text = self.audit_export_path_input.text().strip()
+        if not output_text:
+            self._set_message("レビューJSON出力先を入力してください", is_error=True)
+            return
+        try:
+            output_path = self._write_visible_rows_json(Path(output_text))
+        except Exception as exc:  # noqa: BLE001
+            self._set_message(f"操作履歴JSON出力に失敗しました: {exc}", is_error=True)
+            return
+        self._set_message(f"表示中の操作履歴をJSON出力しました: {output_path}")
+
+    def _write_visible_rows_json(self, output_path: Path) -> Path:
+        resolved = output_path.expanduser().resolve(strict=False)
+        if resolved.exists() and resolved.is_dir():
+            raise ValueError(f"出力先がフォルダです: {resolved}")
+        resolved.parent.mkdir(parents=True, exist_ok=True)
+        filters = self._collect_filters()
+        payload = {
+            "export_type": "audit_log_review",
+            "row_count": len(self._rows),
+            "filters": {
+                "entity_type": filters.entity_type,
+                "action": filters.action,
+                "operator_id": filters.operator_id,
+                "created_from": filters.created_from,
+                "created_to": filters.created_to,
+                "limit": filters.limit,
+            },
+            "rows": [_row_export_payload(row) for row in self._rows],
+        }
+        resolved.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+        return resolved
+
     def _set_message(
         self, message: str, *, is_error: bool = False, level: str | None = None
     ) -> None:
@@ -329,6 +373,23 @@ def _format_diff(
             f"{key}: {_format_value(before_value)} {marker} {_format_value(after_value)}"
         )
     return "\n".join(lines)
+
+
+def _row_export_payload(row: ChangeLogRow) -> dict[str, object]:
+    before = _parse_json_object(row.before_json)
+    after = _parse_json_object(row.after_json)
+    return {
+        "id": row.id,
+        "public_id": row.public_id,
+        "entity_type": row.entity_type,
+        "entity_id": row.entity_id,
+        "action": row.action,
+        "operator_id": row.operator_id,
+        "created_at": row.created_at,
+        "before": before if before is not None else row.before_json,
+        "after": after if after is not None else row.after_json,
+        "diff_text": _format_diff(before, after),
+    }
 
 
 def _format_value(value: Any) -> str:
