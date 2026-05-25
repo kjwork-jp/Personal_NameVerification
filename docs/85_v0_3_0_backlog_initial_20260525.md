@@ -31,13 +31,13 @@
 | V030-OPS-003 | P2 | CI/Release | Implemented / Actions pending | Verify manual-only heavy workflows and release dry-run artifact definitions without publishing |
 | V040-EXPORT-001 | P2 | Data/Security | Implemented / Actions pending | Expand sanitized application-data-only export policy and tests |
 | V040-IMPORT-001 | P2 | Data/Ops | Implemented / Actions pending | Improve import validation, preview, and rollback evidence |
+| V040-AUDIT-001 | P2 | Audit | Implemented / Actions pending | Strengthen audit log review/export workflow for operations |
+| V040-SEC-001 | P2 | Security/Ops | Implemented / Actions pending | Add deeper OS file protection guidance and operator checklist |
 
 ## Later roadmap snapshot
 
 | ID | Horizon | Priority | Area | Status | Candidate |
 |---|---|---:|---|---|---|
-| V040-AUDIT-001 | v0.4.x | P2 | Audit | Candidate | Strengthen audit log review/export workflow for operations |
-| V040-SEC-001 | v0.4.x | P2 | Security/Ops | Candidate | Add deeper OS file protection guidance and operator checklist |
 | V040-UX-001 | v0.4.x | P2 | UI | Candidate | Improve role-specific visual cues and dashboard readability |
 | V050-PERF-001 | v0.5.x | P3 | Performance | Candidate | Re-check large data performance and table pagination/search behavior |
 | V050-ASSET-001 | v0.5.x | P3 | Assets | Candidate | Revisit icon/image asset storage and relative path handling |
@@ -57,48 +57,30 @@
 - V030-MAINT-001: docs maintenance review ledger added; no files deleted.
 - V030-DOC-002: existing manuals refreshed for latest tabs, RBAC, data operations, and deferral policy.
 
-## V030-UX-002 progress
+## Implemented / Actions pending
 
-- Changed `app/ui/title_subtitle_management_tab.py` to a native list-first layout.
-- Title panel now orders title table before title form/actions.
-- Subtitle panel now orders subtitle table before subtitle form/actions.
-- Added `tests/test_title_subtitle_management_tab_ui.py` coverage for list-first ordering.
+- V030-UX-002: title/subtitle management native list-first layout and tests.
+- V030-OPS-003: Windows EXE workflow artifact alignment and static contract tests.
+- V040-EXPORT-001: sanitized JSON export excludes `change_logs` and non-application/admin tables.
+- V040-IMPORT-001: CSV/JSON import source preview diagnostics added.
+- V040-AUDIT-001: operation history review JSON export added.
+- V040-SEC-001: operator file protection checklist added to Help / Settings.
 
-Pending:
+## V040-AUDIT-001 progress
 
-- GitHub Actions quality gate result.
-
-## V030-OPS-003 progress
-
-- Reviewed current workflow definitions.
-- Confirmed `Quality Gates` remains the automatic lightweight gate and ignores docs-only changes.
-- Confirmed `Windows validation`, `Windows EXE Build`, and `Release Dry Run` are manual-only.
-- Updated `.github/workflows/windows-exe.yml` to use `scripts/run_release_windows.ps1`.
-- Aligned `Windows EXE Build` release artifacts with `Release Dry Run`, including `release_verification_checklist_*.md`.
-- Added static contract coverage in `tests/test_release_script_contract.py`.
-- No GitHub Release publishing was performed.
+- Added visible-row audit review JSON export to `app/ui/audit_log_tab.py`.
+- Export payload includes current filters, row count, row metadata, parsed before/after values, and diff text.
+- Added `tests/test_audit_log_tab_ui.py` coverage for review JSON export.
 
 Pending:
 
 - GitHub Actions quality gate result.
 
-## V040-EXPORT-001 progress
+## V040-SEC-001 progress
 
-- Restricted sanitized JSON export to application data tables only.
-- Excluded `change_logs` from sanitized sharing-oriented export.
-- Kept full JSON export and SQL dump behavior unchanged.
-- Updated tests to assert `change_logs`, auth/admin/settings tables, and sensitive operation evidence are excluded.
-
-Pending:
-
-- GitHub Actions quality gate result.
-
-## V040-IMPORT-001 progress
-
-- Added `ImportSourcePreview` for non-destructive source diagnostics.
-- Added `preview_csv_source()` for CSV file counts, missing tables, invalid tables, and unknown CSV files.
-- Added `preview_json_source()` for JSON table counts, missing tables, invalid tables, and unknown keys.
-- Added tests for CSV and JSON preview diagnostics.
+- Added an operator file protection checklist to `app/ui/help_settings_tab.py`.
+- Checklist covers DB, backup, export, SQL dump, shared JSON, JSONL logs, Windows ACL checks, BitLocker/EFS, and external sharing review.
+- Added `tests/test_help_settings_tab.py` coverage for the checklist.
 
 Pending:
 
@@ -115,4 +97,4 @@ Pending:
 
 ## Next action
 
-Check GitHub Actions for implemented code changes. If `Quality Gates` passes, mark completed items done and continue in pairs from `V040-AUDIT-001` and `V040-SEC-001`.
+Check GitHub Actions for implemented code changes. If `Quality Gates` passes, mark completed items done and continue to `V040-UX-001` and `V050-PERF-001`.
