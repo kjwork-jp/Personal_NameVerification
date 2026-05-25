@@ -27,8 +27,7 @@
 
 | ID | Priority | Area | Status | Candidate |
 |---|---:|---|---|---|
-| V030-MAINT-001 | P2 | Maintenance | Implemented / review pending | Review obsolete checkpoint docs |
-| V030-UX-002 | P2 | UI | Candidate | Extend native list-first layout beyond name management |
+| V030-UX-002 | P2 | UI | Implemented / Actions pending | Extend native list-first layout beyond name management |
 | V030-DOC-002 | P2 | Docs | Candidate | Refresh existing manuals to match latest tabs/RBAC/data operations |
 | V030-OPS-003 | P2 | CI/Release | Candidate | Verify manual-only heavy workflows and release dry-run artifact definitions without publishing |
 | V040-EXPORT-001 | P2 | Data/Security | Candidate | Expand sanitized application-data-only export policy and tests |
@@ -56,14 +55,18 @@
 - V030-OPS-002: release verification checklist generator added.
 - V030-DOC-001: user manuals and release/development ledgers separated.
 - V030-DATA-001: demo sample SQLite/CSV generation mode added.
+- V030-MAINT-001: docs maintenance review ledger added; no files deleted.
 
-## V030-MAINT-001 progress
+## V030-UX-002 progress
 
-- Added `docs/87_doc_maintenance_review_20260525.md`.
-- Classified current docs into keep / archive candidate / obsolete candidate / merge candidate.
-- No files were deleted.
-- Obsolete candidates are not approved for deletion yet.
-- Follow-up work routes to `V030-DOC-002`, `V030-UX-002`, and future roadmap items.
+- Changed `app/ui/title_subtitle_management_tab.py` to a native list-first layout.
+- Title panel now orders title table before title form/actions.
+- Subtitle panel now orders subtitle table before subtitle form/actions.
+- Added `tests/test_title_subtitle_management_tab_ui.py` coverage for list-first ordering.
+
+Pending:
+
+- GitHub Actions quality gate result.
 
 ## GitHub Actions policy
 
@@ -76,4 +79,4 @@
 
 ## Next action
 
-Review `docs/87_doc_maintenance_review_20260525.md`. If acceptable, mark `V030-MAINT-001` done and continue to `V030-UX-002`.
+Check GitHub Actions for `V030-UX-002`. If `Quality Gates` passes, mark it done and continue to `V030-DOC-002`.
