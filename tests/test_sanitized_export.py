@@ -23,6 +23,9 @@ class _FakeButton:
     def setToolTip(self, value: str) -> None:  # noqa: N802
         self.tooltip = value
 
+    def toolTip(self) -> str:  # noqa: N802
+        return self.tooltip
+
     def setMinimumHeight(self, value: int) -> None:  # noqa: N802
         self.minimum_height = value
 
@@ -151,6 +154,7 @@ def _make_connection() -> sqlite3.Connection:
         CREATE TABLE app_settings (key TEXT PRIMARY KEY, value TEXT);
         CREATE TABLE schema_migrations (version TEXT PRIMARY KEY);
         INSERT INTO names (display_name) VALUES ('Alice');
+        INSERT INTO change_logs (message) VALUES ('sensitive-operation-evidence');
         INSERT INTO users (operator_id, password_hash) VALUES ('admin', 'secret-hash');
         INSERT INTO user_audit_logs (action) VALUES ('login');
         INSERT INTO app_settings (key, value) VALUES ('theme', 'dark');
@@ -166,21 +170,23 @@ def test_sanitized_json_export_uses_allowlisted_application_tables(tmp_path: Pat
 
     export_sanitized_tables_to_json(connection, output_path)
 
-    payload = json.loads(output_path.read_text(encoding="utf-8"))
+    output_text = output_path.read_text(encoding="utf-8")
+    payload = json.loads(output_text)
     assert set(payload) == {
         "names",
         "titles",
         "subtitles",
         "name_subtitle_links",
         "name_title_links",
-        "change_logs",
     }
     assert payload["names"][0]["display_name"] == "Alice"
+    assert "change_logs" not in payload
     assert "users" not in payload
     assert "user_audit_logs" not in payload
     assert "app_settings" not in payload
     assert "schema_migrations" not in payload
-    assert "secret-hash" not in output_path.read_text(encoding="utf-8")
+    assert "secret-hash" not in output_text
+    assert "sensitive-operation-evidence" not in output_text
 
 
 def test_export_backup_service_exposes_sanitized_json(tmp_path: Path) -> None:
@@ -192,6 +198,7 @@ def test_export_backup_service_exposes_sanitized_json(tmp_path: Path) -> None:
     assert result == output_path.resolve()
     payload = json.loads(result.read_text(encoding="utf-8"))
     assert "names" in payload
+    assert "change_logs" not in payload
     assert "users" not in payload
 
 
