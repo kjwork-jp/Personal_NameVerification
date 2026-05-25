@@ -312,17 +312,25 @@ class HelpSettingsTab(QWidget):
             "以下はDB/backup/export/logの配置候補です。",
             "parent writable=True はアプリが出力できることを示すだけで、閲覧制限済みとは限りません。",
             "共有・添付・外部保存前にOS ACL/BitLocker/EFS/共有権限を確認してください。",
+            "Windows権限確認コマンド例:",
+            "- PowerShell: Get-Acl \"<対象パス>\" | Format-List",
+            "- Command Prompt: icacls \"<対象パス>\"",
+            "- ACL確認では、Users / Authenticated Users / Everyone に不要な読取権限がないかを確認してください。",
+            "- writable parent=True はACL hardening済みの証明ではありません。",
         ]
         for label, path, kind in self._protected_locations():
             expanded = path.expanduser()
             target = expanded if kind == "directory" else expanded.parent
+            path_text = self._path_text(path)
             lines.extend(
                 [
-                    f"- {label}: {self._path_text(path)}",
+                    f"- {label}: {path_text}",
                     f"  - kind: {kind}",
                     f"  - exists: {expanded.exists()}",
                     f"  - parent exists: {target.exists()}",
                     f"  - parent writable: {os.access(target, os.W_OK) if target.exists() else False}",
+                    f"  - PowerShell ACL: Get-Acl \"{path_text}\" | Format-List",
+                    f"  - icacls: icacls \"{path_text}\"",
                 ]
             )
         return "\n".join(lines)
