@@ -3,6 +3,7 @@
 Examples:
     python scripts/generate_sample_data.py --format sqlite --output tmp/sample.db --names 1000000
     python scripts/generate_sample_data.py --format csv --output tmp/sample_csv --names 1000000
+    python scripts/generate_sample_data.py --preset demo --format sqlite --output tmp/demo.db
 """
 
 from __future__ import annotations
@@ -12,6 +13,7 @@ import csv
 import sqlite3
 from pathlib import Path
 
+from app.application.password_services import hash_password
 from app.infrastructure.db import initialize_database
 
 DEFAULT_NAMES = 1000
@@ -19,10 +21,17 @@ DEFAULT_TITLES = 1000
 DEFAULT_SUBTITLES_PER_TITLE = 3
 DEFAULT_LINKS_PER_NAME = 2
 BATCH_SIZE = 5000
+DEMO_TIMESTAMP = "2026-01-01T00:00:00Z"
+DEMO_PASSWORDS: dict[str, str] = {
+    "demo-viewer": "demo-viewer-pass",
+    "demo-editor": "demo-editor-pass",
+    "demo-admin": "demo-admin-pass",
+}
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Generate sample data for NameVerification.")
+    parser.add_argument("--preset", choices=["bulk", "demo"], default="bulk")
     parser.add_argument("--format", choices=["sqlite", "csv"], default="sqlite")
     parser.add_argument("--output", required=True, help="Output DB path or CSV directory")
     parser.add_argument("--names", type=int, default=DEFAULT_NAMES)
@@ -32,6 +41,13 @@ def main() -> int:
     args = parser.parse_args()
 
     output = Path(args.output)
+    if args.preset == "demo":
+        if args.format == "sqlite":
+            generate_demo_sqlite(db_path=output)
+        else:
+            generate_demo_csv(output_dir=output)
+        return 0
+
     if args.format == "sqlite":
         generate_sqlite(
             db_path=output,
@@ -51,6 +67,71 @@ def main() -> int:
     return 0
 
 
+def generate_demo_sqlite(*, db_path: Path) -> None:
+    """Generate a small, meaningful SQLite DB for demo/UAT use."""
+
+    db_path.parent.mkdir(parents=True, exist_ok=True)
+    if db_path.exists():
+        db_path.unlink()
+    connection = initialize_database(db_path)
+    try:
+        _insert_demo_business_data(connection)
+        _insert_demo_users(connection)
+        connection.commit()
+    finally:
+        connection.close()
+    print(f"Generated demo SQLite sample DB: {db_path}")
+    print("Demo users: demo-viewer / demo-editor / demo-admin")
+    print("Demo passwords are documented constants for local demo use only.")
+
+
+def generate_demo_csv(*, output_dir: Path) -> None:
+    """Generate small CSV files for import/export demonstrations."""
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    _write_csv(
+        output_dir / "names.csv",
+        ["raw_name", "normalized_name", "note", "created_at", "updated_at"],
+        (
+            (raw_name, normalized_name, note, DEMO_TIMESTAMP, DEMO_TIMESTAMP)
+            for raw_name, normalized_name, note in _demo_names()
+        ),
+    )
+    _write_csv(
+        output_dir / "titles.csv",
+        ["title_name", "note", "created_at", "updated_at"],
+        (
+            (title_name, note, DEMO_TIMESTAMP, DEMO_TIMESTAMP)
+            for title_name, note in _demo_titles()
+        ),
+    )
+    _write_csv(
+        output_dir / "subtitles.csv",
+        ["title_id", "subtitle_code", "subtitle_name", "sort_order", "note", "created_at", "updated_at"],
+        (
+            (title_id, code, name, sort_order, note, DEMO_TIMESTAMP, DEMO_TIMESTAMP)
+            for title_id, code, name, sort_order, note in _demo_subtitles()
+        ),
+    )
+    _write_csv(
+        output_dir / "name_title_links.csv",
+        ["name_id", "title_id", "relation_type", "created_at", "updated_at"],
+        (
+            (name_id, title_id, "primary", DEMO_TIMESTAMP, DEMO_TIMESTAMP)
+            for name_id, title_id in _demo_name_title_links()
+        ),
+    )
+    _write_csv(
+        output_dir / "name_subtitle_links.csv",
+        ["name_id", "subtitle_id", "relation_type", "created_at", "updated_at"],
+        (
+            (name_id, subtitle_id, "primary", DEMO_TIMESTAMP, DEMO_TIMESTAMP)
+            for name_id, subtitle_id in _demo_name_subtitle_links()
+        ),
+    )
+    print(f"Generated demo CSV sample directory: {output_dir}")
+
+
 def generate_sqlite(
     *,
     db_path: Path,
@@ -65,7 +146,7 @@ def generate_sqlite(
     connection = initialize_database(db_path)
     connection.execute("PRAGMA synchronous = OFF")
     connection.execute("PRAGMA journal_mode = WAL")
-    now = "2026-01-01T00:00:00Z"
+    now = DEMO_TIMESTAMP
 
     _bulk_insert(
         connection,
@@ -145,7 +226,7 @@ def generate_csv(
     links_per_name: int,
 ) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
-    now = "2026-01-01T00:00:00Z"
+    now = DEMO_TIMESTAMP
     _write_csv(
         output_dir / "names.csv",
         ["raw_name", "normalized_name", "note", "created_at", "updated_at"],
@@ -183,6 +264,123 @@ def generate_csv(
         ),
     )
     print(f"Generated CSV sample directory: {output_dir}")
+
+
+def _insert_demo_business_data(connection: sqlite3.Connection) -> None:
+    now = DEMO_TIMESTAMP
+    _bulk_insert(
+        connection,
+        """
+        INSERT INTO names(raw_name, normalized_name, note, icon_path, deleted_at, created_at, updated_at)
+        VALUES (?, ?, ?, NULL, NULL, ?, ?)
+        """,
+        ((raw_name, normalized_name, note, now, now) for raw_name, normalized_name, note in _demo_names()),
+    )
+    _bulk_insert(
+        connection,
+        """
+        INSERT INTO titles(title_name, note, icon_path, deleted_at, created_at, updated_at)
+        VALUES (?, ?, NULL, NULL, ?, ?)
+        """,
+        ((title_name, note, now, now) for title_name, note in _demo_titles()),
+    )
+    _bulk_insert(
+        connection,
+        """
+        INSERT INTO subtitles(title_id, subtitle_code, subtitle_name, sort_order, note, icon_path, deleted_at, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, NULL, NULL, ?, ?)
+        """,
+        ((title_id, code, name, sort_order, note, now, now) for title_id, code, name, sort_order, note in _demo_subtitles()),
+    )
+    _bulk_insert(
+        connection,
+        """
+        INSERT INTO name_title_links(name_id, title_id, relation_type, deleted_at, created_at, updated_at)
+        VALUES (?, ?, 'primary', NULL, ?, ?)
+        """,
+        ((name_id, title_id, now, now) for name_id, title_id in _demo_name_title_links()),
+    )
+    _bulk_insert(
+        connection,
+        """
+        INSERT INTO name_subtitle_links(name_id, subtitle_id, relation_type, deleted_at, created_at, updated_at)
+        VALUES (?, ?, 'primary', NULL, ?, ?)
+        """,
+        ((name_id, subtitle_id, now, now) for name_id, subtitle_id in _demo_name_subtitle_links()),
+    )
+
+
+def _insert_demo_users(connection: sqlite3.Connection) -> None:
+    now = DEMO_TIMESTAMP
+    users = [
+        ("demo-viewer", "Demo Viewer", "viewer"),
+        ("demo-editor", "Demo Editor", "editor"),
+        ("demo-admin", "Demo Admin", "admin"),
+    ]
+    rows = []
+    for index, (operator_id, display_name, role) in enumerate(users, start=1):
+        password = DEMO_PASSWORDS[operator_id]
+        salt = f"demo-salt-{index:06d}".encode("utf-8")
+        hashed = hash_password(password, salt_bytes=salt)
+        rows.append(
+            (
+                operator_id,
+                display_name,
+                role,
+                hashed.password_hash,
+                hashed.salt,
+                hashed.algorithm,
+                hashed.iterations,
+                now,
+                now,
+                now,
+            )
+        )
+    connection.executemany(
+        """
+        INSERT INTO users(
+            operator_id, display_name, role, password_hash, password_salt,
+            password_algorithm, password_iterations, password_updated_at, created_at, updated_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        rows,
+    )
+
+
+def _demo_names() -> list[tuple[str, str, str]]:
+    return [
+        ("Alice Sample", "alice sample", "viewer/editor/adminで検索確認しやすい名前"),
+        ("Bob Demo", "bob demo", "タイトル複数関連の確認用"),
+        ("Carol UAT", "carol uat", "サブタイトル関連の確認用"),
+        ("Deleted Candidate", "deleted candidate", "削除操作確認用の候補"),
+        ("Export Check", "export check", "export/import確認用"),
+    ]
+
+
+def _demo_titles() -> list[tuple[str, str]]:
+    return [
+        ("Demo Title Alpha", "基本検索と関連数確認用"),
+        ("Demo Title Beta", "複数名前関連の確認用"),
+        ("Operations Title", "export/backup確認用"),
+    ]
+
+
+def _demo_subtitles() -> list[tuple[int, str, str, int, str]]:
+    return [
+        (1, "ALPHA-001", "Alpha Episode 1", 1, "初期表示確認"),
+        (1, "ALPHA-002", "Alpha Episode 2", 2, "関連確認"),
+        (2, "BETA-001", "Beta Episode 1", 1, "検索確認"),
+        (3, "OPS-001", "Operations Export", 1, "出力確認"),
+    ]
+
+
+def _demo_name_title_links() -> list[tuple[int, int]]:
+    return [(1, 1), (2, 1), (2, 2), (3, 2), (5, 3)]
+
+
+def _demo_name_subtitle_links() -> list[tuple[int, int]]:
+    return [(1, 1), (2, 2), (3, 3), (5, 4)]
 
 
 def _bulk_insert(connection: sqlite3.Connection, sql: str, rows: object) -> None:
