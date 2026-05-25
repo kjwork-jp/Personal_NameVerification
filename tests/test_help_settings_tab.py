@@ -152,6 +152,23 @@ def test_help_settings_protection_diagnostics_mentions_windows_acl_commands(
     assert str(db_path.resolve(strict=False)) in diagnostics
 
 
+def test_help_settings_operator_file_protection_checklist(tmp_path: Path) -> None:
+    _app()
+    tab = HelpSettingsTab(package_root=tmp_path, database_path=tmp_path / "db.sqlite3")
+
+    checklist = tab.operator_protection_checklist_text.toPlainText()
+    assert "operator file protection checklist" in checklist
+    assert "DBファイル" in checklist
+    assert "backupフォルダ" in checklist
+    assert "CSV/JSON/SQL exportフォルダ" in checklist
+    assert "共有用JSON" in checklist
+    assert "change_logs / operations_events JSONL" in checklist
+    assert "Get-Acl" in checklist
+    assert "icacls" in checklist
+    assert "Users/Auth Users/Everyone" in checklist
+    assert "外部送付・添付・アップロード前" in checklist
+
+
 def test_help_settings_operation_memo_mentions_sanitized_export(tmp_path: Path) -> None:
     _app()
     tab = HelpSettingsTab(package_root=tmp_path, database_path=tmp_path / "db.sqlite3")
@@ -170,8 +187,10 @@ def test_help_settings_refresh_updates_diagnostics(tmp_path: Path) -> None:
 
     diagnostics_text = tab.path_diagnostics_text.toPlainText()
     protection_text = tab.protection_diagnostics_text.toPlainText()
+    checklist_text = tab.operator_protection_checklist_text.toPlainText()
     assert "保存先診断" in diagnostics_text
     assert "DB" in diagnostics_text
     assert "Operations実行JSONLログ" in diagnostics_text
     assert "保護対象パス診断" in protection_text
+    assert "operator file protection checklist" in checklist_text
     assert tab.message_label.text() == "表示を更新しました"
