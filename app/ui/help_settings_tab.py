@@ -115,6 +115,8 @@ class HelpSettingsTab(QWidget):
         self.security_warning_text.setReadOnly(True)
         self.protection_diagnostics_text = QTextEdit()
         self.protection_diagnostics_text.setReadOnly(True)
+        self.operator_protection_checklist_text = QTextEdit()
+        self.operator_protection_checklist_text.setReadOnly(True)
         self.audit_safety_text = QTextEdit()
         self.audit_safety_text.setReadOnly(True)
         self.guide_text = QTextEdit()
@@ -176,6 +178,8 @@ class HelpSettingsTab(QWidget):
         layout.addWidget(self.security_warning_text, 1)
         layout.addWidget(QLabel("保護対象パス診断"))
         layout.addWidget(self.protection_diagnostics_text, 1)
+        layout.addWidget(QLabel("operator file protection checklist"))
+        layout.addWidget(self.operator_protection_checklist_text, 1)
         layout.addWidget(QLabel("passwordログ非記録確認"))
         layout.addWidget(self.audit_safety_text, 1)
         return page
@@ -255,6 +259,9 @@ class HelpSettingsTab(QWidget):
         self.path_diagnostics_text.setPlainText(self._path_diagnostics_text())
         self.security_warning_text.setPlainText(self._security_warning_text())
         self.protection_diagnostics_text.setPlainText(self._protection_diagnostics_text())
+        self.operator_protection_checklist_text.setPlainText(
+            _operator_protection_checklist_text()
+        )
         self.audit_safety_text.setPlainText(_audit_safety_text())
 
     def _copy_database_path(self) -> None:
@@ -375,6 +382,24 @@ class HelpSettingsTab(QWidget):
                 "- Restore/Import前にはbackupを取得し、Operations Logとchange_logsを突合する。",
             ]
         )
+
+
+def _operator_protection_checklist_text() -> str:
+    return "\n".join(
+        [
+            "operator file protection checklist:",
+            "[ ] DBファイルは利用者ごと、または運用担当者だけが読めるフォルダに配置した。",
+            "[ ] backupフォルダはDBと同等以上のアクセス制御にした。",
+            "[ ] CSV/JSON/SQL exportフォルダは共有前に権限と保存期間を確認した。",
+            "[ ] SQL dumpはfull DB dumpとして扱い、共有用JSONとは用途を分けた。",
+            "[ ] 共有用JSONに認証・管理・設定・監査系テーブルが含まれないことを理解した。",
+            "[ ] change_logs / operations_events JSONLの保存先と閲覧権限を確認した。",
+            "[ ] Windowsでは Get-Acl または icacls でUsers/Auth Users/Everyoneの読取権限を確認した。",
+            "[ ] 必要に応じてBitLocker/EFS/共有フォルダ権限を併用した。",
+            "[ ] Restore/Import前にbackupとOperations Logの確認手順を決めた。",
+            "[ ] 外部送付・添付・アップロード前にファイル種別と含有情報を再確認した。",
+        ]
+    )
 
 
 def _audit_safety_text() -> str:
