@@ -14,11 +14,11 @@
 | V030-OPS-001 | P1 | Release | Done | Automate stable release packaging flow |
 | V030-OPS-002 | P1 | Release | Not started | Generate release verification checklist |
 | V030-TEST-001 | P1 | Test | Done | Add richer portable smoke coverage |
-| V030-UX-001 | P1 | UI | Not started | Redesign CRUD screens as native list-first flows |
+| V030-UX-001 | P1 | UI | Implemented / gate pending | Redesign CRUD screens as native list-first flows |
 | V030-SEC-001 | P1 | Security/Ops | Not started | Add optional Windows file-permission diagnostics |
 | V030-DOC-001 | P2 | Docs | Not started | Split user manual from release ledger |
 | V030-DATA-001 | P2 | Data | Not started | Add sample database generation mode |
-| V030-MAINT-001 | P2 | Maintenance | Not started | Review obsolete checkpoint docs |
+| V030-MAINT-001 | P2 | Maintenance | Review pending | Review obsolete checkpoint docs |
 
 ## V030-OPS-001 completion
 
@@ -67,6 +67,23 @@ Dry-run evidence:
 - Portable smoke: PASS
 - Runtime tables confirmed: `app_settings`, `change_logs`, `name_subtitle_links`, `name_title_links`, `names`, `schema_migrations`, `subtitles`, `titles`, `user_audit_logs`, `users`
 
+## V030-UX-001 progress
+
+Implemented on main:
+
+- `app/ui/name_management_tab.py`
+  - Makes `名前を管理` a native list-first layout.
+  - Orders the tab as header, workflow hint, names list, form, actions, and message.
+  - Sets `native_list_first_layout`, `has_list_first_layout`, and `has_list_first_hint` properties directly in the tab.
+  - Keeps the existing `apply_crud_list_first()` helper compatible and idempotent.
+- `tests/test_name_native_list_first_layout.py`
+  - Verifies that the names table is natively before the form/actions.
+  - Verifies that the helper does not add duplicate legacy hints for the native name tab.
+
+Pending:
+
+- Local quality gate re-run.
+
 ## Suggested first iteration
 
 1. V030-UX-001
@@ -82,9 +99,13 @@ Dry-run evidence:
 
 ## Next action
 
-Continue to `V030-UX-001`.
+Run local gates:
 
-Target:
+```powershell
+pytest -q
+ruff check .
+black --check .
+mypy app
+```
 
-- Redesign CRUD screens as native list-first flows.
-- Avoid large UI rewrites in one step; start with tab-level structure and smoke-safe contract tests.
+If all pass, mark `V030-UX-001` complete and continue to `V030-SEC-001`.
