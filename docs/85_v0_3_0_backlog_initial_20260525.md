@@ -29,13 +29,13 @@
 |---|---:|---|---|---|
 | V030-UX-002 | P2 | UI | Implemented / Actions pending | Extend native list-first layout beyond name management |
 | V030-OPS-003 | P2 | CI/Release | Implemented / Actions pending | Verify manual-only heavy workflows and release dry-run artifact definitions without publishing |
-| V040-EXPORT-001 | P2 | Data/Security | Candidate | Expand sanitized application-data-only export policy and tests |
+| V040-EXPORT-001 | P2 | Data/Security | Implemented / Actions pending | Expand sanitized application-data-only export policy and tests |
+| V040-IMPORT-001 | P2 | Data/Ops | Implemented / Actions pending | Improve import validation, preview, and rollback evidence |
 
 ## Later roadmap snapshot
 
 | ID | Horizon | Priority | Area | Status | Candidate |
 |---|---|---:|---|---|---|
-| V040-IMPORT-001 | v0.4.x | P2 | Data/Ops | Candidate | Improve import validation, preview, and rollback evidence |
 | V040-AUDIT-001 | v0.4.x | P2 | Audit | Candidate | Strengthen audit log review/export workflow for operations |
 | V040-SEC-001 | v0.4.x | P2 | Security/Ops | Candidate | Add deeper OS file protection guidance and operator checklist |
 | V040-UX-001 | v0.4.x | P2 | UI | Candidate | Improve role-specific visual cues and dashboard readability |
@@ -82,6 +82,28 @@ Pending:
 
 - GitHub Actions quality gate result.
 
+## V040-EXPORT-001 progress
+
+- Restricted sanitized JSON export to application data tables only.
+- Excluded `change_logs` from sanitized sharing-oriented export.
+- Kept full JSON export and SQL dump behavior unchanged.
+- Updated tests to assert `change_logs`, auth/admin/settings tables, and sensitive operation evidence are excluded.
+
+Pending:
+
+- GitHub Actions quality gate result.
+
+## V040-IMPORT-001 progress
+
+- Added `ImportSourcePreview` for non-destructive source diagnostics.
+- Added `preview_csv_source()` for CSV file counts, missing tables, invalid tables, and unknown CSV files.
+- Added `preview_json_source()` for JSON table counts, missing tables, invalid tables, and unknown keys.
+- Added tests for CSV and JSON preview diagnostics.
+
+Pending:
+
+- GitHub Actions quality gate result.
+
 ## GitHub Actions policy
 
 | Workflow | Auto on push/PR | Manual | Purpose |
@@ -93,4 +115,4 @@ Pending:
 
 ## Next action
 
-Check GitHub Actions for `V030-UX-002` and `V030-OPS-003`. If `Quality Gates` passes, mark them done and continue to `V040-EXPORT-001`.
+Check GitHub Actions for implemented code changes. If `Quality Gates` passes, mark completed items done and continue in pairs from `V040-AUDIT-001` and `V040-SEC-001`.
