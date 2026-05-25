@@ -45,4 +45,5 @@ jobs:
             release/${{ inputs.release_name }}/00_manifest_${{ inputs.release_name }}_*.csv
             release/${{ inputs.release_name }}/70_release_evidence/checksums_sha256_${{ inputs.release_name }}_*.txt
             release/${{ inputs.release_name }}/70_release_evidence/validation_log_template_${{ inputs.release_name }}_*.txt
+            release/${{ inputs.release_name }}/70_release_evidence/release_verification_checklist_${{ inputs.release_name }}_*.md
           if-no-files-found: error
