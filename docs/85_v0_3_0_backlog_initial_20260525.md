@@ -79,6 +79,8 @@ Implemented on main:
 - `tests/test_name_native_list_first_layout.py`
   - Verifies that the names table is natively before the form/actions.
   - Verifies that the helper does not add duplicate legacy hints for the native name tab.
+- `tests/test_audit_log_tab_ui.py`
+  - Removes timezone-dependent fixed UTC expectations from the audit log datetime test.
 
 Pending:
 
@@ -86,10 +88,23 @@ Pending:
 
 ## GitHub Actions policy
 
-- Minor docs updates or low-risk small fixes: rely on GitHub Actions quality gate.
-- Medium or risky UI/service/database changes: run either local gates or wait for GitHub Actions before marking complete.
+- `Quality Gates` is the default automatic CI for code changes.
+- `Quality Gates` ignores docs-only updates to avoid noisy checks for minor documentation edits.
+- `Windows validation` is manual-only and is used for medium/risky changes or pre-release checks.
+- `Windows EXE Build` is manual-only and is used when a distributable EXE/package is needed.
+- `Release Dry Run` is manual-only and is used for release-like verification.
+- Minor docs updates or low-risk small fixes: rely on GitHub Actions, not local full gates.
+- Medium or risky UI/service/database changes: wait for GitHub Actions or run local gates when needed.
 - Release candidates and stable releases: run release dry-run / package / portable smoke before publishing.
-- Manual dry-run workflow is available for release-like verification.
+
+## Workflow trigger policy
+
+| Workflow | Auto on push/PR | Manual | Purpose |
+|---|---:|---:|---|
+| Quality Gates | Yes, except docs-only | Yes | pytest / ruff / black / mypy |
+| Windows validation | No | Yes | heavy validation plus EXE smoke |
+| Windows EXE Build | No | Yes | distributable EXE/package artifact |
+| Release Dry Run | No | Yes | release-like build/package/smoke validation |
 
 ## Suggested first iteration
 
@@ -106,7 +121,7 @@ Pending:
 
 ## Next action
 
-Pull the CI workflow commits and check GitHub Actions:
+Pull the latest commits and check GitHub Actions:
 
 ```powershell
 git pull
