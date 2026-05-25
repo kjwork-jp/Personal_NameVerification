@@ -1,3 +1,4 @@
+# ruff: noqa: I001
 """Tests for native list-first layout in the name management tab."""
 
 from __future__ import annotations
