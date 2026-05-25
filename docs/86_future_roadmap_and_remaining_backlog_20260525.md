@@ -24,12 +24,10 @@ It intentionally includes more than the immediate P2 items so that the remaining
 
 | ID | Horizon | Priority | Area | Status | Candidate |
 |---|---|---:|---|---|---|
-| V030-MAINT-001 | v0.3.x | P2 | Maintenance | Review pending | Review obsolete checkpoint docs |
-| V030-UX-002 | v0.3.x | P2 | UI | Candidate | Extend native list-first layout beyond name management |
-| V030-DOC-002 | v0.3.x | P2 | Docs | Candidate | Refresh existing manuals to match latest tabs/RBAC/data operations |
-| V030-OPS-003 | v0.3.x | P2 | CI/Release | Candidate | Verify manual-only heavy workflows and release dry-run artifact definitions without publishing |
-| V040-EXPORT-001 | v0.4.x | P2 | Data/Security | Candidate | Expand sanitized application-data-only export policy and tests |
-| V040-IMPORT-001 | v0.4.x | P2 | Data/Ops | Candidate | Improve import validation, preview, and rollback evidence |
+| V030-UX-002 | v0.3.x | P2 | UI | Implemented / Actions pending | Extend native list-first layout beyond name management |
+| V030-OPS-003 | v0.3.x | P2 | CI/Release | Implemented / Actions pending | Verify manual-only heavy workflows and release dry-run artifact definitions without publishing |
+| V040-EXPORT-001 | v0.4.x | P2 | Data/Security | Implemented / Actions pending | Expand sanitized application-data-only export policy and tests |
+| V040-IMPORT-001 | v0.4.x | P2 | Data/Ops | Implemented / Actions pending | Improve import validation, preview, and rollback evidence |
 | V040-AUDIT-001 | v0.4.x | P2 | Audit | Candidate | Strengthen audit log review/export workflow for operations |
 | V040-SEC-001 | v0.4.x | P2 | Security/Ops | Candidate | Add deeper OS file protection guidance and operator checklist |
 | V040-UX-001 | v0.4.x | P2 | UI | Candidate | Improve role-specific visual cues and dashboard readability |
@@ -39,13 +37,18 @@ It intentionally includes more than the immediate P2 items so that the remaining
 | V900-UAT-001 | post-backlog | P1 | UAT | Deferred until all backlog complete | Run demo DB based UAT for viewer/editor/admin flows |
 | V100-REL-001 | post-UAT | P1 | Release | Deferred until all backlog complete | Prepare v1.0 release criteria, final UAT, and distribution policy |
 
+## Completed in this roadmap window
+
+- V030-MAINT-001: document maintenance review ledger added; no files deleted.
+- V030-DOC-002: existing manuals refreshed for latest tabs, RBAC, data operations, and deferral policy.
+
 ## Immediate next items
 
-1. V030-MAINT-001
-2. V030-UX-002
-3. V030-DOC-002
-4. V030-OPS-003
-5. V040-EXPORT-001
+1. V040-AUDIT-001
+2. V040-SEC-001
+3. V040-UX-001
+4. V050-PERF-001
+5. V050-ASSET-001
 
 ## Deferred gates
 
