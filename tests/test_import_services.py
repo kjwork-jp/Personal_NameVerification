@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import sqlite3
 from pathlib import Path
 
@@ -96,6 +97,84 @@ def test_import_csv_success_for_admin_on_empty_db(tmp_path: Path) -> None:
     title_row = target_conn.execute("SELECT title_name FROM titles").fetchone()
     assert title_row is not None
     assert title_row["title_name"] == "Title-A"
+
+
+def test_import_csv_preview_reports_counts_and_unknown_files(tmp_path: Path) -> None:
+    source_db = _build_source_db(tmp_path / "source.sqlite3")
+    export_service = ExportBackupService(source_db)
+    csv_dir = tmp_path / "csv"
+    csv_dir.mkdir()
+    export_service.export_csv(csv_dir, role="admin")
+    source_db.close()
+    (csv_dir / "extra.csv").write_text("id\n1\n", encoding="utf-8")
+
+    target_conn = initialize_database(tmp_path / "target.sqlite3")
+    preview = ImportService(target_conn).preview_csv_source(csv_dir)
+
+    assert preview.source_type == "csv"
+    assert preview.ready is True
+    assert preview.table_counts["names"] == 1
+    assert preview.table_counts["titles"] == 1
+    assert preview.table_counts["subtitles"] == 1
+    assert preview.unknown_tables == ("extra",)
+    assert preview.missing_tables == ()
+    assert preview.invalid_tables == ()
+
+
+def test_import_csv_preview_reports_missing_required_files(tmp_path: Path) -> None:
+    source_db = _build_source_db(tmp_path / "source.sqlite3")
+    export_service = ExportBackupService(source_db)
+    csv_dir = tmp_path / "csv"
+    csv_dir.mkdir()
+    export_service.export_csv(csv_dir, role="admin")
+    source_db.close()
+    (csv_dir / "names.csv").unlink()
+
+    target_conn = initialize_database(tmp_path / "target.sqlite3")
+    preview = ImportService(target_conn).preview_csv_source(csv_dir)
+
+    assert preview.ready is False
+    assert preview.missing_tables == ("names",)
+    assert "names" not in preview.table_counts
+
+
+def test_import_json_preview_reports_counts_unknown_and_invalid_tables(tmp_path: Path) -> None:
+    payload = {table_name: [] for table_name in TABLES}
+    payload["names"] = [{"id": 1, "raw_name": "Alice"}]
+    payload["titles"] = [{"id": 1, "title_name": "Title-A"}]
+    payload["subtitles"] = ["not-object"]
+    payload["extra"] = []
+    json_path = tmp_path / "preview.json"
+    json_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    target_conn = initialize_database(tmp_path / "target.sqlite3")
+    preview = ImportService(target_conn).preview_json_source(json_path)
+
+    assert preview.source_type == "json"
+    assert preview.ready is False
+    assert preview.table_counts["names"] == 1
+    assert preview.table_counts["titles"] == 1
+    assert preview.table_counts["subtitles"] == 1
+    assert preview.invalid_tables == ("subtitles",)
+    assert preview.unknown_tables == ("extra",)
+    assert preview.missing_tables == ()
+
+
+def test_import_json_preview_reports_missing_tables(tmp_path: Path) -> None:
+    json_path = tmp_path / "preview.json"
+    json_path.write_text('{"names": []}', encoding="utf-8")
+
+    target_conn = initialize_database(tmp_path / "target.sqlite3")
+    preview = ImportService(target_conn).preview_json_source(json_path)
+
+    assert preview.ready is False
+    assert preview.missing_tables == (
+        "titles",
+        "subtitles",
+        "name_subtitle_links",
+        "name_title_links",
+        "change_logs",
+    )
 
 
 def test_import_rejects_viewer_and_editor(tmp_path: Path) -> None:
