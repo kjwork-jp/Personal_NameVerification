@@ -15,7 +15,7 @@
 | V030-OPS-002 | P1 | Release | Not started | Generate release verification checklist |
 | V030-TEST-001 | P1 | Test | Done | Add richer portable smoke coverage |
 | V030-UX-001 | P1 | UI | Done | Redesign CRUD screens as native list-first flows |
-| V030-SEC-001 | P1 | Security/Ops | Implemented / Actions pending | Add optional Windows file-permission diagnostics |
+| V030-SEC-001 | P1 | Security/Ops | Done | Add optional Windows file-permission diagnostics |
 | V030-DOC-001 | P2 | Docs | Not started | Split user manual from release ledger |
 | V030-DATA-001 | P2 | Data | Not started | Add sample database generation mode |
 | V030-MAINT-001 | P2 | Maintenance | Review pending | Review obsolete checkpoint docs |
@@ -90,9 +90,9 @@ Validation:
 - `black`: PASS through Actions
 - `mypy`: PASS through Actions
 
-## V030-SEC-001 progress
+## V030-SEC-001 completion
 
-Implemented on main:
+Implemented and validated on main:
 
 - `app/ui/help_settings_tab.py`
   - Adds Windows ACL guidance to the existing protected-path diagnostics.
@@ -103,9 +103,13 @@ Implemented on main:
 - `tests/test_help_settings_tab.py`
   - Verifies that Windows ACL guidance appears in the Help / Settings protection diagnostics.
 
-Pending:
+Validation:
 
-- GitHub Actions quality gate result.
+- `Quality Gates`: PASS
+- `pytest`: PASS through Actions
+- `ruff`: PASS through Actions
+- `black`: PASS through Actions
+- `mypy`: PASS through Actions
 
 ## GitHub Actions policy
 
@@ -129,10 +133,10 @@ Pending:
 
 ## Suggested first iteration
 
-1. V030-SEC-001
-2. V030-OPS-002
-3. V030-DOC-001
-4. V030-DATA-001
+1. V030-OPS-002
+2. V030-DOC-001
+3. V030-DATA-001
+4. V030-MAINT-001
 
 ## Policy
 
@@ -142,11 +146,4 @@ Pending:
 
 ## Next action
 
-Pull the latest commits and check GitHub Actions:
-
-```powershell
-git pull
-gh run list --limit 5
-```
-
-If the latest `Quality Gates` run passes, mark `V030-SEC-001` complete and continue to `V030-OPS-002`.
+Pull the latest docs update and continue to `V030-OPS-002`.
