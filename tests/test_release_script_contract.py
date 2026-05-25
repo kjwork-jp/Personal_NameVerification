@@ -9,6 +9,8 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 RUN_RELEASE_SCRIPT = PROJECT_ROOT / "scripts" / "run_release_windows.ps1"
 PORTABLE_SMOKE_SCRIPT = PROJECT_ROOT / "scripts" / "smoke_test_portable_windows.ps1"
+RELEASE_CHECKLIST_SCRIPT = PROJECT_ROOT / "scripts" / "generate_release_checklist_windows.ps1"
+RELEASE_DRY_RUN_WORKFLOW = PROJECT_ROOT / ".github" / "workflows" / "release-dry-run.yml"
 
 
 def _run_release_script_text() -> str:
@@ -19,6 +21,14 @@ def _portable_smoke_script_text() -> str:
     return PORTABLE_SMOKE_SCRIPT.read_text(encoding="utf-8")
 
 
+def _release_checklist_script_text() -> str:
+    return RELEASE_CHECKLIST_SCRIPT.read_text(encoding="utf-8")
+
+
+def _release_dry_run_workflow_text() -> str:
+    return RELEASE_DRY_RUN_WORKFLOW.read_text(encoding="utf-8")
+
+
 def test_run_release_script_exists() -> None:
     assert RUN_RELEASE_SCRIPT.exists()
 
@@ -27,14 +37,22 @@ def test_portable_smoke_script_exists() -> None:
     assert PORTABLE_SMOKE_SCRIPT.exists()
 
 
+def test_release_checklist_script_exists() -> None:
+    assert RELEASE_CHECKLIST_SCRIPT.exists()
+
+
 def test_run_release_script_orchestrates_expected_steps() -> None:
     text = _run_release_script_text()
 
     assert "build_exe_windows.ps1" in text
     assert "package_release_windows.ps1" in text
     assert "smoke_test_portable_windows.ps1" in text
+    assert "generate_release_checklist_windows.ps1" in text
     assert text.index("build_exe_windows.ps1") < text.index("package_release_windows.ps1")
     assert text.index("package_release_windows.ps1") < text.index("smoke_test_portable_windows.ps1")
+    assert text.index("smoke_test_portable_windows.ps1") < text.index(
+        "generate_release_checklist_windows.ps1"
+    )
 
 
 def test_run_release_script_checks_release_assets() -> None:
@@ -45,10 +63,12 @@ def test_run_release_script_checks_release_assets() -> None:
     assert "00_manifest_" in text
     assert "checksums_sha256_" in text
     assert "validation_log_template_" in text
+    assert "release_verification_checklist_" in text
     assert "Assert-FileExists $ZipPath" in text
     assert "Assert-FileExists $ManifestPath" in text
     assert "Assert-FileExists $ChecksumPath" in text
     assert "Assert-FileExists $ValidationPath" in text
+    assert "Assert-FileExists $ChecklistPath" in text
 
 
 def test_run_release_script_supports_optional_github_release() -> None:
@@ -60,6 +80,29 @@ def test_run_release_script_supports_optional_github_release() -> None:
     assert "release" in text
     assert "create" in text
     assert "--prerelease" in text
+    assert "$ChecklistPath" in text
+
+
+def test_release_checklist_script_checks_required_artifacts() -> None:
+    text = _release_checklist_script_text()
+
+    assert "Release verification checklist" in text
+    assert "Overall status" in text
+    assert "Required artifacts" in text
+    assert "portable zip" in text
+    assert "manifest csv" in text
+    assert "checksum file" in text
+    assert "validation log template" in text
+    assert "release evidence folder" in text
+    assert "release_verification_checklist_" in text
+
+
+def test_release_dry_run_uploads_release_checklist() -> None:
+    text = _release_dry_run_workflow_text()
+
+    assert "release_verification_checklist_" in text
+    assert "validation_log_template_" in text
+    assert "checksums_sha256_" in text
 
 
 def test_portable_smoke_checks_runtime_directories() -> None:
