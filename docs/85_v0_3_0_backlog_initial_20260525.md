@@ -14,7 +14,7 @@
 | V030-OPS-001 | P1 | Release | Done | Automate stable release packaging flow |
 | V030-OPS-002 | P1 | Release | Not started | Generate release verification checklist |
 | V030-TEST-001 | P1 | Test | Done | Add richer portable smoke coverage |
-| V030-UX-001 | P1 | UI | Implemented / gate pending | Redesign CRUD screens as native list-first flows |
+| V030-UX-001 | P1 | UI | Implemented / Actions pending | Redesign CRUD screens as native list-first flows |
 | V030-SEC-001 | P1 | Security/Ops | Not started | Add optional Windows file-permission diagnostics |
 | V030-DOC-001 | P2 | Docs | Not started | Split user manual from release ledger |
 | V030-DATA-001 | P2 | Data | Not started | Add sample database generation mode |
@@ -82,7 +82,14 @@ Implemented on main:
 
 Pending:
 
-- Local quality gate re-run.
+- GitHub Actions quality gate result.
+
+## GitHub Actions policy
+
+- Minor docs updates or low-risk small fixes: rely on GitHub Actions quality gate.
+- Medium or risky UI/service/database changes: run either local gates or wait for GitHub Actions before marking complete.
+- Release candidates and stable releases: run release dry-run / package / portable smoke before publishing.
+- Manual dry-run workflow is available for release-like verification.
 
 ## Suggested first iteration
 
@@ -94,18 +101,16 @@ Pending:
 ## Policy
 
 - Keep v0.2.0 as the stable baseline.
-- Use a separate branch or direct-main workflow only after deciding the next implementation item.
+- Use direct-main workflow with GitHub Actions as the default gate for minor updates.
 - Use hotfix scope only if v0.2.0 requires urgent correction.
 
 ## Next action
 
-Run local gates:
+Pull the CI workflow commits and check GitHub Actions:
 
 ```powershell
-pytest -q
-ruff check .
-black --check .
-mypy app
+git pull
+gh run list --limit 5
 ```
 
-If all pass, mark `V030-UX-001` complete and continue to `V030-SEC-001`.
+If the latest `Quality Gates` run passes, mark `V030-UX-001` complete and continue to `V030-SEC-001`.
