@@ -2,42 +2,47 @@
 
 ## Purpose
 
-Record the scope update made after v0.2.0-rc1 tag/package/smoke.
+Record the scope update made after v0.2.0-rc1 tag/package/smoke and the final v0.2.0 promotion.
 
 ## Decision
 
-v0.2.0-rc1 was tagged, built, packaged, and smoke-tested successfully, but it is now treated as a checkpoint rather than the final distribution candidate.
+v0.2.0-rc1 was tagged, built, packaged, and smoke-tested successfully, but it is treated as a checkpoint rather than the final distribution candidate.
 
-The final zip creation flow was deferred until the remaining future-improvement items were completed inside the v0.2.0 scope. Those implementation P1 items are now complete, v0.2.0-rc2 packaging/smoke has completed successfully, the GitHub Release has been published as a pre-release, and external ledgers have been synchronized.
+The final zip creation flow was deferred until the remaining future-improvement items were completed inside the v0.2.0 scope. Those implementation P1 items completed, v0.2.0-rc2 packaging/smoke completed successfully, the rc2 GitHub Release was published as a pre-release, external ledgers were synchronized, and v0.2.0 has now been promoted to a stable GitHub Release.
 
-## Current checkpoint and release candidate
+## Current stable release
 
-- Previous checkpoint tag: v0.2.0-rc1
-- Previous checkpoint status: hold / checkpoint only
-- Current release candidate: v0.2.0-rc2
+- Stable release: v0.2.0
+- Tag: pushed
+- GitHub Release: published / stable release
 - Build: PASS
 - Package: PASS
 - Portable smoke: PASS
-- Tag: pushed
-- GitHub Release: published / pre-release
+- Final zip: `release/NameVerification-v0.2.0-portable.zip`
+- Manifest: `release/v0.2.0/00_manifest_v0.2.0_20260525.csv`
+- Checksums: `release/v0.2.0/70_release_evidence/checksums_sha256_v0.2.0_20260525.txt`
+- Final stable evidence: docs/83_release_final_v0_2_0_20260525.md
+
+## Previous checkpoints
+
+- v0.2.0-rc1: checkpoint only
+- v0.2.0-rc2: release candidate / GitHub pre-release published
 - Remote branches: `main` only after cleanup
-- Final zip: `release/NameVerification-v0.2.0-rc2-portable.zip`
-- Manifest: `release/v0.2.0-rc2/00_manifest_v0.2.0-rc2_20260525.csv`
-- Checksums: `release/v0.2.0-rc2/70_release_evidence/checksums_sha256_v0.2.0-rc2_20260525.txt`
-- Final rc2 evidence: docs/81_release_final_v0_2_0_rc2_20260525.md
-- External ledger evidence: docs/82_external_ledger_sync_v0_2_0_rc2_20260525.md
+- rc2 final evidence: docs/81_release_final_v0_2_0_rc2_20260525.md
+- rc2 external ledger evidence: docs/82_external_ledger_sync_v0_2_0_rc2_20260525.md
 
-## Items to complete before the next zip
+## v0.2.0 scope items
 
-| ID | Priority | Scope | Status | Expected outcome |
+| ID | Priority | Scope | Status | Outcome |
 |---|---:|---|---|---|
-| SANITIZED-EXPORT-001 | P1 | Export/security | Done | Add a sharing-oriented export that excludes authentication, admin, settings, and schema-management tables |
+| SANITIZED-EXPORT-001 | P1 | Export/security | Done | Added a sharing-oriented export that excludes authentication, admin, settings, and schema-management tables |
 | HELP-001 | P1 | Help/Settings | Done | Split diagnostics, path information, protection warnings, and operation notes |
-| STYLE-001 | P1 | RBAC/UI | Done | Make viewer/editor/admin role differences visually clearer |
-| CRUD-UX-001 | P1 | CRUD/UI | Done | Reorganize CRUD screens around list-first workflows |
-| DB-SEC-OPS-001 | P1 | Security/operations | Done | Add DB/backup/export/log protection diagnostics and guidance |
-| RELEASE-REPACK-001 | P1 | Release | Done | Rebuild, repackage, smoke-test, and regenerate manifest/checksum after all P1 items |
-| DOC-SYNC-001 | P1 | Docs/external ledgers | Done | Sync GitHub docs and external ledgers after rc2 packaging/release |
+| STYLE-001 | P1 | RBAC/UI | Done | Made viewer/editor/admin role differences visually clearer |
+| CRUD-UX-001 | P1 | CRUD/UI | Done | Reorganized CRUD screens around list-first workflows |
+| DB-SEC-OPS-001 | P1 | Security/operations | Done | Added DB/backup/export/log protection diagnostics and guidance |
+| RELEASE-REPACK-001 | P1 | Release | Done | Rebuilt, repackaged, smoke-tested, and regenerated manifest/checksum after all P1 items |
+| DOC-SYNC-001 | P1 | Docs/external ledgers | Done | Synced GitHub docs and external ledgers after rc2 packaging/release |
+| STABLE-RELEASE-001 | P1 | Release | Done | Promoted rc2 to stable v0.2.0 with a non-prerelease GitHub Release |
 
 ## SANITIZED-EXPORT-001 completion
 
@@ -140,7 +145,7 @@ Validation:
 
 ## RELEASE-REPACK-001 completion
 
-Validated on local Windows environment:
+Validated on local Windows environment for rc2:
 
 - `pytest -q`: PASS
 - `ruff check .`: PASS
@@ -150,48 +155,50 @@ Validated on local Windows environment:
 - `scripts/package_release_windows.ps1 -ReleaseName v0.2.0-rc2`: PASS
 - `scripts/smoke_test_portable_windows.ps1 -ReleaseDir .\release\v0.2.0-rc2`: PASS
 
-Generated artifacts:
+## STABLE-RELEASE-001 completion
 
-- `release/NameVerification-v0.2.0-rc2-portable.zip`
-- `release/v0.2.0-rc2/00_manifest_v0.2.0-rc2_20260525.csv`
-- `release/v0.2.0-rc2/70_release_evidence/checksums_sha256_v0.2.0-rc2_20260525.txt`
-- `release/v0.2.0-rc2/70_release_evidence/validation_log_template_v0.2.0-rc2_20260525.txt`
+Validated on local Windows environment for stable v0.2.0:
 
-Portable smoke runtime confirmed:
+- `pytest -q`: PASS
+- `ruff check .`: PASS
+- `black --check .`: PASS
+- `mypy app`: PASS
+- `scripts/build_exe_windows.ps1`: PASS
+- `scripts/package_release_windows.ps1 -ReleaseName v0.2.0`: PASS
+- `scripts/smoke_test_portable_windows.ps1 -ReleaseDir .\release\v0.2.0`: PASS
+- `gh release create v0.2.0 ...`: PASS
+- `gh release view v0.2.0`: PASS
+- `gh release view v0.2.0 --json tagName,isPrerelease,assets,url`: PASS
 
-- Release name: `v0.2.0-rc2`
-- Portable root: `tmp/portable_smoke/v0.2.0-rc2/extracted/v0.2.0-rc2`
+Generated stable artifacts:
+
+- `release/NameVerification-v0.2.0-portable.zip`
+- `release/v0.2.0/00_manifest_v0.2.0_20260525.csv`
+- `release/v0.2.0/70_release_evidence/checksums_sha256_v0.2.0_20260525.txt`
+- `release/v0.2.0/70_release_evidence/validation_log_template_v0.2.0_20260525.txt`
+
+Stable release asset digests:
+
+- `00_manifest_v0.2.0_20260525.csv`: `sha256:fc20a15b667db29fd6b2c3be63822b229c43fc741858190abaa239e3605494ff`
+- `checksums_sha256_v0.2.0_20260525.txt`: `sha256:50c8fc9f27ca4b93899f842ee31cdbd56f8e5a3f4e735a10cc22f7844dcfff68`
+- `NameVerification-v0.2.0-portable.zip`: `sha256:616c44389453ffc3af86d680f3f34f9387822e7c3aaebfb19c74db036ab5f8ef`
+- `validation_log_template_v0.2.0_20260525.txt`: `sha256:f7179b4471811c1746cae7c4793e87dbcf718949406561a2bcc86a734664e840`
+
+Portable smoke runtime confirmed for stable v0.2.0:
+
+- Release name: `v0.2.0`
+- Portable root: `tmp/portable_smoke/v0.2.0/extracted/v0.2.0`
 - Portable DB: `30_prod_db/nameverification.db`
 - Runtime tables: `app_settings`, `schema_migrations`, `user_audit_logs`, `users`
 - Change log path: `40_logs/change_logs.jsonl`
 - Operations log path: `40_logs/operations_events.jsonl`
 
-## DOC-SYNC-001 completion
+## Current final status
 
-External ledger pack generated and synchronized:
-
-- `Personal_NameVerification_都度更新資料パック_RC2完了反映版_v20260525.zip`
-- `Personal_NameVerification_成果物一覧マスター_v1.8_20260525.xlsx`
-- `Personal_NameVerification_WBS_工程管理台帳_v20260525_RC2完了反映版.xlsx`
-- `Personal_NameVerification_v0.2.0_統合UATチェックリスト_v1.6_20260525_RC2完了反映版.xlsx`
-- `Personal_NameVerification_設計書_更新管理台帳_v20260525_RC2完了反映版.xlsx`
-- `Personal_NameVerification_管理台帳_統合版_v20260525_RC2完了反映版.xlsx`
-- `Personal_NameVerification_引継ぎマスター_v20260525_RC2完了反映版.xlsx`
-- `Personal_NameVerification_運用操作マニュアル_v2.7_20260525_RC2完了反映版.xlsx`
-- `Personal_NameVerification_新規チャット初回プロンプト_v20260525_RC2完了反映版.md`
-- `Personal_NameVerification_old不要一覧_v20260525_RC2完了反映版.xlsx`
-
-## Tagging policy
-
-- `v0.2.0-rc1`: checkpoint only
-- `v0.2.0-rc2`: current release candidate / GitHub pre-release published
-
-## Next action
-
-No P1 items remain for rc2.
+No P1 items remain for v0.2.0.
 
 Optional next actions:
 
-1. Run user-level acceptance on rc2.
-2. Decide whether to promote rc2 to final `v0.2.0`.
+1. Run user-level acceptance on stable v0.2.0.
+2. Archive or delete rc2 local artifacts after stable release retention is confirmed.
 3. Start a new backlog for v0.3.0.
