@@ -2,7 +2,16 @@
 
 NameVerification v3 は、名前・タイトル・サブタイトル・関連付けをローカルで管理する **PySide6 / SQLite デスクトップアプリ**です。
 
-このリポジトリはドキュメントだけではなく、SQLite schema、migration、アプリケーションサービス、PySide6 UI、テスト、Windows EXE build / smoke test 手順を含みます。
+このリポジトリは、SQLite schema、migration、アプリケーションサービス、PySide6 UI、テスト、Windows EXE build / smoke test 手順を含みます。
+
+## Document entry points
+
+| 読む人 | 入口 | 用途 |
+|---|---|---|
+| 通常利用者 / 運用担当 | `docs/manuals/00_user_manual_index.md` | 初回教育、通常操作、Day0/Day1手順 |
+| 開発者 / release担当 | `docs/release_ledger/00_release_ledger_index.md` | release証跡、backlog、CI、開発台帳 |
+
+通常利用だけなら、release evidence や backlog 文書を読む必要はありません。
 
 ## Runtime / stack
 
@@ -45,14 +54,12 @@ python -m app.pyside6_main
 | editor | 可 | 可 | 可 | 不可 | 不可 | 可 | 不可 | 不可 | 不可/内容非表示 |
 | admin | 可 | 可 | 可 | 可 | 可 | 可 | 可 | 可 | 可 |
 
-RBACの詳細と残作業は `docs/74_rbac_hardening_plan.md`、v0.2.0の横断状況は `docs/75_v0_2_0_current_status_and_improvement_ledger.md` を参照してください。
-
 ## Portable release layout
 
 EXE配布版では、`NameVerification.exe` を以下のように配置すると、EXE直起動でもパッケージ配下の相対パスを既定値として使います。
 
 ```text
-v0.1.0-rc2/
+v0.2.0/
 ├─ 10_app/
 │  └─ NameVerification.exe
 ├─ 30_prod_db/
@@ -70,13 +77,13 @@ v0.1.0-rc2/
 この配置で `NAMEVERIFICATION_DB_PATH` を指定しない場合、DBは以下に作成されます。
 
 ```text
-v0.1.0-rc2/30_prod_db/nameverification.db
+v0.2.0/30_prod_db/nameverification.db
 ```
 
 この配置で `NAMEVERIFICATION_CHANGE_LOG_JSONL_PATH` を指定しない場合、自動JSONLログは以下に出力されます。
 
 ```text
-v0.1.0-rc2/40_logs/change_logs.jsonl
+v0.2.0/40_logs/change_logs.jsonl
 ```
 
 `NAMEVERIFICATION_PACKAGE_ROOT` を指定すると、EXE位置ではなくそのパスをパッケージルートとして扱います。
@@ -92,57 +99,6 @@ python -m app.pyside6_main
 ```
 
 ソース実行時に環境変数を指定しない場合は、従来どおりカレントディレクトリの `nameverification.db` を使用します。
-
-## Database schema / migrations
-
-起動時のDB初期化では、`db/schema.sql` 適用後に `migrations/*.sql` を filename order で適用します。
-適用済みmigrationは `schema_migrations` table で管理します。
-
-現在の認証・ユーザー管理系migrationは以下です。
-
-```text
-migrations/20260515_0001_auth_users_settings_audit.sql
-```
-
-このmigrationで主に以下を追加します。
-
-- `users`
-- `app_settings`
-- `user_audit_logs`
-- `schema_migrations`
-
-EXE smoke test では、runtime DB内に上記auth系tableが作成されることも確認します。
-
-## Automatic change log JSONL export
-
-DB内の `change_logs` が正の操作履歴です。加えて、運用補助として変更履歴を JSONL へ自動出力します。
-
-portable release layout では既定値として以下を使います。
-
-```text
-v0.1.0-rc2/40_logs/change_logs.jsonl
-```
-
-ソース実行時の既定値:
-
-```text
-logs/change_logs.jsonl
-```
-
-設定:
-
-```powershell
-$env:NAMEVERIFICATION_CHANGE_LOG_JSONL_PATH = "logs/change_logs.jsonl"
-$env:NAMEVERIFICATION_CHANGE_LOG_JSONL_MAX_BYTES = "5242880"
-$env:NAMEVERIFICATION_CHANGE_LOG_JSONL_ENABLED = "1"
-```
-
-挙動:
-
-- DB更新ごとに `timestamp / entity_type / entity_id / action / operator_id / before_json / after_json` をJSONLへ追記します。
-- 出力先の親ディレクトリは自動作成します。
-- ファイルサイズが上限を超えた場合、既存ログをタイムスタンプ付きファイルへローテーションします。
-- JSONL出力に失敗してもDB更新は継続します。JSONLは監査補助であり、DBの `change_logs` が正です。
 
 ## Main window tabs
 
@@ -160,16 +116,6 @@ $env:NAMEVERIFICATION_CHANGE_LOG_JSONL_ENABLED = "1"
 | データ入出力 | CSV/JSON/SQL出力、バックアップ、Restore、Import、Operations JSONLログ確認を行う |
 | ヘルプ/設定 | DB保存先、環境変数、自動JSONLログ、基本操作を確認する |
 
-## Current UI improvement status
-
-| 区分 | 状態 |
-|---|---|
-| ユーザー管理 | `ガイド` / `ユーザー作成` / `ユーザー一覧` / `選択ユーザー操作` へサブタブ化済み |
-| ログイン状態表示 | title bar / status bar に常時表示済み |
-| viewer RBAC | 主要更新系UIを無効化済み |
-| editor RBAC | 通常更新/export/backupは有効表示、destructive/import/restore/user管理は無効表示。実行UATは未完 |
-| 今後のUI改善 | データ入出力、削除データ、通常CRUD系のサブタブ化を予定 |
-
 ## Data operations
 
 データ入出力タブでは以下を扱います。
@@ -184,20 +130,6 @@ $env:NAMEVERIFICATION_CHANGE_LOG_JSONL_ENABLED = "1"
 
 Restore / Import は destructive 操作です。実行前に自動で `50_backups/before_restore` または `50_backups/before_import` へ退避DBを作成します。
 ただし、重要データ投入前後は明示的なbackup取得も推奨します。
-
-portable release layout で起動した場合、データ入出力タブの初期値は配布フォルダ配下を優先します。
-
-```text
-v0.1.0-rc2/60_exports/csv/
-v0.1.0-rc2/60_exports/json/nameverification_export_YYYYMMDD_HHMMSS.json
-v0.1.0-rc2/60_exports/sql/nameverification_dump_YYYYMMDD_HHMMSS.sql
-v0.1.0-rc2/50_backups/daily/nameverification_YYYYMMDD_HHMMSS.db
-v0.1.0-rc2/30_prod_db/nameverification.db
-```
-
-ソース実行や非portable配置では、従来どおりユーザーホーム配下の
-`tmp/NameVerification v3` を安全な既定フォルダとして使います。Restore用バックアップ
-ファイルとJSON importファイルは誤操作を避けるため初期表示では空欄にします。
 
 ## Setup
 
@@ -224,60 +156,26 @@ black --check .
 mypy app
 ```
 
-## Windows EXE build / smoke test
+## Windows release workflow
 
 ```powershell
-.\scripts\build_exe_windows.ps1
-.\scripts\smoke_test_exe_windows.ps1
+.\scripts\run_release_windows.ps1 -ReleaseName v0.3.0-smoke-dryrun
 ```
 
-成功時は以下が生成されます。
-
-```text
-dist/NameVerification.exe
-tmp/exe_smoke/nameverification_smoke.db
-```
-
-Smoke DBでは、auth/user-management用の `users` / `user_audit_logs` / `app_settings` / `schema_migrations` table 作成も確認します。
-
-## Sample data generation
-
-100万件級の生成物はリポジトリへ置かず、必要時にスクリプトで再生成します。
-
-```powershell
-python .\scripts\generate_sample_data.py --help
-```
-
-## Implemented layers
-
-- `app/domain`: normalization rules, public ID helpers, domain errors
-- `app/application`: `CoreService` / `EnhancedQueryService` / `UserService` / `UserAuditLogService` / read models / authorization helpers / automatic JSONL change log export
-- `app/infrastructure`: SQLite schema and migration application helpers
-- `app/ui`: PySide6 UI tabs, first-run admin setup, password login, role-based UI guards, login context display
-- `db/`: base schema SQL
-- `migrations/`: repo-managed SQLite migrations
-- `tests/`: unit + UI tests
-
-## Operations handoff docs
-
-- Day0/Day1 runbook + initial operations checklist: `docs/58_operations_handoff_runbook_and_day1_checklist.md`
-- UAT plan: `docs/45_uat_plan.md`
-- Go-Live checklist: `docs/54_go_live_checklist.md`
-- Incident runbook: `docs/55_incident_response_runbook.md`
-- v0.1.0-rc2 release evidence: `docs/59_release_evidence_v0_1_0_rc2.md`
-- v0.2.0 auth/user management implementation plan: `docs/70_v0_2_0_auth_user_management_implementation_plan.md`
-- v0.2.0 integrated UAT checklist: `docs/71_v0_2_0_auth_integrated_uat_checklist.md`
-- v0.2.0 integrated UAT execution record: `docs/72_v0_2_0_auth_integrated_uat_execution_record.md`
-- UI navigation redesign plan: `docs/73_ui_navigation_redesign_plan.md`
-- RBAC hardening plan: `docs/74_rbac_hardening_plan.md`
-- v0.2.0 current status and improvement ledger: `docs/75_v0_2_0_current_status_and_improvement_ledger.md`
-- Open issues and constraints: `docs/97_open_issues_and_constraints.md`
+このworkflowは、build、package、portable smoke、release verification checklist生成をまとめて実行します。
 
 ## Manuals
 
-- 運用操作マニュアル（Excel）: `docs/manuals/NameVerification_運用操作マニュアル_機能説明.md`
-- 運用手順書（詳細版）: `docs/manuals/NameVerification_運用手順書_詳細版.md`
+- ユーザー向けマニュアル入口: `docs/manuals/00_user_manual_index.md`
 - 初回教育用（簡易マニュアル）: `docs/manuals/NameVerification_初回教育用_簡易マニュアル.md`
+- 運用操作マニュアル（機能説明）: `docs/manuals/NameVerification_運用操作マニュアル_機能説明.md`
+- 運用手順書（詳細版）: `docs/manuals/NameVerification_運用手順書_詳細版.md`
+
+## Release / development ledgers
+
+- Release / development ledger index: `docs/release_ledger/00_release_ledger_index.md`
+- v0.3.0 backlog: `docs/85_v0_3_0_backlog_initial_20260525.md`
+- Open issues and constraints: `docs/97_open_issues_and_constraints.md`
 
 ## Notes
 
