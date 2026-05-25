@@ -11,6 +11,7 @@ RUN_RELEASE_SCRIPT = PROJECT_ROOT / "scripts" / "run_release_windows.ps1"
 PORTABLE_SMOKE_SCRIPT = PROJECT_ROOT / "scripts" / "smoke_test_portable_windows.ps1"
 RELEASE_CHECKLIST_SCRIPT = PROJECT_ROOT / "scripts" / "generate_release_checklist_windows.ps1"
 RELEASE_DRY_RUN_WORKFLOW = PROJECT_ROOT / ".github" / "workflows" / "release-dry-run.yml"
+WINDOWS_EXE_WORKFLOW = PROJECT_ROOT / ".github" / "workflows" / "windows-exe.yml"
 
 
 def _run_release_script_text() -> str:
@@ -27,6 +28,10 @@ def _release_checklist_script_text() -> str:
 
 def _release_dry_run_workflow_text() -> str:
     return RELEASE_DRY_RUN_WORKFLOW.read_text(encoding="utf-8")
+
+
+def _windows_exe_workflow_text() -> str:
+    return WINDOWS_EXE_WORKFLOW.read_text(encoding="utf-8")
 
 
 def test_run_release_script_exists() -> None:
@@ -100,6 +105,17 @@ def test_release_checklist_script_checks_required_artifacts() -> None:
 def test_release_dry_run_uploads_release_checklist() -> None:
     text = _release_dry_run_workflow_text()
 
+    assert "release_verification_checklist_" in text
+    assert "validation_log_template_" in text
+    assert "checksums_sha256_" in text
+
+
+def test_windows_exe_workflow_uses_release_runner_and_uploads_checklist() -> None:
+    text = _windows_exe_workflow_text()
+
+    assert "run_release_windows.ps1" in text
+    assert "release_name" in text
+    assert "startup_seconds" in text
     assert "release_verification_checklist_" in text
     assert "validation_log_template_" in text
     assert "checksums_sha256_" in text
