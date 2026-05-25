@@ -13,7 +13,7 @@
 |---|---:|---|---|---|
 | V030-OPS-001 | P1 | Release | Done | Automate stable release packaging flow |
 | V030-OPS-002 | P1 | Release | Not started | Generate release verification checklist |
-| V030-TEST-001 | P1 | Test | Not started | Add richer portable smoke coverage |
+| V030-TEST-001 | P1 | Test | Implemented / gate pending | Add richer portable smoke coverage |
 | V030-UX-001 | P1 | UI | Not started | Redesign CRUD screens as native list-first flows |
 | V030-SEC-001 | P1 | Security/Ops | Not started | Add optional Windows file-permission diagnostics |
 | V030-DOC-001 | P2 | Docs | Not started | Split user manual from release ledger |
@@ -39,6 +39,23 @@ Validation:
 - `black --check .`: PASS
 - `mypy app`: PASS
 
+## V030-TEST-001 progress
+
+Implemented on main:
+
+- `scripts/smoke_test_portable_windows.ps1`
+  - Expands the portable smoke flow from 9 to 10 steps.
+  - Validates portable README files and release name text.
+  - Validates runtime directories for DB, logs, backups, and exports.
+  - Performs writable-directory probes for runtime output folders.
+  - Expands required SQLite bootstrap table checks to include business tables and change logs.
+- `tests/test_release_script_contract.py`
+  - Adds static contract tests for runtime directories, README release-name checks, all bootstrap tables, and the 10-step smoke flow.
+
+Pending:
+
+- Local quality gate re-run.
+
 ## Suggested first iteration
 
 1. V030-TEST-001
@@ -54,9 +71,13 @@ Validation:
 
 ## Next action
 
-Continue to `V030-TEST-001`.
+Run local gates:
 
-Target:
+```powershell
+pytest -q
+ruff check .
+black --check .
+mypy app
+```
 
-- Expand portable smoke from basic EXE/process/table checks to a richer contract that validates login/bootstrap readiness and major runtime paths.
-- Keep the first pass low-risk and script/test oriented.
+If all pass, optionally run a full release dry-run with a temporary local release name before marking `V030-TEST-001` complete.
