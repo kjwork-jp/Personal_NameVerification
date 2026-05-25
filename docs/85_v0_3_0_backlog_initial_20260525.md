@@ -7,61 +7,28 @@
 - Required v0.2.0 P1 items: complete
 - Next development target: v0.3.0
 
-## Initial backlog
+## Remaining backlog
 
 | ID | Priority | Area | Status | Candidate |
 |---|---:|---|---|---|
-| V030-OPS-001 | P1 | Release | Done | Automate stable release packaging flow |
-| V030-OPS-002 | P1 | Release | Done | Generate release verification checklist |
-| V030-TEST-001 | P1 | Test | Done | Add richer portable smoke coverage |
-| V030-UX-001 | P1 | UI | Done | Redesign CRUD screens as native list-first flows |
-| V030-SEC-001 | P1 | Security/Ops | Done | Add optional Windows file-permission diagnostics |
-| V030-DOC-001 | P2 | Docs | Implemented / docs-only | Split user manual from release ledger |
 | V030-DATA-001 | P2 | Data | Not started | Add sample database generation mode |
 | V030-MAINT-001 | P2 | Maintenance | Review pending | Review obsolete checkpoint docs |
 
-## Completed items
+## Completed items summary
 
-### V030-OPS-001
+- V030-OPS-001: release workflow orchestration added.
+- V030-TEST-001: portable smoke coverage expanded.
+- V030-UX-001: name management tab changed to native list-first layout.
+- V030-SEC-001: Windows ACL guidance added to Help / Settings diagnostics.
+- V030-OPS-002: release verification checklist generator added.
+- V030-DOC-001: user manuals and release/development ledgers separated.
 
-- Added `scripts/run_release_windows.ps1`.
-- Release workflow now orchestrates build, package, portable smoke, optional GitHub Release creation, and required artifact checks.
-- Validated by local gates before the GitHub Actions policy change.
-
-### V030-TEST-001
-
-- Expanded `scripts/smoke_test_portable_windows.ps1` from 9 to 10 steps.
-- Added runtime directory, README, writable-folder, and SQLite bootstrap table checks.
-- Release dry-run passed for `v0.3.0-smoke-dryrun`.
-
-### V030-UX-001
-
-- Changed `app/ui/name_management_tab.py` to a native list-first layout.
-- Added static/UI contract tests for the native name-management layout.
-- `Quality Gates`: PASS.
-
-### V030-SEC-001
-
-- Added Windows ACL guidance to Help / Settings protected-path diagnostics.
-- Added `Get-Acl` and `icacls` guidance.
-- `Quality Gates`: PASS.
-
-### V030-OPS-002
-
-- Added `scripts/generate_release_checklist_windows.ps1`.
-- `scripts/run_release_windows.ps1` now generates a release verification checklist after package and portable smoke.
-- `.github/workflows/release-dry-run.yml` uploads the generated checklist as a dry-run artifact.
-- `tests/test_release_script_contract.py` covers checklist generation and workflow integration.
-- `Quality Gates`: PASS.
-
-## In progress items
-
-### V030-DOC-001
+## V030-DOC-001 completion
 
 - Added `docs/manuals/00_user_manual_index.md` as the user-facing document entry point.
 - Added `docs/release_ledger/00_release_ledger_index.md` as the release/development ledger entry point.
 - Updated `README.md` to route users to manuals and developers/release operators to ledgers.
-- This is docs-only and should not require local quality gates.
+- This was docs-only and did not require local quality gates.
 
 ## GitHub Actions policy
 
@@ -72,11 +39,6 @@
 | Windows EXE Build | No | Yes | distributable EXE/package artifact |
 | Release Dry Run | No | Yes | release-like build/package/smoke validation |
 
-## Suggested next items
-
-1. V030-DATA-001
-2. V030-MAINT-001
-
 ## Next action
 
-Pull the latest docs update and decide whether to mark `V030-DOC-001` done after review.
+Pull the latest docs update and continue to `V030-DATA-001`.
