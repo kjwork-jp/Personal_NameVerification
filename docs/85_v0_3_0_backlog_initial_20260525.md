@@ -12,7 +12,7 @@
 | ID | Priority | Area | Status | Candidate |
 |---|---:|---|---|---|
 | V030-OPS-001 | P1 | Release | Done | Automate stable release packaging flow |
-| V030-OPS-002 | P1 | Release | Not started | Generate release verification checklist |
+| V030-OPS-002 | P1 | Release | Implemented / Actions pending | Generate release verification checklist |
 | V030-TEST-001 | P1 | Test | Done | Add richer portable smoke coverage |
 | V030-UX-001 | P1 | UI | Done | Redesign CRUD screens as native list-first flows |
 | V030-SEC-001 | P1 | Security/Ops | Done | Add optional Windows file-permission diagnostics |
@@ -38,6 +38,26 @@ Validation:
 - `ruff check .`: PASS
 - `black --check .`: PASS
 - `mypy app`: PASS
+
+## V030-OPS-002 progress
+
+Implemented on main:
+
+- `scripts/generate_release_checklist_windows.ps1`
+  - Generates `release_verification_checklist_<release>_<yyyymmdd>.md` under `70_release_evidence`.
+  - Verifies release directory, portable zip, manifest, checksum, validation template, and expected package folders.
+  - Fails fast if required artifacts are missing.
+- `scripts/run_release_windows.ps1`
+  - Runs the release verification checklist generator after package and portable smoke.
+  - Includes the checklist in optional GitHub Release asset upload.
+- `.github/workflows/release-dry-run.yml`
+  - Uploads the generated release verification checklist as a dry-run artifact.
+- `tests/test_release_script_contract.py`
+  - Adds static contract coverage for checklist generation, release workflow integration, and dry-run artifact upload.
+
+Pending:
+
+- GitHub Actions quality gate result.
 
 ## V030-TEST-001 completion
 
@@ -146,4 +166,12 @@ Validation:
 
 ## Next action
 
-Pull the latest docs update and continue to `V030-OPS-002`.
+Pull the latest commits and check GitHub Actions:
+
+```powershell
+git pull
+git status
+gh run list --limit 5
+```
+
+If the latest `Quality Gates` run passes, mark `V030-OPS-002` complete and continue to `V030-DOC-001`.
