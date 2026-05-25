@@ -16,6 +16,7 @@ from app.ui.role_visual_identity import (  # noqa: E402
     apply_role_status_style,
     make_role_banner,
     role_banner_text,
+    role_capability_summary,
     role_visual_identity,
 )
 
@@ -47,14 +48,31 @@ def test_role_visual_identity_texts_are_role_specific() -> None:
     assert len({viewer.background_color, editor.background_color, admin.background_color}) == 3
 
 
-def test_role_banner_includes_operator_and_limitations() -> None:
+def test_role_capability_summary_is_role_specific() -> None:
+    viewer = role_capability_summary(RoleContext(role="viewer", operator_id="viewer1"))
+    editor = role_capability_summary(RoleContext(role="editor", operator_id="editor1"))
+    admin = role_capability_summary(RoleContext(role="admin", operator_id="admin1"))
+
+    assert "検索・参照" in viewer.allowed
+    assert "export" in viewer.restricted
+    assert "通常登録" in editor.allowed
+    assert "restore" in editor.restricted
+    assert "restore/import" in admin.allowed
+    assert admin.restricted == ()
+    assert "backup" in editor.caution
+    assert "destructive" in admin.caution
+
+
+def test_role_banner_includes_operator_limitations_and_allowed_actions() -> None:
     role_context = RoleContext(role="viewer", operator_id="windows:pc\\naoki")
 
     text = role_banner_text(role_context)
 
     assert "VIEWER / 参照専用" in text
     assert "windows:pc\\naoki" in text
+    assert "許可" in text
     assert "制限" in text
+    assert "検索・参照" in text
 
 
 def test_make_role_banner_sets_properties_and_style() -> None:
@@ -67,6 +85,9 @@ def test_make_role_banner_sets_properties_and_style() -> None:
     assert banner.property("operatorRole") == "admin"
     assert "ADMIN / 管理者" in banner.text()
     assert "background-color" in banner.styleSheet()
+    assert "restore/import" in banner.property("allowedActions")
+    assert banner.property("restrictedActions") == ""
+    assert "destructive" in banner.toolTip()
 
 
 def test_apply_role_status_style_sets_role_property() -> None:
@@ -77,3 +98,4 @@ def test_apply_role_status_style_sets_role_property() -> None:
 
     assert label.property("operatorRole") == "editor"
     assert "background-color" in label.styleSheet()
+    assert "export/backup" in label.property("roleCaution")
