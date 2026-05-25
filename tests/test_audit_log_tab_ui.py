@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import json
 import os
+from pathlib import Path
 
 import pytest
 
@@ -144,6 +146,27 @@ def test_audit_log_tab_all_filters_are_none_by_default() -> None:
     assert query.calls[-1]["action"] is None
     assert query.calls[-1]["created_from"] is None
     assert query.calls[-1]["created_to"] is None
+
+
+def test_audit_log_tab_exports_visible_rows_as_review_json(tmp_path: Path) -> None:
+    _app()
+    tab = AuditLogTab(query_service=StubQueryService())
+    output_path = tmp_path / "audit_review.json"
+    tab.audit_export_path_input.setText(str(output_path))
+
+    tab._export_visible_rows_json()
+
+    payload = json.loads(output_path.read_text(encoding="utf-8"))
+    assert payload["export_type"] == "audit_log_review"
+    assert payload["row_count"] == 1
+    assert payload["filters"]["limit"] == 200
+    assert payload["rows"][0]["entity_type"] == "names"
+    assert payload["rows"][0]["action"] == "update"
+    assert payload["rows"][0]["operator_id"] == "op-1"
+    assert payload["rows"][0]["before"]["raw_name"] == "A"
+    assert payload["rows"][0]["after"]["raw_name"] == "B"
+    assert "raw_name: A → B" in payload["rows"][0]["diff_text"]
+    assert "JSON出力しました" in tab.message_label.text()
 
 
 def test_audit_log_tab_raw_fallback_for_invalid_json() -> None:
