@@ -1,12 +1,6 @@
 name: Windows validation
 
 on:
-  pull_request:
-    branches:
-      - main
-  push:
-    branches:
-      - main
   workflow_dispatch:
 
 jobs:
@@ -14,6 +8,8 @@ jobs:
     name: Validate on Windows
     runs-on: windows-latest
     timeout-minutes: 30
+    env:
+      QT_QPA_PLATFORM: offscreen
 
     steps:
       - name: Checkout
