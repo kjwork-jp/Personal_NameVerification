@@ -122,6 +122,7 @@ class NameManagementTab(QWidget):
         self.note_input = QLineEdit()
         self.note_input.setPlaceholderText("備考")
         self.message_label = QLabel("")
+        self.workflow_hint_label = self._make_workflow_hint_label()
 
         self.names_table = QTableWidget(0, 9)
         self.names_table.setHorizontalHeaderLabels(
@@ -181,13 +182,36 @@ class NameManagementTab(QWidget):
         layout = QVBoxLayout(self)
         compact_layout(layout, margins=5, spacing=4)
         layout.addWidget(PageHeader("名前", "名前の登録・更新と関連数の確認を行います。"))
+        layout.addWidget(self.workflow_hint_label)
+        layout.addWidget(self.names_table, 1)
         layout.addLayout(form)
         layout.addLayout(actions)
         layout.addWidget(self.message_label)
-        layout.addWidget(self.names_table, 1)
+        self.setProperty("has_list_first_layout", True)
+        self.setProperty("has_list_first_hint", True)
+        self.setProperty("native_list_first_layout", True)
 
         self._apply_role_guards()
         self._refresh_list()
+
+    def _make_workflow_hint_label(self) -> QLabel:
+        hint = QLabel(
+            "一覧から名前を選択し、下の入力欄で内容確認・更新・操作します。"
+            "新規作成時は選択状態を気にせず入力してください。"
+        )
+        hint.setObjectName("nativeListFirstWorkflowHint")
+        hint.setWordWrap(True)
+        hint.setStyleSheet(
+            "QLabel#nativeListFirstWorkflowHint {"
+            "color: #dbeafe;"
+            "background-color: #1f2937;"
+            "border: 1px solid #60a5fa;"
+            "border-radius: 6px;"
+            "padding: 4px 6px;"
+            "font-weight: 600;"
+            "}"
+        )
+        return hint
 
     def _apply_role_guards(self) -> None:
         role = self._role_context.role
