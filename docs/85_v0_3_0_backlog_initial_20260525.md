@@ -13,7 +13,7 @@
 |---|---:|---|---|---|
 | V030-OPS-001 | P1 | Release | Done | Automate stable release packaging flow |
 | V030-OPS-002 | P1 | Release | Not started | Generate release verification checklist |
-| V030-TEST-001 | P1 | Test | Implemented / gate pending | Add richer portable smoke coverage |
+| V030-TEST-001 | P1 | Test | Done | Add richer portable smoke coverage |
 | V030-UX-001 | P1 | UI | Not started | Redesign CRUD screens as native list-first flows |
 | V030-SEC-001 | P1 | Security/Ops | Not started | Add optional Windows file-permission diagnostics |
 | V030-DOC-001 | P2 | Docs | Not started | Split user manual from release ledger |
@@ -39,9 +39,9 @@ Validation:
 - `black --check .`: PASS
 - `mypy app`: PASS
 
-## V030-TEST-001 progress
+## V030-TEST-001 completion
 
-Implemented on main:
+Implemented and validated on main:
 
 - `scripts/smoke_test_portable_windows.ps1`
   - Expands the portable smoke flow from 9 to 10 steps.
@@ -52,16 +52,27 @@ Implemented on main:
 - `tests/test_release_script_contract.py`
   - Adds static contract tests for runtime directories, README release-name checks, all bootstrap tables, and the 10-step smoke flow.
 
-Pending:
+Validation:
 
-- Local quality gate re-run.
+- `pytest -q`: PASS
+- `ruff check .`: PASS
+- `black --check .`: PASS
+- `mypy app`: PASS
+- `scripts/run_release_windows.ps1 -ReleaseName v0.3.0-smoke-dryrun`: PASS
+
+Dry-run evidence:
+
+- Release name: `v0.3.0-smoke-dryrun`
+- Release package: `release/NameVerification-v0.3.0-smoke-dryrun-portable.zip`
+- Portable smoke: PASS
+- Runtime tables confirmed: `app_settings`, `change_logs`, `name_subtitle_links`, `name_title_links`, `names`, `schema_migrations`, `subtitles`, `titles`, `user_audit_logs`, `users`
 
 ## Suggested first iteration
 
-1. V030-TEST-001
-2. V030-UX-001
-3. V030-SEC-001
-4. V030-OPS-002
+1. V030-UX-001
+2. V030-SEC-001
+3. V030-OPS-002
+4. V030-DOC-001
 
 ## Policy
 
@@ -71,13 +82,9 @@ Pending:
 
 ## Next action
 
-Run local gates:
+Continue to `V030-UX-001`.
 
-```powershell
-pytest -q
-ruff check .
-black --check .
-mypy app
-```
+Target:
 
-If all pass, optionally run a full release dry-run with a temporary local release name before marking `V030-TEST-001` complete.
+- Redesign CRUD screens as native list-first flows.
+- Avoid large UI rewrites in one step; start with tab-level structure and smoke-safe contract tests.
