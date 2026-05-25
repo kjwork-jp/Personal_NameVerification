@@ -15,7 +15,7 @@
 | V030-OPS-002 | P1 | Release | Not started | Generate release verification checklist |
 | V030-TEST-001 | P1 | Test | Done | Add richer portable smoke coverage |
 | V030-UX-001 | P1 | UI | Done | Redesign CRUD screens as native list-first flows |
-| V030-SEC-001 | P1 | Security/Ops | Not started | Add optional Windows file-permission diagnostics |
+| V030-SEC-001 | P1 | Security/Ops | Implemented / Actions pending | Add optional Windows file-permission diagnostics |
 | V030-DOC-001 | P2 | Docs | Not started | Split user manual from release ledger |
 | V030-DATA-001 | P2 | Data | Not started | Add sample database generation mode |
 | V030-MAINT-001 | P2 | Maintenance | Review pending | Review obsolete checkpoint docs |
@@ -90,6 +90,23 @@ Validation:
 - `black`: PASS through Actions
 - `mypy`: PASS through Actions
 
+## V030-SEC-001 progress
+
+Implemented on main:
+
+- `app/ui/help_settings_tab.py`
+  - Adds Windows ACL guidance to the existing protected-path diagnostics.
+  - Shows `Get-Acl "<path>" | Format-List` examples for PowerShell.
+  - Shows `icacls "<path>"` examples for Command Prompt.
+  - Clarifies that `parent writable=True` is not proof of ACL hardening.
+  - Prompts operators to review Users / Authenticated Users / Everyone read permissions.
+- `tests/test_help_settings_tab.py`
+  - Verifies that Windows ACL guidance appears in the Help / Settings protection diagnostics.
+
+Pending:
+
+- GitHub Actions quality gate result.
+
 ## GitHub Actions policy
 
 - `Quality Gates` is the default automatic CI for code changes.
@@ -125,4 +142,11 @@ Validation:
 
 ## Next action
 
-Pull the latest docs update and continue to `V030-SEC-001`.
+Pull the latest commits and check GitHub Actions:
+
+```powershell
+git pull
+gh run list --limit 5
+```
+
+If the latest `Quality Gates` run passes, mark `V030-SEC-001` complete and continue to `V030-OPS-002`.
