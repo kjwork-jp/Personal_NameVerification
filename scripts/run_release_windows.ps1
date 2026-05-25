@@ -19,6 +19,7 @@ $ZipPath = Join-Path $ReleaseRoot ("NameVerification-" + $ReleaseName + "-portab
 $ManifestPath = Join-Path $ReleaseDir ("00_manifest_" + $ReleaseName + "_" + $Today + ".csv")
 $ChecksumPath = Join-Path $ReleaseDir ("70_release_evidence\checksums_sha256_" + $ReleaseName + "_" + $Today + ".txt")
 $ValidationPath = Join-Path $ReleaseDir ("70_release_evidence\validation_log_template_" + $ReleaseName + "_" + $Today + ".txt")
+$ChecklistPath = Join-Path $ReleaseDir ("70_release_evidence\release_verification_checklist_" + $ReleaseName + "_" + $Today + ".md")
 
 function Invoke-ReleaseStep([string]$Label, [scriptblock]$Command) {
     Write-Host ""
@@ -67,6 +68,13 @@ try {
     Assert-FileExists $ChecksumPath
     Assert-FileExists $ValidationPath
 
+    Invoke-ReleaseStep "release verification checklist" {
+        & (Join-Path $ScriptRoot "generate_release_checklist_windows.ps1") `
+            -ReleaseName $ReleaseName `
+            -ReleaseDir $ReleaseDir
+    }
+    Assert-FileExists $ChecklistPath
+
     if ($CreateGitHubRelease) {
         $GhCommand = Get-Command gh -ErrorAction SilentlyContinue
         if ($null -eq $GhCommand) {
@@ -88,6 +96,7 @@ try {
             $ManifestPath,
             $ChecksumPath,
             $ValidationPath,
+            $ChecklistPath,
             "--title",
             $ReleaseTitle,
             "--notes",
@@ -110,6 +119,7 @@ try {
     Write-Host "Manifest: $ManifestPath"
     Write-Host "Checksums: $ChecksumPath"
     Write-Host "Validation template: $ValidationPath"
+    Write-Host "Verification checklist: $ChecklistPath"
 } finally {
     Pop-Location
 }
