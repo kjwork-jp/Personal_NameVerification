@@ -257,10 +257,10 @@ class TitleSubtitleManagementTab(QWidget):
         compact_layout(title_layout, margins=2, spacing=3)
         self.title_panel_label = QLabel("タイトル情報")
         title_layout.addWidget(self.title_panel_label)
+        title_layout.addWidget(self.titles_table, 2)
         title_layout.addLayout(title_form)
         title_layout.addLayout(title_actions)
         title_layout.addWidget(self.linked_names_label)
-        title_layout.addWidget(self.titles_table, 2)
 
         subtitle_panel = QWidget()
         self.subtitle_panel = subtitle_panel
@@ -269,9 +269,9 @@ class TitleSubtitleManagementTab(QWidget):
         self.subtitle_panel_label = QLabel("サブタイトル情報")
         subtitle_layout.addWidget(self.subtitle_panel_label)
         subtitle_layout.addWidget(self.subtitle_hint_label)
+        subtitle_layout.addWidget(self.subtitles_table, 2)
         subtitle_layout.addLayout(subtitle_form)
         subtitle_layout.addLayout(subtitle_actions)
-        subtitle_layout.addWidget(self.subtitles_table, 2)
 
         splitter = QSplitter()
         self.splitter = splitter
@@ -283,6 +283,8 @@ class TitleSubtitleManagementTab(QWidget):
         compact_layout(root, margins=2, spacing=3)
         root.addWidget(self.message_label)
         root.addWidget(splitter, 1)
+        self.setProperty("native_list_first_layout", True)
+        self.setProperty("has_list_first_layout", True)
 
         self._configure_table_columns()
         self._apply_role_guards()
