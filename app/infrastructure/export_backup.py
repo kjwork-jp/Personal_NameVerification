@@ -19,7 +19,13 @@ EXPORT_TABLES: tuple[str, ...] = (
     "change_logs",
 )
 
-SANITIZED_EXPORT_TABLES: tuple[str, ...] = EXPORT_TABLES
+SANITIZED_EXPORT_TABLES: tuple[str, ...] = (
+    "names",
+    "titles",
+    "subtitles",
+    "name_subtitle_links",
+    "name_title_links",
+)
 
 
 def export_tables_to_csv(
@@ -77,11 +83,12 @@ def export_sanitized_tables_to_json(
     connection: sqlite3.Connection,
     output_path: Path | PathLike[str],
 ) -> Path:
-    """Export shareable application data without authentication/admin tables.
+    """Export shareable application data without audit/auth/admin tables.
 
     This intentionally uses an allowlist of application data tables instead of a
-    full database dump.  Authentication and admin-only tables such as users,
-    settings, schema metadata, and user audit logs are not exported.
+    full database dump. Authentication/admin tables and operation/audit evidence
+    such as users, settings, schema metadata, user audit logs, and change_logs
+    are not exported.
     """
 
     return export_tables_to_json(
