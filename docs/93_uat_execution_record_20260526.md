@@ -25,7 +25,7 @@ Do not paste sensitive data, passwords, generated DB contents, or screenshots th
 | Python / EXE mode | Python module execution |
 | DB path | `tmp/uat_demo.db` |
 | CSV source path | `tmp/uat_demo_csv` |
-| Overall status | IN PROGRESS |
+| Overall status | IN PROGRESS / release blocked by UX finding |
 
 ## Setup result
 
@@ -42,8 +42,8 @@ Do not paste sensitive data, passwords, generated DB contents, or screenshots th
 | Group | Result | Notes |
 |---|---|---|
 | UAT-01 Startup / Login | PASS | viewer/editor/admin role login and role-specific banner/status were observed. Operator IDs observed in UI were `viewer`, `editor`, and `admin`. |
-| UAT-02 Viewer role | IN PROGRESS | Viewer role screen and banner were observed. Specific restriction checks remain. |
-| UAT-03 Editor role | IN PROGRESS | Editor role screen and banner were observed. Create/update/export checks remain. |
+| UAT-02 Viewer role | IN PROGRESS | Viewer role screen and banner were observed. Title/subtitle area usability finding was raised. Specific restriction checks remain. |
+| UAT-03 Editor role | IN PROGRESS | Editor role screen and banner were observed. Create/update/export checks remain. Title/subtitle UX needs redesign before release. |
 | UAT-04 Admin role | IN PROGRESS | Admin role screen, banner, and user management list were observed. Admin operation checks remain. |
 | UAT-05 Data operations | NOT RUN |  |
 | UAT-06 Audit / Security | IN PROGRESS | Help / Settings operation memo, protection warning, path diagnostics, and password logging guidance observed. |
@@ -55,6 +55,7 @@ Do not paste sensitive data, passwords, generated DB contents, or screenshots th
 |---|---|---|---|---|---|
 | UAT-F-001 | documentation fix | SETUP-004 | UAT execution record used invalid launch command `python -m app.main`. | Fixed in record. Continue with corrected command. | Use `python -m app.pyside6_main`. |
 | UAT-F-002 | documentation fix | UAT-01 | UAT guidance expected `demo-viewer` / `demo-editor` / `demo-admin`, while screenshots showed active operator IDs `viewer` / `editor` / `admin`. | Role validation accepted; clarify demo DB/user wording before final UAT closure. | Reconcile checklist/manual wording with actual generated or selected UAT DB users. |
+| UAT-F-003 | fix before release | UAT-02 / UAT-03 / title-subtitle workflow | Title/subtitle area is too cluttered and not intuitive enough. | Do not start release preparation until fixed or explicitly accepted. | Track as `V040-UX-002` in `docs/94_title_subtitle_ui_redesign_backlog_20260526.md`. |
 
 ## Completed checks from screenshots/logs
 
@@ -64,6 +65,7 @@ Do not paste sensitive data, passwords, generated DB contents, or screenshots th
 | UAT-01-002 | PASS | Editor login observed. Window/status showed `editor` role and editor role banner. |
 | UAT-01-003 | PASS | Admin login observed. Window/status showed `admin` role, admin role banner, and user management tab. |
 | UAT-01-004 | PASS | Role banner displayed role-specific text and allowed/restricted summary for viewer/editor/admin. |
+| UAT-02-005 | FAIL | Role restriction is visible, but title/subtitle workflow itself is not intuitive enough. Release-affecting UX finding opened. |
 | UAT-04-002 | IN PROGRESS | Admin user management list was visible with three users. Create/role change/disable/enable operations were not yet executed. |
 | UAT-06-004 | PASS | Help / Settings file protection checklist/guidance area was visible. |
 | UAT-06-005 | PASS | Path diagnostics and protection warning showed ACL guidance including `Get-Acl` / `icacls` wording. |
@@ -74,19 +76,19 @@ Do not paste sensitive data, passwords, generated DB contents, or screenshots th
 
 | Item | Status | Notes |
 |---|---|---|
-| Any blocker found | NO | Current findings are documentation/wording issues, not application blockers. |
-| Any fix-before-release found | NOT RUN |  |
+| Any blocker found | NO | No hard application crash/blocker identified. |
+| Any fix-before-release found | YES | `UAT-F-003`: title/subtitle UI is too cluttered and not intuitive enough. |
 | Any documentation fix found | YES | Launch command corrected; demo operator ID wording still needs reconciliation before final closure. |
-| Any accepted limitation recorded | NOT RUN |  |
+| Any accepted limitation recorded | NO | Title/subtitle UX is not accepted as-is at this point. |
 
 ## Exit decision
 
 | Item | Status | Notes |
 |---|---|---|
 | All required checks executed | NOT RUN |  |
-| No unresolved blocker remains | IN PROGRESS | No blocker currently identified. |
+| No unresolved blocker remains | IN PROGRESS | No hard blocker currently identified. |
 | UAT complete | NOT RUN |  |
-| Release preparation allowed | NOT RUN | Only after UAT complete |
+| Release preparation allowed | NO | Blocked by `UAT-F-003` unless fixed or explicitly accepted. |
 
 ## Local execution commands
 
@@ -126,4 +128,4 @@ Remove-Item Env:\NAMEVERIFICATION_DB_PATH -ErrorAction SilentlyContinue
 - Keep generated UAT data under `tmp/`.
 - Do not commit generated DB/CSV/export/backup/log outputs.
 - Record only non-sensitive summary evidence in this file.
-- Release preparation remains deferred until UAT is complete.
+- Release preparation remains deferred until UAT is complete and `UAT-F-003` is fixed or accepted.
