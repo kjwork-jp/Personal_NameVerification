@@ -205,7 +205,7 @@ def test_title_subtitle_workflow_tabs_layout() -> None:
         "ガイド",
     ]
     assert "新規追加は選択状態を持ち込みません" in tab.workflow_hint_label.text()
-    assert "タイトル一覧" in tab.title_panel_label.text()
+    assert "一覧: タイトルを確認" in tab.title_panel_label.text()
     assert isinstance(tab.title_detail_group, QGroupBox)
     assert isinstance(tab.subtitle_group, QGroupBox)
 
