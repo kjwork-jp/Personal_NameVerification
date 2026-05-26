@@ -147,8 +147,8 @@ def test_remaining_uat_audit_logs_and_operation_guides_are_visible(
 
     audit_tab = window._tabs_by_name[AUDIT_TAB]
     assert isinstance(audit_tab, AuditLogsTab)
-    assert CHANGE_LOG_TEXT in audit_tab.change_log_group.title()
-    assert USER_AUTH_LOG_TEXT in audit_tab.user_audit_group.title()
+    assert audit_tab.tabs.tabText(0) == CHANGE_LOG_TEXT
+    assert audit_tab.tabs.tabText(1) == USER_AUTH_LOG_TEXT
 
     operations_tab = window._tabs_by_name[OPERATIONS_TAB]
     labels = [label.text() for label in operations_tab.findChildren(QLabel)]
