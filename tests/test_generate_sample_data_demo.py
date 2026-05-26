@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import csv
 import sqlite3
 from pathlib import Path
 
@@ -32,6 +33,11 @@ def _table_values(db_path: Path, sql: str) -> list[tuple[object, ...]]:
         return list(connection.execute(sql))
     finally:
         connection.close()
+
+
+def _csv_data_row_count(path: Path) -> int:
+    with path.open(encoding="utf-8", newline="") as handle:
+        return sum(1 for _row in csv.reader(handle)) - 1
 
 
 def test_generate_demo_sqlite_creates_small_meaningful_database(tmp_path: Path) -> None:
@@ -97,7 +103,18 @@ def test_generate_bulk_sqlite_creates_expected_scaled_counts(tmp_path: Path) -> 
     assert _count_table(db_path, "titles") == 4
     assert _count_table(db_path, "subtitles") == 8
     assert _count_table(db_path, "name_title_links") == 10
-    assert _count_table(db_path, "name_subtitle_links") == 10
+    assert _count_table(db_path, "name_subtitle_links") == 20
+    assert _table_values(
+        db_path,
+        """
+        SELECT COUNT(*)
+        FROM (
+            SELECT name_id, subtitle_id
+            FROM name_subtitle_links
+            GROUP BY name_id, subtitle_id
+        )
+        """,
+    )[0][0] == 20
 
 
 def test_generate_bulk_csv_creates_expected_large_review_files(tmp_path: Path) -> None:
@@ -126,3 +143,22 @@ def test_generate_bulk_csv_creates_expected_large_review_files(tmp_path: Path) -
     assert "SUB-0000001" in (output_dir / "subtitles.csv").read_text(
         encoding="utf-8"
     )
+    assert _csv_data_row_count(output_dir / "name_subtitle_links.csv") == 20
+
+
+def test_generate_bulk_sqlite_respects_medium_uat_link_volume(tmp_path: Path) -> None:
+    db_path = tmp_path / "uat.db"
+
+    generate_sqlite(
+        db_path=db_path,
+        name_count=80,
+        title_count=18,
+        subtitles_per_title=4,
+        links_per_name=3,
+    )
+
+    assert _count_table(db_path, "names") == 80
+    assert _count_table(db_path, "titles") == 18
+    assert _count_table(db_path, "subtitles") == 72
+    assert _count_table(db_path, "name_title_links") == 80
+    assert _count_table(db_path, "name_subtitle_links") == 240
