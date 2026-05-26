@@ -107,7 +107,15 @@ def generate_demo_csv(*, output_dir: Path) -> None:
     )
     _write_csv(
         output_dir / "subtitles.csv",
-        ["title_id", "subtitle_code", "subtitle_name", "sort_order", "note", "created_at", "updated_at"],
+        [
+            "title_id",
+            "subtitle_code",
+            "subtitle_name",
+            "sort_order",
+            "note",
+            "created_at",
+            "updated_at",
+        ],
         (
             (title_id, code, name, sort_order, note, DEMO_TIMESTAMP, DEMO_TIMESTAMP)
             for title_id, code, name, sort_order, note in _demo_subtitles()
@@ -155,7 +163,13 @@ def generate_sqlite(
         VALUES (?, ?, ?, NULL, NULL, ?, ?)
         """,
         (
-            (f"sample-name-{i:07d}", f"sample-name-{i:07d}", f"sample note {i}", now, now)
+            (
+                f"sample-name-{i:07d}",
+                f"sample-name-{i:07d}",
+                f"sample note {i}",
+                now,
+                now,
+            )
             for i in range(1, name_count + 1)
         ),
     )
@@ -165,7 +179,10 @@ def generate_sqlite(
         INSERT INTO titles(title_name, note, icon_path, deleted_at, created_at, updated_at)
         VALUES (?, ?, NULL, NULL, ?, ?)
         """,
-        ((f"sample-title-{i:07d}", f"title note {i}", now, now) for i in range(1, title_count + 1)),
+        (
+            (f"sample-title-{i:07d}", f"title note {i}", now, now)
+            for i in range(1, title_count + 1)
+        ),
     )
 
     subtitle_total = title_count * subtitles_per_title
@@ -189,7 +206,6 @@ def generate_sqlite(
         ),
     )
 
-    link_total = min(name_count * links_per_name, max(name_count, subtitle_total))
     _bulk_insert(
         connection,
         """
@@ -207,9 +223,11 @@ def generate_sqlite(
         INSERT OR IGNORE INTO name_subtitle_links(name_id, subtitle_id, relation_type, deleted_at, created_at, updated_at)
         VALUES (?, ?, 'primary', NULL, ?, ?)
         """,
-        (
-            (((i - 1) % name_count) + 1, ((i - 1) % subtitle_total) + 1, now, now)
-            for i in range(1, link_total + 1)
+        _bulk_name_subtitle_link_rows(
+            name_count=name_count,
+            subtitle_total=subtitle_total,
+            links_per_name=links_per_name,
+            now=now,
         ),
     )
     connection.commit()
@@ -230,17 +248,37 @@ def generate_csv(
     _write_csv(
         output_dir / "names.csv",
         ["raw_name", "normalized_name", "note", "created_at", "updated_at"],
-        ((f"sample-name-{i:07d}", f"sample-name-{i:07d}", f"sample note {i}", now, now) for i in range(1, name_count + 1)),
+        (
+            (
+                f"sample-name-{i:07d}",
+                f"sample-name-{i:07d}",
+                f"sample note {i}",
+                now,
+                now,
+            )
+            for i in range(1, name_count + 1)
+        ),
     )
     _write_csv(
         output_dir / "titles.csv",
         ["title_name", "note", "created_at", "updated_at"],
-        ((f"sample-title-{i:07d}", f"title note {i}", now, now) for i in range(1, title_count + 1)),
+        (
+            (f"sample-title-{i:07d}", f"title note {i}", now, now)
+            for i in range(1, title_count + 1)
+        ),
     )
     subtitle_total = title_count * subtitles_per_title
     _write_csv(
         output_dir / "subtitles.csv",
-        ["title_id", "subtitle_code", "subtitle_name", "sort_order", "note", "created_at", "updated_at"],
+        [
+            "title_id",
+            "subtitle_code",
+            "subtitle_name",
+            "sort_order",
+            "note",
+            "created_at",
+            "updated_at",
+        ],
         (
             (
                 ((i - 1) // subtitles_per_title) + 1,
@@ -254,16 +292,38 @@ def generate_csv(
             for i in range(1, subtitle_total + 1)
         ),
     )
-    link_total = min(name_count * links_per_name, max(name_count, subtitle_total))
     _write_csv(
         output_dir / "name_subtitle_links.csv",
         ["name_id", "subtitle_id", "relation_type", "created_at", "updated_at"],
-        (
-            (((i - 1) % name_count) + 1, ((i - 1) % subtitle_total) + 1, "primary", now, now)
-            for i in range(1, link_total + 1)
+        _bulk_name_subtitle_link_rows(
+            name_count=name_count,
+            subtitle_total=subtitle_total,
+            links_per_name=links_per_name,
+            now=now,
         ),
     )
     print(f"Generated CSV sample directory: {output_dir}")
+
+
+def _bulk_name_subtitle_link_rows(
+    *,
+    name_count: int,
+    subtitle_total: int,
+    links_per_name: int,
+    now: str,
+) -> object:
+    """Yield deterministic unique name-subtitle links for bulk/UAT data.
+
+    The row count is capped only by the number of unique (name_id, subtitle_id)
+    combinations so `links_per_name` is reflected in medium-sized UAT data.
+    """
+
+    if name_count <= 0 or subtitle_total <= 0 or links_per_name <= 0:
+        return
+    for name_id in range(1, name_count + 1):
+        for offset in range(links_per_name):
+            subtitle_id = ((name_id + offset - 1) % subtitle_total) + 1
+            yield (name_id, subtitle_id, "primary", now, now)
 
 
 def _insert_demo_business_data(connection: sqlite3.Connection) -> None:
@@ -274,7 +334,10 @@ def _insert_demo_business_data(connection: sqlite3.Connection) -> None:
         INSERT INTO names(raw_name, normalized_name, note, icon_path, deleted_at, created_at, updated_at)
         VALUES (?, ?, ?, NULL, NULL, ?, ?)
         """,
-        ((raw_name, normalized_name, note, now, now) for raw_name, normalized_name, note in _demo_names()),
+        (
+            (raw_name, normalized_name, note, now, now)
+            for raw_name, normalized_name, note in _demo_names()
+        ),
     )
     _bulk_insert(
         connection,
@@ -290,7 +353,10 @@ def _insert_demo_business_data(connection: sqlite3.Connection) -> None:
         INSERT INTO subtitles(title_id, subtitle_code, subtitle_name, sort_order, note, icon_path, deleted_at, created_at, updated_at)
         VALUES (?, ?, ?, ?, ?, NULL, NULL, ?, ?)
         """,
-        ((title_id, code, name, sort_order, note, now, now) for title_id, code, name, sort_order, note in _demo_subtitles()),
+        (
+            (title_id, code, name, sort_order, note, now, now)
+            for title_id, code, name, sort_order, note in _demo_subtitles()
+        ),
     )
     _bulk_insert(
         connection,
