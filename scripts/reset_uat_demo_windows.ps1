@@ -44,6 +44,9 @@ python .\scripts\generate_sample_data.py `
     --titles $Titles `
     --subtitles-per-title $SubtitlesPerTitle `
     --links-per-name $LinksPerName
+if ($LASTEXITCODE -ne 0) {
+    throw "SQLite sample generation failed with exit code $LASTEXITCODE"
+}
 
 if (-not $SkipCsv) {
     Write-Host "[3/5] Generate matching CSV sample data" -ForegroundColor Cyan
@@ -55,6 +58,9 @@ if (-not $SkipCsv) {
         --titles $Titles `
         --subtitles-per-title $SubtitlesPerTitle `
         --links-per-name $LinksPerName
+    if ($LASTEXITCODE -ne 0) {
+        throw "CSV sample generation failed with exit code $LASTEXITCODE"
+    }
 } else {
     Write-Host "[3/5] Skip CSV generation" -ForegroundColor DarkGray
 }
@@ -126,6 +132,9 @@ try:
 finally:
     connection.close()
 '@.Replace("__DB_PATH__", $DbPath.Replace("\", "\")) | python -
+if ($LASTEXITCODE -ne 0) {
+    throw "UAT user reset failed with exit code $LASTEXITCODE"
+}
 
 Write-Host "[5/5] Verify tmp is not tracked" -ForegroundColor Cyan
 git status --short tmp
