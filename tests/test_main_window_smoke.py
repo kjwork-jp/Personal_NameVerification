@@ -29,7 +29,13 @@ class EmptyQueryService:
         _ = (args, kwargs)
         raise RuntimeError(f"not used: {name_id}")
 
-    def list_related_rows(self, name_id: int, *args: object, include_deleted: bool = False, **kwargs: object) -> list[object]:
+    def list_related_rows(
+        self,
+        name_id: int,
+        *args: object,
+        include_deleted: bool = False,
+        **kwargs: object,
+    ) -> list[object]:
         _ = (name_id, args, include_deleted, kwargs)
         return []
 
