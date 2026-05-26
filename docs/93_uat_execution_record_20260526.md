@@ -41,25 +41,30 @@ Do not paste sensitive data, passwords, generated DB contents, or screenshots th
 
 | Group | Result | Notes |
 |---|---|---|
-| UAT-01 Startup / Login | IN PROGRESS | Viewer-role startup, role banner, Help / Settings basics observed. Demo-user-specific login checks remain. |
-| UAT-02 Viewer role | NOT RUN |  |
-| UAT-03 Editor role | NOT RUN |  |
-| UAT-04 Admin role | NOT RUN |  |
+| UAT-01 Startup / Login | PASS | viewer/editor/admin role login and role-specific banner/status were observed. Operator IDs observed in UI were `viewer`, `editor`, and `admin`. |
+| UAT-02 Viewer role | IN PROGRESS | Viewer role screen and banner were observed. Specific restriction checks remain. |
+| UAT-03 Editor role | IN PROGRESS | Editor role screen and banner were observed. Create/update/export checks remain. |
+| UAT-04 Admin role | IN PROGRESS | Admin role screen, banner, and user management list were observed. Admin operation checks remain. |
 | UAT-05 Data operations | NOT RUN |  |
 | UAT-06 Audit / Security | IN PROGRESS | Help / Settings operation memo, protection warning, path diagnostics, and password logging guidance observed. |
-| UAT-07 Documentation match | IN PROGRESS | Launch command documentation fix recorded. Help / Settings guidance visually matches current UI. |
+| UAT-07 Documentation match | IN PROGRESS | Launch command documentation fix recorded. Help / Settings guidance visually matches current UI. Demo operator ID wording discrepancy was recorded. |
 
 ## Detailed findings
 
 | Finding ID | Severity | Related check | Summary | Decision | Follow-up |
 |---|---|---|---|---|---|
 | UAT-F-001 | documentation fix | SETUP-004 | UAT execution record used invalid launch command `python -m app.main`. | Fixed in record. Continue with corrected command. | Use `python -m app.pyside6_main`. |
+| UAT-F-002 | documentation fix | UAT-01 | UAT guidance expected `demo-viewer` / `demo-editor` / `demo-admin`, while screenshots showed active operator IDs `viewer` / `editor` / `admin`. | Role validation accepted; clarify demo DB/user wording before final UAT closure. | Reconcile checklist/manual wording with actual generated or selected UAT DB users. |
 
 ## Completed checks from screenshots/logs
 
 | ID | Result | Notes |
 |---|---|---|
-| UAT-01-004 | PASS | Viewer role banner displayed role-specific text and restriction summary. |
+| UAT-01-001 | PASS | Viewer login observed. Window/status showed `viewer` role and viewer role banner. |
+| UAT-01-002 | PASS | Editor login observed. Window/status showed `editor` role and editor role banner. |
+| UAT-01-003 | PASS | Admin login observed. Window/status showed `admin` role, admin role banner, and user management tab. |
+| UAT-01-004 | PASS | Role banner displayed role-specific text and allowed/restricted summary for viewer/editor/admin. |
+| UAT-04-002 | IN PROGRESS | Admin user management list was visible with three users. Create/role change/disable/enable operations were not yet executed. |
 | UAT-06-004 | PASS | Help / Settings file protection checklist/guidance area was visible. |
 | UAT-06-005 | PASS | Path diagnostics and protection warning showed ACL guidance including `Get-Acl` / `icacls` wording. |
 | UAT-06-006 | PASS | Password logging guidance stated password/password_hash/password_salt are not recorded. |
@@ -69,9 +74,9 @@ Do not paste sensitive data, passwords, generated DB contents, or screenshots th
 
 | Item | Status | Notes |
 |---|---|---|
-| Any blocker found | NO | Current issue was command documentation, not application blocker. |
+| Any blocker found | NO | Current findings are documentation/wording issues, not application blockers. |
 | Any fix-before-release found | NOT RUN |  |
-| Any documentation fix found | YES | Launch command corrected in this record. |
+| Any documentation fix found | YES | Launch command corrected; demo operator ID wording still needs reconciliation before final closure. |
 | Any accepted limitation recorded | NOT RUN |  |
 
 ## Exit decision
