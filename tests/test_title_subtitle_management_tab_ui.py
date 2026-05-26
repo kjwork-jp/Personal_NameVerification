@@ -12,8 +12,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 qt_widgets = pytest.importorskip("PySide6.QtWidgets", exc_type=ImportError)
 QApplication = qt_widgets.QApplication
-QFormLayout = qt_widgets.QFormLayout
-QHBoxLayout = qt_widgets.QHBoxLayout
+QGroupBox = qt_widgets.QGroupBox
 
 from app.ui import title_subtitle_management_tab as ts_tab_module  # noqa: E402
 from app.ui.role_context import RoleContext  # noqa: E402
@@ -24,13 +23,26 @@ class StubCoreService:
     def __init__(self) -> None:
         self.calls: list[str] = []
 
-    def create_title(self, payload, operator_id: str, role: str = "admin", *, name_ids=None) -> int:  # type: ignore[no-untyped-def]
+    def create_title(
+        self,
+        payload,
+        operator_id: str,
+        role: str = "admin",
+        *,
+        name_ids=None,
+    ) -> int:  # type: ignore[no-untyped-def]
         self.calls.append(
             f"create_title:{payload.title_name}:{operator_id}:{role}:{name_ids or []}"
         )
         return 1
 
-    def update_title(self, title_id: int, payload, operator_id: str, role: str = "admin") -> None:  # type: ignore[no-untyped-def]
+    def update_title(
+        self,
+        title_id: int,
+        payload,
+        operator_id: str,
+        role: str = "admin",
+    ) -> None:  # type: ignore[no-untyped-def]
         self.calls.append(f"update_title:{title_id}:{payload.title_name}:{operator_id}:{role}")
 
     def delete_title(self, title_id: int, operator_id: str, role: str = "admin") -> None:
@@ -42,7 +54,12 @@ class StubCoreService:
     def hard_delete_title(self, title_id: int, operator_id: str, role: str = "admin") -> None:
         self.calls.append(f"hard_delete_title:{title_id}:{operator_id}:{role}")
 
-    def create_subtitle(self, payload, operator_id: str, role: str = "admin") -> int:  # type: ignore[no-untyped-def]
+    def create_subtitle(
+        self,
+        payload,
+        operator_id: str,
+        role: str = "admin",
+    ) -> int:  # type: ignore[no-untyped-def]
         self.calls.append(
             f"create_subtitle:{payload.title_id}:{payload.subtitle_code}:{operator_id}:{role}"
         )
@@ -107,7 +124,11 @@ class StubQueryService:
         ]
 
     def list_names_for_title(
-        self, title_id: int, role: str = "admin", *, include_deleted: bool = False
+        self,
+        title_id: int,
+        role: str = "admin",
+        *,
+        include_deleted: bool = False,
     ) -> list[NameTitleLinkRow]:
         _ = (role, include_deleted)
         if title_id != 1:
@@ -125,13 +146,20 @@ class StubQueryService:
         ]
 
     def list_titles(
-        self, role: str = "admin", *, include_deleted: bool = False
+        self,
+        role: str = "admin",
+        *,
+        include_deleted: bool = False,
     ) -> list[TitleDetail]:
         _ = (role, include_deleted)
         return self.titles
 
     def list_subtitles(
-        self, title_id: int, role: str = "admin", *, include_deleted: bool = False
+        self,
+        title_id: int,
+        role: str = "admin",
+        *,
+        include_deleted: bool = False,
     ) -> list[SubtitleDetail]:
         _ = (role, include_deleted)
         deleted_at = "2026-01-03T00:00:00Z" if title_id == 2 else None
@@ -158,18 +186,7 @@ def _app() -> QApplication:
     return app
 
 
-def _child_layout_index(widget, layout_type: type) -> int:  # type: ignore[no-untyped-def]
-    layout = widget.layout()
-    assert layout is not None
-    for index in range(layout.count()):
-        item = layout.itemAt(index)
-        child_layout = item.layout() if item is not None else None
-        if isinstance(child_layout, layout_type):
-            return index
-    raise AssertionError(f"{layout_type.__name__} was not found")
-
-
-def test_title_subtitle_native_list_first_layout() -> None:
+def test_title_subtitle_master_detail_layout() -> None:
     _app()
     tab = TitleSubtitleManagementTab(
         core_service=StubCoreService(),
@@ -181,17 +198,20 @@ def test_title_subtitle_native_list_first_layout() -> None:
     assert title_layout is not None
     assert subtitle_layout is not None
 
-    title_form_index = _child_layout_index(tab.title_panel, QFormLayout)
-    title_actions_index = _child_layout_index(tab.title_panel, QHBoxLayout)
-    subtitle_form_index = _child_layout_index(tab.subtitle_panel, QFormLayout)
-    subtitle_actions_index = _child_layout_index(tab.subtitle_panel, QHBoxLayout)
-
     assert tab.property("native_list_first_layout") is True
     assert tab.property("has_list_first_layout") is True
-    assert title_layout.indexOf(tab.titles_table) < title_form_index
-    assert title_layout.indexOf(tab.titles_table) < title_actions_index
-    assert subtitle_layout.indexOf(tab.subtitles_table) < subtitle_form_index
-    assert subtitle_layout.indexOf(tab.subtitles_table) < subtitle_actions_index
+    assert tab.property("master_detail_layout") is True
+    assert "左でタイトルを選択" in tab.workflow_hint_label.text()
+    assert "タイトル一覧" in tab.title_panel_label.text()
+    assert "選択中タイトル" in tab.title_detail_group.title()
+    assert "サブタイトル" in tab.subtitle_group.title()
+    assert isinstance(tab.title_detail_group, QGroupBox)
+    assert isinstance(tab.subtitle_group, QGroupBox)
+    assert title_layout.indexOf(tab.titles_table) >= 0
+    assert subtitle_layout.indexOf(tab.title_detail_group) >= 0
+    assert subtitle_layout.indexOf(tab.subtitle_group) > subtitle_layout.indexOf(
+        tab.title_detail_group
+    )
 
 
 def test_title_subtitle_management_operations(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -331,12 +351,14 @@ def test_selected_title_label_and_subtitle_form_clear_on_title_change() -> None:
 
     tab.titles_table.selectRow(0)
     assert "Title1" in tab.selected_title_label.text()
+    assert "Title1" in tab.selected_title_context_label.text()
     assert "Title1" in tab.title_selector_combo.currentText()
 
     tab.subtitle_code_input.setText("TEMP")
     tab.titles_table.selectRow(1)
 
     assert "Title2" in tab.selected_title_label.text()
+    assert "Title2" in tab.selected_title_context_label.text()
     assert tab.subtitle_code_input.text() == ""
     assert "削除済みタイトル" in tab.subtitle_hint_label.text()
     assert not tab.subtitle_create_button.isEnabled()
@@ -413,7 +435,10 @@ def test_title_buttons_follow_deleted_state() -> None:
 
 class SubtitleDeletedOnActiveTitleQueryService(StubQueryService):
     def list_subtitles(
-        self, title_id: int, *, include_deleted: bool = False
+        self,
+        title_id: int,
+        *,
+        include_deleted: bool = False,
     ) -> list[SubtitleDetail]:
         _ = include_deleted
         return [
