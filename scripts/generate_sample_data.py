@@ -221,7 +221,7 @@ def generate_sqlite(
         connection,
         """
         INSERT OR IGNORE INTO name_subtitle_links(name_id, subtitle_id, relation_type, deleted_at, created_at, updated_at)
-        VALUES (?, ?, 'primary', NULL, ?, ?)
+        VALUES (?, ?, ?, NULL, ?, ?)
         """,
         _bulk_name_subtitle_link_rows(
             name_count=name_count,
