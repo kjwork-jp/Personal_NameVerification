@@ -26,30 +26,12 @@ This is a release-affecting UX backlog item. It does not publish a release and d
 | Visual hierarchy is weak | The primary workflow and secondary/destructive workflows are not separated enough. |
 | Role-specific affordance is still noisy | viewer/editor/admin restrictions are visible, but the title/subtitle workflow itself remains hard to parse. |
 | List-first change helped structure but not enough | The screen still needs workflow-level redesign, not only widget reordering. |
+| Selection state persistence is annoying | Once a title is selected, the selected state remains even when the user expects a clean unselected/add mode. |
+| Create/edit/delete are mixed | Listing, editing, deleting, and adding new records should be separated by workflow, not shown as one crowded panel. |
 
-## Target UX direction
+## First fix result
 
-| Direction | Description |
-|---|---|
-| Split by workflow | Separate title operations and subtitle operations more clearly. |
-| Make selection state explicit | Show "selected title" as a persistent context header before subtitle operations. |
-| Reduce simultaneous controls | Hide or collapse advanced/destructive controls unless needed. |
-| Make create/update mode explicit | Use mode labels or separated panels so users know whether they are creating or editing. |
-| Keep destructive actions away | Delete/restore/hard-delete should stay visually separated from normal create/update. |
-| Improve empty-state guidance | When no title is selected, subtitle area should clearly say what to do next. |
-
-## Candidate redesign options
-
-| Option | Summary | Pros | Cons |
-|---|---|---|---|
-| A: Two sub-tabs | Split into `タイトル` and `サブタイトル` sub-tabs inside the management tab. | Simple mental model, less clutter per screen. | Cross-context operations need tab switching. |
-| B: Wizard-like flow | Step 1 select/create title, step 2 manage subtitles. | Strong guidance for new users. | Slower for power users. |
-| C: Master-detail layout | Left title list, right selected-title details and subtitles. | Common desktop pattern, good context. | Requires careful layout tuning. |
-| D: Keep current layout but collapse sections | Add collapsible create/update/destructive panels. | Least disruptive. | May still feel crowded. |
-
-## Implemented first fix
-
-Used **Option C: Master-detail layout** as the first implementation.
+The first fix used **Option C: Master-detail layout**.
 
 Implemented structure:
 
@@ -62,38 +44,69 @@ Title/Subtitle Management
    └─ subtitle list and create-update controls for the selected title
 ```
 
+UAT re-check feedback: **not sufficient**.
+
+Reason:
+
+- The UI is cleaner than before but still keeps listing/editing/add/delete concepts too close together.
+- Selection state continues to affect the user's mental model.
+- The user explicitly prefers tabs such as list / edit / delete / new add.
+
+## Revised target UX direction
+
+Use workflow-level tab separation as the next implementation direction.
+
+Recommended tab model:
+
+```text
+Title/Subtitle Management
+├─ 一覧
+│  └─ title/subtitle reference and selection preview only
+├─ 新規追加
+│  └─ create title / create subtitle flows without persistent edit selection noise
+├─ 編集
+│  └─ select existing title/subtitle, then update fields
+├─ 削除
+│  └─ admin-only delete/restore/hard-delete workflow, visually isolated
+└─ ガイド
+   └─ operation rules and role restrictions
+```
+
+## Candidate redesign options
+
+| Option | Summary | Decision |
+|---|---|---|
+| A: Two sub-tabs | Split into `タイトル` and `サブタイトル` only. | Not enough; workflow separation is still weak. |
+| B: Wizard-like flow | Step 1 select/create title, step 2 manage subtitles. | Useful later, but slower for power users. |
+| C: Master-detail layout | Left title list, right selected-title details and subtitles. | Implemented first; UAT judged insufficient. |
+| D: Collapse sections | Add collapsible create/update/destructive panels. | Not enough; still crowded. |
+| E: Workflow tabs | Split into `一覧` / `新規追加` / `編集` / `削除` / `ガイド`. | Revised recommended direction. |
+
 ## Implementation status
 
 | ID | Priority | Area | Status | Candidate |
 |---|---:|---|---|---|
-| V040-UX-002 | P2 | UI | Implemented / Actions pending / UAT re-check pending | Redesign title/subtitle management into clearer master-detail workflow |
-
-## Implementation notes
-
-- Updated `app/ui/title_subtitle_management_tab.py`.
-- Added top-level workflow hint.
-- Left panel is now title-list focused.
-- Right panel now contains selected title detail and selected-title subtitle management.
-- Added `master_detail_layout` property for UI tests.
-- Updated `tests/test_title_subtitle_management_tab_ui.py` to assert the master-detail structure.
+| V040-UX-002 | P2 | UI | Revision required / fix before release | Redesign title/subtitle management into workflow tabs |
 
 ## Acceptance criteria
 
 | ID | Criteria | Status |
 |---|---|---|
-| UX-TS-001 | A user can identify the selected title without reading the whole form. | Implemented / re-check pending |
-| UX-TS-002 | Subtitle operations are visually tied to the selected title. | Implemented / re-check pending |
-| UX-TS-003 | Create/update/destructive actions are visually separated. | Partially implemented / re-check pending |
-| UX-TS-004 | Viewer sees the structure without being distracted by unusable controls. | Implemented / re-check pending |
-| UX-TS-005 | Editor can create/update without encountering admin-only destructive controls as primary actions. | Implemented / re-check pending |
-| UX-TS-006 | Admin can still access delete/restore/hard-delete, but they are clearly separated. | Partially implemented / re-check pending |
-| UX-TS-007 | Existing tests for role guards and list-first ordering are updated or replaced with layout-level tests. | Implemented / Actions pending |
+| UX-TS-001 | A user can identify whether they are in list, add, edit, or delete mode. | Revision required |
+| UX-TS-002 | Selecting a row in list mode does not unexpectedly force edit/delete mode. | Revision required |
+| UX-TS-003 | New-add flow starts from a clean form and is not polluted by previous selection state. | Revision required |
+| UX-TS-004 | Edit flow requires explicit selection of an existing title/subtitle. | Revision required |
+| UX-TS-005 | Delete/restore/hard-delete are isolated from normal create/update work. | Revision required |
+| UX-TS-006 | Viewer can browse list/guide without seeing primary disabled write buttons as the main experience. | Revision required |
+| UX-TS-007 | Editor sees add/edit as primary workflows and admin-only delete workflow remains separated. | Revision required |
+| UX-TS-008 | Admin can access delete/restore/hard-delete from the delete tab only. | Revision required |
+| UX-TS-009 | Tests assert workflow tabs and mode isolation. | Revision required |
 
 ## Decision
 
 Do not start release preparation until one of the following is true:
 
-1. `V040-UX-002` passes GitHub Actions and UAT re-check.
+1. Workflow-tab redesign is implemented and UAT re-check passes.
 2. The user explicitly accepts the current title/subtitle UI as a known limitation for the release.
 
-Current recommendation: run local re-check after pulling the latest implementation.
+Current recommendation: implement workflow tabs before continuing release judgment.
