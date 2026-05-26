@@ -4,7 +4,7 @@
 
 This document records the UAT finding that the title/subtitle management area is too cluttered and not intuitive enough.
 
-This is a release-affecting UX backlog candidate. It does not publish a release and does not complete UAT.
+This is a release-affecting UX backlog item. It does not publish a release and does not complete UAT by itself.
 
 ## UAT finding
 
@@ -15,7 +15,7 @@ This is a release-affecting UX backlog candidate. It does not publish a release 
 | Area | Title / Subtitle management UI |
 | Summary | The title/subtitle area is too cluttered and difficult to operate intuitively. |
 | Reported during | UAT viewer/editor/admin screen review |
-| Release impact | Release preparation should remain deferred until this is either fixed or explicitly accepted. |
+| Release impact | Release preparation should remain deferred until this is either fixed and re-checked or explicitly accepted. |
 
 ## Observed pain points
 
@@ -47,45 +47,53 @@ This is a release-affecting UX backlog candidate. It does not publish a release 
 | C: Master-detail layout | Left title list, right selected-title details and subtitles. | Common desktop pattern, good context. | Requires careful layout tuning. |
 | D: Keep current layout but collapse sections | Add collapsible create/update/destructive panels. | Least disruptive. | May still feel crowded. |
 
-## Recommended first fix
+## Implemented first fix
 
-Use **Option C: Master-detail layout** as the first implementation candidate.
+Used **Option C: Master-detail layout** as the first implementation.
 
-Suggested structure:
+Implemented structure:
 
 ```text
 Title/Subtitle Management
-├─ Left: Title list + title search/filter
-└─ Right: selected title context
-   ├─ Title details / edit controls
-   ├─ Subtitle list for selected title
-   ├─ Subtitle create/update controls
-   └─ Advanced/destructive actions collapsed or separated
+├─ Top: workflow hint
+├─ Left: title list and reload only
+└─ Right: selected-title workflow
+   ├─ selected title details / create-update controls
+   └─ subtitle list and create-update controls for the selected title
 ```
 
-## Acceptance criteria
-
-| ID | Criteria |
-|---|---|
-| UX-TS-001 | A user can identify the selected title without reading the whole form. |
-| UX-TS-002 | Subtitle operations are visually tied to the selected title. |
-| UX-TS-003 | Create/update/destructive actions are visually separated. |
-| UX-TS-004 | Viewer sees the structure without being distracted by unusable controls. |
-| UX-TS-005 | Editor can create/update without encountering admin-only destructive controls as primary actions. |
-| UX-TS-006 | Admin can still access delete/restore/hard-delete, but they are clearly separated. |
-| UX-TS-007 | Existing tests for role guards and list-first ordering are updated or replaced with layout-level tests. |
-
-## Proposed backlog item
+## Implementation status
 
 | ID | Priority | Area | Status | Candidate |
 |---|---:|---|---|---|
-| V040-UX-002 | P2 | UI | Candidate / UAT finding | Redesign title/subtitle management into clearer master-detail workflow |
+| V040-UX-002 | P2 | UI | Implemented / Actions pending / UAT re-check pending | Redesign title/subtitle management into clearer master-detail workflow |
+
+## Implementation notes
+
+- Updated `app/ui/title_subtitle_management_tab.py`.
+- Added top-level workflow hint.
+- Left panel is now title-list focused.
+- Right panel now contains selected title detail and selected-title subtitle management.
+- Added `master_detail_layout` property for UI tests.
+- Updated `tests/test_title_subtitle_management_tab_ui.py` to assert the master-detail structure.
+
+## Acceptance criteria
+
+| ID | Criteria | Status |
+|---|---|---|
+| UX-TS-001 | A user can identify the selected title without reading the whole form. | Implemented / re-check pending |
+| UX-TS-002 | Subtitle operations are visually tied to the selected title. | Implemented / re-check pending |
+| UX-TS-003 | Create/update/destructive actions are visually separated. | Partially implemented / re-check pending |
+| UX-TS-004 | Viewer sees the structure without being distracted by unusable controls. | Implemented / re-check pending |
+| UX-TS-005 | Editor can create/update without encountering admin-only destructive controls as primary actions. | Implemented / re-check pending |
+| UX-TS-006 | Admin can still access delete/restore/hard-delete, but they are clearly separated. | Partially implemented / re-check pending |
+| UX-TS-007 | Existing tests for role guards and list-first ordering are updated or replaced with layout-level tests. | Implemented / Actions pending |
 
 ## Decision
 
 Do not start release preparation until one of the following is true:
 
-1. `V040-UX-002` is implemented and UAT re-check passes.
+1. `V040-UX-002` passes GitHub Actions and UAT re-check.
 2. The user explicitly accepts the current title/subtitle UI as a known limitation for the release.
 
-Current recommendation: implement `V040-UX-002` before release.
+Current recommendation: run local re-check after pulling the latest implementation.
