@@ -106,6 +106,25 @@ def _app() -> QApplication:
     return app
 
 
+def test_name_management_tab_has_workflow_tabs() -> None:
+    _app()
+    tab = NameManagementTab(core_service=StubCoreService(), query_service=StubQueryService())
+
+    assert tab.property("workflow_tabs_layout") is True
+    assert tab.workflow_tabs.count() == 5
+    assert [tab.workflow_tabs.tabText(index) for index in range(5)] == [
+        "一覧",
+        "新規追加",
+        "編集",
+        "削除",
+        "ガイド",
+    ]
+    assert tab.list_hint_label.property("accent") == "list"
+    assert tab.add_hint_label.property("accent") == "add"
+    assert tab.edit_hint_label.property("accent") == "edit"
+    assert tab.delete_hint_label.property("accent") == "delete"
+
+
 def test_name_management_tab_create_update_delete(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -118,12 +137,17 @@ def test_name_management_tab_create_update_delete(
     tab = NameManagementTab(core_service=core, query_service=query)
 
     tab.operator_input.setText("op-1")
-    tab.raw_name_input.setText("Created")
+    tab.workflow_tabs.setCurrentWidget(tab.add_tab)
+    tab.add_raw_name_input.setText("Created")
     tab._create_name()
 
+    tab.workflow_tabs.setCurrentWidget(tab.edit_tab)
     tab.names_table.selectRow(0)
     tab.raw_name_input.setText("Alice Updated")
     tab._update_name()
+
+    tab.workflow_tabs.setCurrentWidget(tab.delete_tab)
+    tab.delete_name_selector.setCurrentIndex(1)
     tab._delete_name()
 
     assert any(item.startswith("create:Created:op-1:admin") for item in core.called)
@@ -143,6 +167,18 @@ def test_name_management_tab_create_update_delete(
     tab.filter_input.setText("ali")
     tab._refresh_list()
     assert query.last_query == "ali"
+
+
+def test_name_add_tab_does_not_use_previous_selection() -> None:
+    _app()
+    tab = NameManagementTab(core_service=StubCoreService(), query_service=StubQueryService())
+
+    tab.names_table.selectRow(0)
+    tab.workflow_tabs.setCurrentWidget(tab.add_tab)
+
+    assert tab.add_raw_name_input.text() == ""
+    assert tab.add_note_input.text() == ""
+    assert tab.raw_name_input.text() == "Alice"
 
 
 def test_name_management_tab_requires_operator_id() -> None:
@@ -189,6 +225,7 @@ def test_name_management_role_guards() -> None:
         role_context=RoleContext(role="editor"),
     )
     assert tab_editor.create_button.isEnabled()
+    tab_editor.names_table.selectRow(0)
     assert tab_editor.update_button.isEnabled()
     assert not tab_editor.delete_button.isEnabled()
 
@@ -197,6 +234,7 @@ def test_name_management_role_guards() -> None:
         query_service=StubQueryService(),
         role_context=RoleContext(role="admin"),
     )
+    tab_admin.names_table.selectRow(0)
     assert tab_admin.delete_button.isEnabled()
     assert tab_admin.restore_button.isHidden()
     assert tab_admin.hard_delete_button.isHidden()
@@ -212,7 +250,8 @@ def test_name_management_propagates_editor_role_to_service() -> None:
         role_context=RoleContext(role="editor"),
     )
     tab.operator_input.setText("op-1")
-    tab.raw_name_input.setText("EditorCreate")
+    tab.workflow_tabs.setCurrentWidget(tab.add_tab)
+    tab.add_raw_name_input.setText("EditorCreate")
     tab._create_name()
 
     assert "create:EditorCreate:op-1:editor" in core.called
