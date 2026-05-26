@@ -186,32 +186,28 @@ def _app() -> QApplication:
     return app
 
 
-def test_title_subtitle_master_detail_layout() -> None:
+def test_title_subtitle_workflow_tabs_layout() -> None:
     _app()
     tab = TitleSubtitleManagementTab(
         core_service=StubCoreService(),
         query_service=StubQueryService(),
     )
 
-    title_layout = tab.title_panel.layout()
-    subtitle_layout = tab.subtitle_panel.layout()
-    assert title_layout is not None
-    assert subtitle_layout is not None
-
     assert tab.property("native_list_first_layout") is True
     assert tab.property("has_list_first_layout") is True
-    assert tab.property("master_detail_layout") is True
-    assert "左でタイトルを選択" in tab.workflow_hint_label.text()
+    assert tab.property("master_detail_layout") is False
+    assert tab.property("workflow_tabs_layout") is True
+    assert [tab.workflow_tabs.tabText(index) for index in range(tab.workflow_tabs.count())] == [
+        "一覧",
+        "新規追加",
+        "編集",
+        "削除",
+        "ガイド",
+    ]
+    assert "新規追加は選択状態を持ち込みません" in tab.workflow_hint_label.text()
     assert "タイトル一覧" in tab.title_panel_label.text()
-    assert "選択中タイトル" in tab.title_detail_group.title()
-    assert "サブタイトル" in tab.subtitle_group.title()
     assert isinstance(tab.title_detail_group, QGroupBox)
     assert isinstance(tab.subtitle_group, QGroupBox)
-    assert title_layout.indexOf(tab.titles_table) >= 0
-    assert subtitle_layout.indexOf(tab.title_detail_group) >= 0
-    assert subtitle_layout.indexOf(tab.subtitle_group) > subtitle_layout.indexOf(
-        tab.title_detail_group
-    )
 
 
 def test_title_subtitle_management_operations(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -227,26 +223,38 @@ def test_title_subtitle_management_operations(monkeypatch: pytest.MonkeyPatch) -
 
     assert tab.operator_input.isHidden()
 
-    tab.title_name_input.setText("NewTitle")
-    tab.title_link_name_combo.setCurrentIndex(1)
+    tab.workflow_tabs.setCurrentWidget(tab.add_tab)
+    tab.add_title_name_input.setText("NewTitle")
+    tab.add_title_link_name_combo.setCurrentIndex(1)
     tab._create_title()
+
+    tab.workflow_tabs.setCurrentWidget(tab.edit_tab)
     tab.titles_table.selectRow(0)
     tab.title_name_input.setText("UpdatedTitle")
     tab._update_title()
+
+    tab.workflow_tabs.setCurrentWidget(tab.delete_tab)
+    tab.delete_title_selector_combo.setCurrentIndex(1)
     tab._delete_title()
 
-    tab.titles_table.selectRow(1)
+    tab.delete_title_selector_combo.setCurrentIndex(2)
     tab._restore_title()
     tab._hard_delete_title()
 
-    tab.titles_table.selectRow(0)
-    tab.subtitle_code_input.setText("SNEW")
-    tab.subtitle_name_input.setText("SubNew")
+    tab.workflow_tabs.setCurrentWidget(tab.add_tab)
+    tab.add_subtitle_title_combo.setCurrentIndex(1)
+    tab.add_subtitle_code_input.setText("SNEW")
+    tab.add_subtitle_name_input.setText("SubNew")
     tab._create_subtitle()
 
+    tab.workflow_tabs.setCurrentWidget(tab.edit_tab)
+    tab.titles_table.selectRow(0)
     tab.subtitles_table.selectRow(0)
     tab.subtitle_code_input.setText("S1-U")
     tab._update_subtitle()
+
+    tab.workflow_tabs.setCurrentWidget(tab.delete_tab)
+    tab.delete_subtitle_selector_combo.setCurrentIndex(1)
     tab._delete_subtitle()
 
     assert any(call.startswith("create_title:NewTitle:op-1:admin:[100]") for call in core.calls)
@@ -287,7 +295,8 @@ def test_title_subtitle_management_ignores_hidden_operator_input() -> None:
     )
 
     tab.operator_input.setText("manual-user")
-    tab.title_name_input.setText("NewTitle")
+    tab.workflow_tabs.setCurrentWidget(tab.add_tab)
+    tab.add_title_name_input.setText("NewTitle")
     tab._create_title()
 
     assert any(call.startswith("create_title:NewTitle:login-user:admin") for call in core.calls)
@@ -326,6 +335,9 @@ def test_title_subtitle_role_guards() -> None:
         role_context=RoleContext(role="editor"),
     )
     assert editor.title_create_button.isEnabled()
+    assert not editor.subtitle_update_button.isEnabled()
+    editor.titles_table.selectRow(0)
+    editor.subtitles_table.selectRow(0)
     assert editor.subtitle_update_button.isEnabled()
     assert not editor.title_delete_button.isEnabled()
     assert not editor.subtitle_delete_button.isEnabled()
@@ -335,6 +347,9 @@ def test_title_subtitle_role_guards() -> None:
         query_service=StubQueryService(),
         role_context=RoleContext(role="admin"),
     )
+    assert not admin.title_delete_button.isEnabled()
+    admin.titles_table.selectRow(0)
+    admin.subtitles_table.selectRow(0)
     assert admin.title_delete_button.isEnabled()
     assert admin.title_restore_button.isHidden()
     assert admin.title_hard_delete_button.isHidden()
@@ -370,7 +385,7 @@ def test_title_combo_selection_updates_table_selection() -> None:
         core_service=StubCoreService(), query_service=StubQueryService()
     )
 
-    tab.title_selector_combo.setCurrentIndex(1)
+    tab.title_selector_combo.setCurrentIndex(2)
 
     assert tab.titles_table.currentRow() == 1
     assert "Title2" in tab.selected_title_label.text()
