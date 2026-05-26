@@ -31,7 +31,8 @@ from app.ui.audit_logs_tab import AuditLogsTab  # noqa: E402
 from app.ui.main_window import MainWindow  # noqa: E402
 from app.ui.operations_tab import OperationsTab  # noqa: E402
 from app.ui.role_context import RoleContext  # noqa: E402
-from app.ui.title_subtitle_unified_tab import TitleSubtitleUnifiedTab  # noqa: E402
+from app.ui.subtitle_management_tab import SubtitleManagementTab  # noqa: E402
+from app.ui.title_management_tab import TitleManagementTab  # noqa: E402
 from tests.test_main_window_smoke import (  # noqa: E402
     EmptyBackupRestoreService,
     EmptyCoreService,
@@ -57,7 +58,8 @@ class UatQueryService:
             )
         ]
 
-    def get_name_detail(self, name_id: int) -> object:
+    def get_name_detail(self, name_id: int, *args: object, **kwargs: object) -> object:
+        _ = (args, kwargs)
         raise RuntimeError(f"not used: {name_id}")
 
     def list_titles(
@@ -332,22 +334,27 @@ def test_uat_title_and_link_visibility_by_role(monkeypatch: pytest.MonkeyPatch) 
     editor = _window_for_role("editor", monkeypatch)
     admin = _window_for_role("admin", monkeypatch)
 
-    viewer_title = viewer._tabs_by_name["タイトル/サブタイトル管理"]
-    assert isinstance(viewer_title, TitleSubtitleUnifiedTab)
-    viewer_title_editor = viewer_title.title_tab.editor
+    viewer_title = viewer._tabs_by_name["タイトル管理"]
+    assert isinstance(viewer_title, TitleManagementTab)
+    viewer_title_editor = viewer_title.editor
     assert viewer_title_editor.title_name_input.isHidden()
     assert viewer_title_editor.title_create_button.isHidden()
     assert viewer_title_editor.title_delete_button.isHidden()
 
-    editor_title = editor._tabs_by_name["タイトル/サブタイトル管理"]
-    assert isinstance(editor_title, TitleSubtitleUnifiedTab)
-    editor_title_editor = editor_title.title_tab.editor
+    editor_title = editor._tabs_by_name["タイトル管理"]
+    assert isinstance(editor_title, TitleManagementTab)
+    editor_title_editor = editor_title.editor
     assert not editor_title_editor.title_create_button.isHidden()
     assert editor_title_editor.title_delete_button.isHidden()
 
-    admin_title = admin._tabs_by_name["タイトル/サブタイトル管理"]
-    assert isinstance(admin_title, TitleSubtitleUnifiedTab)
-    assert not admin_title.title_tab.editor.title_delete_button.isHidden()
+    admin_title = admin._tabs_by_name["タイトル管理"]
+    assert isinstance(admin_title, TitleManagementTab)
+    assert not admin_title.editor.title_delete_button.isHidden()
+
+    viewer_subtitle = viewer._tabs_by_name["サブタイトル管理"]
+    assert isinstance(viewer_subtitle, SubtitleManagementTab)
+    assert viewer_subtitle.editor.subtitle_create_button.isHidden()
+    assert viewer_subtitle.editor.subtitle_delete_button.isHidden()
 
     assert _link_subtab_visibility(viewer) == {"登録": False, "解除": False}
     assert _link_subtab_visibility(editor) == {"登録": True, "解除": False}
