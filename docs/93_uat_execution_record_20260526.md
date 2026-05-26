@@ -20,22 +20,22 @@ Do not paste sensitive data, passwords, generated DB contents, or screenshots th
 | Item | Value |
 |---|---|
 | Execution date | 2026-05-26 |
-| Executor |  |
-| OS |  |
-| Python / EXE mode |  |
+| Executor | NAOKI KAJIWARA |
+| OS | Windows / PowerShell |
+| Python / EXE mode | Python module execution |
 | DB path | `tmp/uat_demo.db` |
 | CSV source path | `tmp/uat_demo_csv` |
-| Overall status | NOT RUN |
+| Overall status | IN PROGRESS |
 
 ## Setup result
 
 | ID | Result | Notes |
 |---|---|---|
-| SETUP-001 | NOT RUN | Generate demo SQLite DB under `tmp/uat_demo.db`. |
-| SETUP-002 | NOT RUN | Generate demo CSV source under `tmp/uat_demo_csv`. |
-| SETUP-003 | NOT RUN | Confirm generated files are not tracked by git. |
-| SETUP-004 | NOT RUN | Confirm application starts with the intended DB path. |
-| SETUP-005 | NOT RUN | Confirm Help / Settings shows DB/log/export/backup paths. |
+| SETUP-001 | PASS | Demo SQLite DB generated at `tmp/uat_demo.db`. |
+| SETUP-002 | PASS | Demo CSV source generated at `tmp/uat_demo_csv`. |
+| SETUP-003 | PASS | `git status --short tmp` returned no tracked/untracked tmp entries. |
+| SETUP-004 | NOT RUN | Initial template command `python -m app.main` was invalid. Corrected command is `python -m app.pyside6_main`. |
+| SETUP-005 | NOT RUN | Confirm Help / Settings shows DB/log/export/backup paths after successful startup. |
 
 ## Scenario result summary
 
@@ -53,15 +53,15 @@ Do not paste sensitive data, passwords, generated DB contents, or screenshots th
 
 | Finding ID | Severity | Related check | Summary | Decision | Follow-up |
 |---|---|---|---|---|---|
-|  |  |  |  |  |  |
+| UAT-F-001 | documentation fix | SETUP-004 | UAT execution record used invalid launch command `python -m app.main`. | Fixed in record. Continue with corrected command. | Use `python -m app.pyside6_main`. |
 
 ## Blocker status
 
 | Item | Status | Notes |
 |---|---|---|
-| Any blocker found | NOT RUN |  |
+| Any blocker found | NO | Current issue was command documentation, not application blocker. |
 | Any fix-before-release found | NOT RUN |  |
-| Any documentation fix found | NOT RUN |  |
+| Any documentation fix found | YES | Launch command corrected in this record. |
 | Any accepted limitation recorded | NOT RUN |  |
 
 ## Exit decision
@@ -69,7 +69,7 @@ Do not paste sensitive data, passwords, generated DB contents, or screenshots th
 | Item | Status | Notes |
 |---|---|---|
 | All required checks executed | NOT RUN |  |
-| No unresolved blocker remains | NOT RUN |  |
+| No unresolved blocker remains | IN PROGRESS | No blocker currently identified. |
 | UAT complete | NOT RUN |  |
 | Release preparation allowed | NOT RUN | Only after UAT complete |
 
@@ -97,7 +97,7 @@ Run application against UAT DB for local testing:
 
 ```powershell
 $env:NAMEVERIFICATION_DB_PATH = "tmp\uat_demo.db"
-python -m app.main
+python -m app.pyside6_main
 ```
 
 Clear UAT DB path after testing:
