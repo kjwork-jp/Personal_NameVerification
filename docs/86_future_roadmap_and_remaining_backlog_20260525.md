@@ -30,10 +30,10 @@ It intentionally includes more than the immediate P2 items so that the remaining
 | V040-IMPORT-001 | v0.4.x | P2 | Data/Ops | Implemented / Actions pending | Improve import validation, preview, and rollback evidence |
 | V040-AUDIT-001 | v0.4.x | P2 | Audit | Implemented / Actions pending | Strengthen audit log review/export workflow for operations |
 | V040-SEC-001 | v0.4.x | P2 | Security/Ops | Implemented / Actions pending | Add deeper OS file protection guidance and operator checklist |
-| V040-UX-001 | v0.4.x | P2 | UI | Candidate | Improve role-specific visual cues and dashboard readability |
-| V050-PERF-001 | v0.5.x | P3 | Performance | Candidate | Re-check large data performance and table pagination/search behavior |
-| V050-ASSET-001 | v0.5.x | P3 | Assets | Candidate | Revisit icon/image asset storage and relative path handling |
-| V050-MULTI-001 | v0.5.x | P3 | Architecture | Candidate | Revisit single-user/local SQLite constraints before multi-user use |
+| V040-UX-001 | v0.4.x | P2 | UI | Implemented / Actions pending | Improve role-specific visual cues and dashboard readability |
+| V050-PERF-001 | v0.5.x | P3 | Performance | Implemented / Actions pending | Re-check large data performance and table pagination/search behavior |
+| V050-ASSET-001 | v0.5.x | P3 | Assets | Implemented / docs-only | Revisit icon/image asset storage and relative path handling |
+| V050-MULTI-001 | v0.5.x | P3 | Architecture | Implemented / docs-only | Revisit single-user/local SQLite constraints before multi-user use |
 | V900-UAT-001 | post-backlog | P1 | UAT | Deferred until all backlog complete | Run demo DB based UAT for viewer/editor/admin flows |
 | V100-REL-001 | post-UAT | P1 | Release | Deferred until all backlog complete | Prepare v1.0 release criteria, final UAT, and distribution policy |
 
@@ -41,13 +41,14 @@ It intentionally includes more than the immediate P2 items so that the remaining
 
 - V030-MAINT-001: document maintenance review ledger added; no files deleted.
 - V030-DOC-002: existing manuals refreshed for latest tabs, RBAC, data operations, and deferral policy.
+- V050-ASSET-001: asset storage and relative path policy documented.
+- V050-MULTI-001: local SQLite single-user and future multi-user policy documented.
 
 ## Immediate next items
 
-1. V040-UX-001
-2. V050-PERF-001
-3. V050-ASSET-001
-4. V050-MULTI-001
+1. Check GitHub Actions for implemented code changes.
+2. Mark Actions-pending implementation items done if `Quality Gates` passes.
+3. Keep UAT and Release deferred until all backlog work is complete.
 
 ## Deferred gates
 
