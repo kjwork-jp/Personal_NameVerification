@@ -14,6 +14,8 @@
 | Immediate v0.3.x work | this file |
 | Future roadmap / remaining backlog | `docs/86_future_roadmap_and_remaining_backlog_20260525.md` |
 | Large data performance review | `docs/88_large_data_performance_review_20260525.md` |
+| Asset storage and relative path policy | `docs/89_asset_storage_and_relative_path_policy_20260525.md` |
+| Local SQLite / multi-user policy | `docs/90_local_sqlite_single_user_and_multi_user_policy_20260525.md` |
 | Document maintenance review | `docs/87_doc_maintenance_review_20260525.md` |
 | Open issues / constraints | `docs/97_open_issues_and_constraints.md` |
 | Release/development ledger index | `docs/release_ledger/00_release_ledger_index.md` |
@@ -37,12 +39,10 @@
 | V040-UX-001 | P2 | UI | Implemented / Actions pending | Improve role-specific visual cues and dashboard readability |
 | V050-PERF-001 | P3 | Performance | Implemented / Actions pending | Re-check large data performance and table pagination/search behavior |
 
-## Later roadmap snapshot
+## Deferred gates
 
 | ID | Horizon | Priority | Area | Status | Candidate |
 |---|---|---:|---|---|---|
-| V050-ASSET-001 | v0.5.x | P3 | Assets | Candidate | Revisit icon/image asset storage and relative path handling |
-| V050-MULTI-001 | v0.5.x | P3 | Architecture | Candidate | Revisit single-user/local SQLite constraints before multi-user use |
 | V900-UAT-001 | post-backlog | P1 | UAT | Deferred until all backlog complete | Run demo DB based UAT for viewer/editor/admin flows |
 | V100-REL-001 | post-UAT | P1 | Release | Deferred until all backlog complete | Prepare v1.0 release criteria, final UAT, and distribution policy |
 
@@ -57,6 +57,8 @@
 - V030-DATA-001: demo sample SQLite/CSV generation mode added.
 - V030-MAINT-001: docs maintenance review ledger added; no files deleted.
 - V030-DOC-002: existing manuals refreshed for latest tabs, RBAC, data operations, and deferral policy.
+- V050-ASSET-001: asset storage and relative path policy documented.
+- V050-MULTI-001: local SQLite single-user and future multi-user policy documented.
 
 ## Implemented / Actions pending
 
@@ -69,27 +71,21 @@
 - V040-UX-001: structured role capability summary added.
 - V050-PERF-001: large data performance review plan and bulk generator contract tests added.
 
-## V040-UX-001 progress
+## V050-ASSET-001 completion
 
-- Added structured role capability summaries in `app/ui/role_visual_identity.py`.
-- Role banner now includes allowed/restricted action summaries.
-- Role banner/status labels expose structured properties for dashboard/help reuse.
-- Added `tests/test_role_visual_identity.py` coverage.
+- Added `docs/89_asset_storage_and_relative_path_policy_20260525.md`.
+- Documented DB-vs-file asset storage policy.
+- Documented package-root-relative path guidance and absolute path cautions.
+- Documented future asset-root, missing asset diagnostics, and asset bundle candidates.
+- Docs-only; no application behavior changed.
 
-Pending:
+## V050-MULTI-001 completion
 
-- GitHub Actions quality gate result.
-
-## V050-PERF-001 progress
-
-- Added `docs/88_large_data_performance_review_20260525.md`.
-- Fixed small/medium/large bulk data generation commands and review checklist.
-- Added bulk sample generator contract tests in `tests/test_generate_sample_data_demo.py`.
-- No generated DB/CSV data was committed.
-
-Pending:
-
-- GitHub Actions quality gate result.
+- Added `docs/90_local_sqlite_single_user_and_multi_user_policy_20260525.md`.
+- Documented current local SQLite single-operator model.
+- Documented network-share and concurrent-write constraints.
+- Documented future options for service/API or server-side DB architecture.
+- Docs-only; no application behavior changed.
 
 ## GitHub Actions policy
 
@@ -102,4 +98,4 @@ Pending:
 
 ## Next action
 
-Check GitHub Actions for implemented code changes. If `Quality Gates` passes, mark completed items done and continue to `V050-ASSET-001` and `V050-MULTI-001`.
+Check GitHub Actions for implemented code changes. If `Quality Gates` passes, mark Actions-pending items done. UAT and release remain deferred until all backlog work is complete.
