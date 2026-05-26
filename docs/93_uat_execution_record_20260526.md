@@ -34,26 +34,36 @@ Do not paste sensitive data, passwords, generated DB contents, or screenshots th
 | SETUP-001 | PASS | Demo SQLite DB generated at `tmp/uat_demo.db`. |
 | SETUP-002 | PASS | Demo CSV source generated at `tmp/uat_demo_csv`. |
 | SETUP-003 | PASS | `git status --short tmp` returned no tracked/untracked tmp entries. |
-| SETUP-004 | NOT RUN | Initial template command `python -m app.main` was invalid. Corrected command is `python -m app.pyside6_main`. |
-| SETUP-005 | NOT RUN | Confirm Help / Settings shows DB/log/export/backup paths after successful startup. |
+| SETUP-004 | PASS | Application started with corrected command `python -m app.pyside6_main` and intended DB path. |
+| SETUP-005 | PASS | Help / Settings showed DB path `tmp\\uat_demo.db`, DB exists, JSONL log path, operations log path, and backup default path. |
 
 ## Scenario result summary
 
 | Group | Result | Notes |
 |---|---|---|
-| UAT-01 Startup / Login | NOT RUN |  |
+| UAT-01 Startup / Login | IN PROGRESS | Viewer-role startup, role banner, Help / Settings basics observed. Demo-user-specific login checks remain. |
 | UAT-02 Viewer role | NOT RUN |  |
 | UAT-03 Editor role | NOT RUN |  |
 | UAT-04 Admin role | NOT RUN |  |
 | UAT-05 Data operations | NOT RUN |  |
-| UAT-06 Audit / Security | NOT RUN |  |
-| UAT-07 Documentation match | NOT RUN |  |
+| UAT-06 Audit / Security | IN PROGRESS | Help / Settings operation memo, protection warning, path diagnostics, and password logging guidance observed. |
+| UAT-07 Documentation match | IN PROGRESS | Launch command documentation fix recorded. Help / Settings guidance visually matches current UI. |
 
 ## Detailed findings
 
 | Finding ID | Severity | Related check | Summary | Decision | Follow-up |
 |---|---|---|---|---|---|
 | UAT-F-001 | documentation fix | SETUP-004 | UAT execution record used invalid launch command `python -m app.main`. | Fixed in record. Continue with corrected command. | Use `python -m app.pyside6_main`. |
+
+## Completed checks from screenshots/logs
+
+| ID | Result | Notes |
+|---|---|---|
+| UAT-01-004 | PASS | Viewer role banner displayed role-specific text and restriction summary. |
+| UAT-06-004 | PASS | Help / Settings file protection checklist/guidance area was visible. |
+| UAT-06-005 | PASS | Path diagnostics and protection warning showed ACL guidance including `Get-Acl` / `icacls` wording. |
+| UAT-06-006 | PASS | Password logging guidance stated password/password_hash/password_salt are not recorded. |
+| UAT-07-004 | PASS | Help / Settings guidance matched current implementation areas for paths, logs, backup, and protection notes. |
 
 ## Blocker status
 
