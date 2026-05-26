@@ -254,4 +254,4 @@ def test_operations_guide_is_role_specific(monkeypatch: pytest.MonkeyPatch) -> N
     editor_text = _operations_guide_text(_window_for_role("editor", monkeypatch))
     assert "通常の出力とバックアップ" in editor_text
     assert "Restore / Import" in editor_text
-    assert "Import / Restore" in _operations_guide_text(_window_for_role("admin", monkeypatch))
+    assert "Restore / Import" in _operations_guide_text(_window_for_role("admin", monkeypatch))
