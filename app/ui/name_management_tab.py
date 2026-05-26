@@ -8,7 +8,6 @@ from typing import Protocol
 from PySide6.QtWidgets import (
     QComboBox,
     QFormLayout,
-    QHBoxLayout,
     QLabel,
     QLineEdit,
     QPushButton,
