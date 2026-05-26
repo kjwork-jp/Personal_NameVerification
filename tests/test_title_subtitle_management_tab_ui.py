@@ -181,16 +181,17 @@ def test_title_subtitle_native_list_first_layout() -> None:
     assert title_layout is not None
     assert subtitle_layout is not None
 
+    title_form_index = _child_layout_index(tab.title_panel, QFormLayout)
+    title_actions_index = _child_layout_index(tab.title_panel, QHBoxLayout)
+    subtitle_form_index = _child_layout_index(tab.subtitle_panel, QFormLayout)
+    subtitle_actions_index = _child_layout_index(tab.subtitle_panel, QHBoxLayout)
+
     assert tab.property("native_list_first_layout") is True
     assert tab.property("has_list_first_layout") is True
-    assert title_layout.indexOf(tab.titles_table) < _child_layout_index(tab.title_panel, QFormLayout)
-    assert title_layout.indexOf(tab.titles_table) < _child_layout_index(tab.title_panel, QHBoxLayout)
-    assert subtitle_layout.indexOf(tab.subtitles_table) < _child_layout_index(
-        tab.subtitle_panel, QFormLayout
-    )
-    assert subtitle_layout.indexOf(tab.subtitles_table) < _child_layout_index(
-        tab.subtitle_panel, QHBoxLayout
-    )
+    assert title_layout.indexOf(tab.titles_table) < title_form_index
+    assert title_layout.indexOf(tab.titles_table) < title_actions_index
+    assert subtitle_layout.indexOf(tab.subtitles_table) < subtitle_form_index
+    assert subtitle_layout.indexOf(tab.subtitles_table) < subtitle_actions_index
 
 
 def test_title_subtitle_management_operations(monkeypatch: pytest.MonkeyPatch) -> None:
