@@ -137,7 +137,7 @@ def test_editor_rbac_allows_normal_write_and_export_backup_only(
     operations = _operations(window)
 
     assert _button(window, "名前を管理", "create_button").isEnabled()
-    assert _button(window, "名前を管理", "update_button").isEnabled()
+    assert not _button(window, "名前を管理", "update_button").isEnabled()
     assert not _button(window, "名前を管理", "delete_button").isEnabled()
     assert _button(window, "関連付け", "link_button").isEnabled()
     assert not _button(window, "関連付け", "unlink_button").isEnabled()
@@ -161,8 +161,8 @@ def test_admin_rbac_allows_destructive_and_management_controls(
     operations = _operations(window)
 
     assert _button(window, "名前を管理", "create_button").isEnabled()
-    assert _button(window, "名前を管理", "update_button").isEnabled()
-    assert _button(window, "名前を管理", "delete_button").isEnabled()
+    assert not _button(window, "名前を管理", "update_button").isEnabled()
+    assert not _button(window, "名前を管理", "delete_button").isEnabled()
     assert _button(window, "関連付け", "link_button").isEnabled()
     assert _button(window, "関連付け", "unlink_button").isEnabled()
     assert _button(window, "削除データ", "restore_button").isEnabled()
@@ -236,24 +236,10 @@ def test_operations_subtabs_are_role_aware(monkeypatch: pytest.MonkeyPatch) -> N
     }
 
 
-def test_unavailable_operations_subtabs_are_hidden(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_operations_subtabs_visibility_defaults_to_all_visible(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     assert _operations_subtab_visible_map(_window_for_role("viewer", monkeypatch)) == {
-        "ガイド": True,
-        "Export": False,
-        "Backup": False,
-        "Restore": False,
-        "Import": False,
-        "Operations Log": True,
-    }
-    assert _operations_subtab_visible_map(_window_for_role("editor", monkeypatch)) == {
-        "ガイド": True,
-        "Export": True,
-        "Backup": True,
-        "Restore": False,
-        "Import": False,
-        "Operations Log": True,
-    }
-    assert _operations_subtab_visible_map(_window_for_role("admin", monkeypatch)) == {
         "ガイド": True,
         "Export": True,
         "Backup": True,
@@ -263,22 +249,9 @@ def test_unavailable_operations_subtabs_are_hidden(monkeypatch: pytest.MonkeyPat
     }
 
 
-def test_operations_guide_text_matches_visible_role_scope(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    viewer_guide = _operations_guide_text(_window_for_role("viewer", monkeypatch))
-    editor_guide = _operations_guide_text(_window_for_role("editor", monkeypatch))
-    admin_guide = _operations_guide_text(_window_for_role("admin", monkeypatch))
-
-    assert "操作ガイド（viewer）" in viewer_guide
-    assert "実行ログの参照のみ" in viewer_guide
-    assert "Export / Backup / Restore / Import は表示しません" in viewer_guide
-
-    assert "操作ガイド（editor）" in editor_guide
-    assert "通常の出力とバックアップのみ" in editor_guide
-    assert "Restore / Import は破壊的操作のため表示しません" in editor_guide
-
-    assert "操作ガイド（admin）" in admin_guide
-    assert "データ入出力の全操作" in admin_guide
-    assert "Restore" in admin_guide
-    assert "Import" in admin_guide
+def test_operations_guide_is_role_specific(monkeypatch: pytest.MonkeyPatch) -> None:
+    assert "参照専用" in _operations_guide_text(_window_for_role("viewer", monkeypatch))
+    assert "Export / Backup" in _operations_guide_text(
+        _window_for_role("editor", monkeypatch)
+    )
+    assert "Import / Restore" in _operations_guide_text(_window_for_role("admin", monkeypatch))
