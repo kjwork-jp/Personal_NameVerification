@@ -12,15 +12,14 @@ qt_widgets = pytest.importorskip("PySide6.QtWidgets", exc_type=ImportError)
 QLabel = qt_widgets.QLabel
 
 from app.ui.audit_logs_tab import AuditLogsTab  # noqa: E402
-from app.ui.title_subtitle_unified_tab import TitleSubtitleUnifiedTab  # noqa: E402
+from app.ui.subtitle_management_tab import SubtitleManagementTab  # noqa: E402
+from app.ui.title_management_tab import TitleManagementTab  # noqa: E402
 from tests.test_release_uat_coverage import _window_for_role  # noqa: E402
 
 SEARCH_TAB = "\u691c\u7d22"
 NAME_TAB = "\u540d\u524d\u3092\u7ba1\u7406"
-TITLE_SUBTITLE_TAB = (
-    "\u30bf\u30a4\u30c8\u30eb/"
-    "\u30b5\u30d6\u30bf\u30a4\u30c8\u30eb\u7ba1\u7406"
-)
+TITLE_TAB = "\u30bf\u30a4\u30c8\u30eb\u7ba1\u7406"
+SUBTITLE_TAB = "\u30b5\u30d6\u30bf\u30a4\u30c8\u30eb\u7ba1\u7406"
 LINK_TAB = "\u95a2\u9023\u4ed8\u3051"
 TRASH_TAB = "\u524a\u9664\u30c7\u30fc\u30bf"
 AUDIT_TAB = "\u76e3\u67fb\u30ed\u30b0"
@@ -66,14 +65,18 @@ def test_remaining_uat_public_ids_are_full_across_primary_tables(
     name_tab = window._tabs_by_name[NAME_TAB]
     _assert_full_public_id(name_tab.names_table.item(0, 1).text(), "name-public-id-001")
 
-    title_unified = window._tabs_by_name[TITLE_SUBTITLE_TAB]
-    assert isinstance(title_unified, TitleSubtitleUnifiedTab)
-    title_editor = title_unified.title_tab.editor
+    title_tab = window._tabs_by_name[TITLE_TAB]
+    assert isinstance(title_tab, TitleManagementTab)
+    title_editor = title_tab.editor
     _assert_full_public_id(title_editor.titles_table.item(0, 1).text(), "title-public-id-001")
-    title_editor.titles_table.selectRow(0)
-    title_editor._on_title_selected()
+
+    subtitle_tab = window._tabs_by_name[SUBTITLE_TAB]
+    assert isinstance(subtitle_tab, SubtitleManagementTab)
+    subtitle_editor = subtitle_tab.editor
+    subtitle_editor.titles_table.selectRow(0)
+    subtitle_editor._on_title_selected()
     _assert_full_public_id(
-        title_editor.subtitles_table.item(0, 1).text(),
+        subtitle_editor.subtitles_table.item(0, 1).text(),
         "subtitle-public-id-001",
     )
 
@@ -101,26 +104,35 @@ def test_remaining_uat_crud_and_delete_controls_follow_role_order(
     assert editor_name.delete_button.isHidden()
     assert not admin_name.delete_button.isHidden()
 
-    viewer_title = viewer._tabs_by_name[TITLE_SUBTITLE_TAB]
-    editor_title = editor._tabs_by_name[TITLE_SUBTITLE_TAB]
-    admin_title = admin._tabs_by_name[TITLE_SUBTITLE_TAB]
-    assert isinstance(viewer_title, TitleSubtitleUnifiedTab)
-    assert isinstance(editor_title, TitleSubtitleUnifiedTab)
-    assert isinstance(admin_title, TitleSubtitleUnifiedTab)
+    viewer_title = viewer._tabs_by_name[TITLE_TAB]
+    editor_title = editor._tabs_by_name[TITLE_TAB]
+    admin_title = admin._tabs_by_name[TITLE_TAB]
+    viewer_subtitle = viewer._tabs_by_name[SUBTITLE_TAB]
+    editor_subtitle = editor._tabs_by_name[SUBTITLE_TAB]
+    admin_subtitle = admin._tabs_by_name[SUBTITLE_TAB]
+    assert isinstance(viewer_title, TitleManagementTab)
+    assert isinstance(editor_title, TitleManagementTab)
+    assert isinstance(admin_title, TitleManagementTab)
+    assert isinstance(viewer_subtitle, SubtitleManagementTab)
+    assert isinstance(editor_subtitle, SubtitleManagementTab)
+    assert isinstance(admin_subtitle, SubtitleManagementTab)
 
-    viewer_editor = viewer_title.title_tab.editor
-    editor_editor = editor_title.title_tab.editor
-    admin_editor = admin_title.title_tab.editor
-    assert viewer_editor.title_create_button.isHidden()
-    assert viewer_editor.title_update_button.isHidden()
-    assert viewer_editor.subtitle_create_button.isHidden()
-    assert viewer_editor.subtitle_update_button.isHidden()
-    assert not editor_editor.title_create_button.isHidden()
-    assert not editor_editor.subtitle_create_button.isHidden()
-    assert editor_editor.title_delete_button.isHidden()
-    assert editor_editor.subtitle_delete_button.isHidden()
-    assert not admin_editor.title_delete_button.isHidden()
-    assert not admin_editor.subtitle_delete_button.isHidden()
+    viewer_title_editor = viewer_title.editor
+    editor_title_editor = editor_title.editor
+    admin_title_editor = admin_title.editor
+    viewer_subtitle_editor = viewer_subtitle.editor
+    editor_subtitle_editor = editor_subtitle.editor
+    admin_subtitle_editor = admin_subtitle.editor
+    assert viewer_title_editor.title_create_button.isHidden()
+    assert viewer_title_editor.title_update_button.isHidden()
+    assert viewer_subtitle_editor.subtitle_create_button.isHidden()
+    assert viewer_subtitle_editor.subtitle_update_button.isHidden()
+    assert not editor_title_editor.title_create_button.isHidden()
+    assert not editor_subtitle_editor.subtitle_create_button.isHidden()
+    assert editor_title_editor.title_delete_button.isHidden()
+    assert editor_subtitle_editor.subtitle_delete_button.isHidden()
+    assert not admin_title_editor.title_delete_button.isHidden()
+    assert not admin_subtitle_editor.subtitle_delete_button.isHidden()
 
 
 def test_remaining_uat_trash_controls_are_admin_only(
