@@ -8,6 +8,7 @@ from typing import Any, Protocol
 from PySide6.QtWidgets import (
     QComboBox,
     QFormLayout,
+    QGroupBox,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -55,15 +56,41 @@ class TitleSubtitleWriteService(Protocol):
 
     def hard_delete_title(self, title_id: int, operator_id: str, role: UserRole = "admin") -> None: ...
 
-    def create_subtitle(self, payload: SubtitleInput, operator_id: str, role: UserRole = "admin") -> int: ...
+    def create_subtitle(
+        self,
+        payload: SubtitleInput,
+        operator_id: str,
+        role: UserRole = "admin",
+    ) -> int: ...
 
-    def update_subtitle(self, subtitle_id: int, payload: SubtitleInput, operator_id: str, role: UserRole = "admin") -> None: ...
+    def update_subtitle(
+        self,
+        subtitle_id: int,
+        payload: SubtitleInput,
+        operator_id: str,
+        role: UserRole = "admin",
+    ) -> None: ...
 
-    def delete_subtitle(self, subtitle_id: int, operator_id: str, role: UserRole = "admin") -> None: ...
+    def delete_subtitle(
+        self,
+        subtitle_id: int,
+        operator_id: str,
+        role: UserRole = "admin",
+    ) -> None: ...
 
-    def restore_subtitle(self, subtitle_id: int, operator_id: str, role: UserRole = "admin") -> None: ...
+    def restore_subtitle(
+        self,
+        subtitle_id: int,
+        operator_id: str,
+        role: UserRole = "admin",
+    ) -> None: ...
 
-    def hard_delete_subtitle(self, subtitle_id: int, operator_id: str, role: UserRole = "admin") -> None: ...
+    def hard_delete_subtitle(
+        self,
+        subtitle_id: int,
+        operator_id: str,
+        role: UserRole = "admin",
+    ) -> None: ...
 
 
 class TitleSubtitleReadService(Protocol):
@@ -86,9 +113,20 @@ class TitleSubtitleReadService(Protocol):
         include_deleted: bool = False,
     ) -> list[NameTitleLinkRow]: ...
 
-    def list_titles(self, role: UserRole = "admin", *, include_deleted: bool = False) -> list[TitleDetail]: ...
+    def list_titles(
+        self,
+        role: UserRole = "admin",
+        *,
+        include_deleted: bool = False,
+    ) -> list[TitleDetail]: ...
 
-    def list_subtitles(self, title_id: int, role: UserRole = "admin", *, include_deleted: bool = False) -> list[SubtitleDetail]: ...
+    def list_subtitles(
+        self,
+        title_id: int,
+        role: UserRole = "admin",
+        *,
+        include_deleted: bool = False,
+    ) -> list[SubtitleDetail]: ...
 
 
 @dataclass(frozen=True)
@@ -148,7 +186,13 @@ class TitleSubtitleManagementTab(QWidget):
         self.subtitle_note_input = QLineEdit()
 
         self.message_label = QLabel("")
+        self.workflow_hint_label = QLabel(
+            "左でタイトルを選択し、右で選択中タイトルの詳細とサブタイトルを操作します。"
+        )
         self.selected_title_label = QLabel("選択中タイトル: 未選択")
+        self.selected_title_context_label = QLabel(
+            "まず左のタイトル一覧から対象を選択してください。"
+        )
         self.subtitle_hint_label = QLabel("タイトルを選択するとサブタイトル操作が有効になります")
         self.title_link_names_list = QListWidget()
         self.title_link_names_list.setSelectionMode(QListWidget.SelectionMode.MultiSelection)
@@ -186,20 +230,20 @@ class TitleSubtitleManagementTab(QWidget):
         self.subtitles_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.subtitles_table.itemSelectionChanged.connect(self._on_subtitle_selected)
 
-        self.title_refresh_button = QPushButton("再読込")
-        self.title_create_button = QPushButton("作成")
-        self.title_update_button = QPushButton("更新")
-        self.title_delete_button = QPushButton("ゴミ箱に入れる")
-        self.title_restore_button = QPushButton("復元")
-        self.title_hard_delete_button = QPushButton("完全削除")
+        self.title_refresh_button = QPushButton("タイトル一覧を再読込")
+        self.title_create_button = QPushButton("タイトルを作成")
+        self.title_update_button = QPushButton("タイトルを更新")
+        self.title_delete_button = QPushButton("タイトルをゴミ箱に入れる")
+        self.title_restore_button = QPushButton("タイトルを復元")
+        self.title_hard_delete_button = QPushButton("タイトルを完全削除")
         self.title_restore_button.hide()
         self.title_hard_delete_button.hide()
-        self.subtitle_refresh_button = QPushButton("再読込")
-        self.subtitle_create_button = QPushButton("作成")
-        self.subtitle_update_button = QPushButton("更新")
-        self.subtitle_delete_button = QPushButton("ゴミ箱に入れる")
-        self.subtitle_restore_button = QPushButton("復元")
-        self.subtitle_hard_delete_button = QPushButton("完全削除")
+        self.subtitle_refresh_button = QPushButton("サブタイトル一覧を再読込")
+        self.subtitle_create_button = QPushButton("サブタイトルを作成")
+        self.subtitle_update_button = QPushButton("サブタイトルを更新")
+        self.subtitle_delete_button = QPushButton("サブタイトルをゴミ箱に入れる")
+        self.subtitle_restore_button = QPushButton("サブタイトルを復元")
+        self.subtitle_hard_delete_button = QPushButton("サブタイトルを完全削除")
         self.subtitle_restore_button.hide()
         self.subtitle_hard_delete_button.hide()
 
@@ -225,16 +269,19 @@ class TitleSubtitleManagementTab(QWidget):
 
         subtitle_form = QFormLayout()
         compact_layout(subtitle_form, margins=0, spacing=2)
-        subtitle_form.addRow("タイトル選択", self.selected_title_label)
+        subtitle_form.addRow("選択中タイトル", self.selected_title_label)
         subtitle_form.addRow("管理番号", self.subtitle_code_input)
         subtitle_form.addRow("サブタイトル名", self.subtitle_name_input)
         subtitle_form.addRow("表示順", self.subtitle_sort_order_input)
         subtitle_form.addRow("備考", self.subtitle_note_input)
 
+        title_list_actions = QHBoxLayout()
+        compact_layout(title_list_actions, margins=0, spacing=3)
+        title_list_actions.addWidget(self.title_refresh_button)
+
         title_actions = QHBoxLayout()
         compact_layout(title_actions, margins=0, spacing=3)
         for button in [
-            self.title_refresh_button,
             self.title_create_button,
             self.title_update_button,
             self.title_delete_button,
@@ -255,36 +302,56 @@ class TitleSubtitleManagementTab(QWidget):
         self.title_panel = title_panel
         title_layout = QVBoxLayout(title_panel)
         compact_layout(title_layout, margins=2, spacing=3)
-        self.title_panel_label = QLabel("タイトル情報")
+        self.title_panel_label = QLabel("1. タイトル一覧から対象を選択")
+        self.title_list_hint_label = QLabel(
+            "ここでは対象タイトルの選択に集中します。編集は右側で行います。"
+        )
         title_layout.addWidget(self.title_panel_label)
-        title_layout.addWidget(self.titles_table, 2)
-        title_layout.addLayout(title_form)
-        title_layout.addLayout(title_actions)
-        title_layout.addWidget(self.linked_names_label)
+        title_layout.addWidget(self.title_list_hint_label)
+        title_layout.addWidget(self.titles_table, 1)
+        title_layout.addLayout(title_list_actions)
+
+        title_detail_group = QGroupBox("2. 選択中タイトルの詳細 / 作成・更新")
+        self.title_detail_group = title_detail_group
+        title_detail_layout = QVBoxLayout(title_detail_group)
+        compact_layout(title_detail_layout, margins=4, spacing=4)
+        title_detail_layout.addWidget(self.selected_title_context_label)
+        title_detail_layout.addLayout(title_form)
+        title_detail_layout.addLayout(title_actions)
+        title_detail_layout.addWidget(self.linked_names_label)
+
+        subtitle_group = QGroupBox("3. 選択中タイトル配下のサブタイトル")
+        self.subtitle_group = subtitle_group
+        subtitle_layout_inner = QVBoxLayout(subtitle_group)
+        compact_layout(subtitle_layout_inner, margins=4, spacing=4)
+        subtitle_layout_inner.addWidget(self.subtitle_hint_label)
+        subtitle_layout_inner.addWidget(self.subtitles_table, 1)
+        subtitle_layout_inner.addLayout(subtitle_form)
+        subtitle_layout_inner.addLayout(subtitle_actions)
 
         subtitle_panel = QWidget()
         self.subtitle_panel = subtitle_panel
         subtitle_layout = QVBoxLayout(subtitle_panel)
-        compact_layout(subtitle_layout, margins=2, spacing=3)
-        self.subtitle_panel_label = QLabel("サブタイトル情報")
+        compact_layout(subtitle_layout, margins=2, spacing=4)
+        self.subtitle_panel_label = QLabel("右側で詳細編集とサブタイトル操作")
         subtitle_layout.addWidget(self.subtitle_panel_label)
-        subtitle_layout.addWidget(self.subtitle_hint_label)
-        subtitle_layout.addWidget(self.subtitles_table, 2)
-        subtitle_layout.addLayout(subtitle_form)
-        subtitle_layout.addLayout(subtitle_actions)
+        subtitle_layout.addWidget(title_detail_group)
+        subtitle_layout.addWidget(subtitle_group, 1)
 
         splitter = QSplitter()
         self.splitter = splitter
         splitter.addWidget(title_panel)
         splitter.addWidget(subtitle_panel)
-        splitter.setSizes([560, 610])
+        splitter.setSizes([470, 700])
 
         root = QVBoxLayout(self)
         compact_layout(root, margins=2, spacing=3)
+        root.addWidget(self.workflow_hint_label)
         root.addWidget(self.message_label)
         root.addWidget(splitter, 1)
         self.setProperty("native_list_first_layout", True)
         self.setProperty("has_list_first_layout", True)
+        self.setProperty("master_detail_layout", True)
 
         self._configure_table_columns()
         self._apply_role_guards()
@@ -554,7 +621,11 @@ class TitleSubtitleManagementTab(QWidget):
             f"タイトルID={selected.id} を{label}します。よろしいですか？",
         ):
             return
-        getattr(self._core_service, method_name)(selected.id, operator_id=operator_id, role=self._role_context.role)
+        getattr(self._core_service, method_name)(
+            selected.id,
+            operator_id=operator_id,
+            role=self._role_context.role,
+        )
         self._set_message(f"タイトルを{label}しました")
         self._refresh_titles(None if method_name == "hard_delete_title" else selected.id)
 
@@ -576,7 +647,11 @@ class TitleSubtitleManagementTab(QWidget):
             f"サブタイトルID={selected_subtitle.id} を{label}します。よろしいですか？",
         ):
             return
-        getattr(self._core_service, method_name)(selected_subtitle.id, operator_id=operator_id, role=self._role_context.role)
+        getattr(self._core_service, method_name)(
+            selected_subtitle.id,
+            operator_id=operator_id,
+            role=self._role_context.role,
+        )
         self._set_message(f"サブタイトルを{label}しました")
         self._refresh_subtitles(None if method_name == "hard_delete_subtitle" else selected_subtitle.id)
 
@@ -684,11 +759,14 @@ class TitleSubtitleManagementTab(QWidget):
     def _update_selected_title_label(self, title: TitleDetail | None = None) -> None:
         if title is None:
             self.selected_title_label.setText("選択中タイトル: 未選択")
+            self.selected_title_context_label.setText(
+                "まず左のタイトル一覧から対象を選択してください。"
+            )
             return
         status = "削除済み" if title.deleted_at else "有効"
-        self.selected_title_label.setText(
-            f"タイトル: {title.title_name}（公開ID: {short_public_id(title.public_id)} / 状態: {status}）"
-        )
+        text = f"タイトル: {title.title_name}（公開ID: {short_public_id(title.public_id)} / 状態: {status}）"
+        self.selected_title_label.setText(text)
+        self.selected_title_context_label.setText(f"選択中: {text}")
 
     def _update_action_states(self) -> None:
         role = self._role_context.role
@@ -743,13 +821,13 @@ class TitleSubtitleManagementTab(QWidget):
             self._set_message("viewerはタイトル/サブタイトルの追加・更新・削除を実行できません", is_error=True)
 
     def _configure_table_columns(self) -> None:
-        self.titles_table.setColumnWidth(1, 230)
+        self.titles_table.setColumnWidth(1, 210)
         self.titles_table.setColumnWidth(2, 150)
         self.titles_table.setColumnWidth(3, 58)
         self.titles_table.setColumnWidth(4, 135)
         self.titles_table.setColumnWidth(5, 105)
-        self.titles_table.setColumnWidth(6, 155)
-        self.subtitles_table.setColumnWidth(1, 230)
+        self.titles_table.setColumnWidth(6, 135)
+        self.subtitles_table.setColumnWidth(1, 210)
         self.subtitles_table.setColumnWidth(3, 125)
         self.subtitles_table.setColumnWidth(4, 110)
         self.subtitles_table.setColumnWidth(5, 145)
