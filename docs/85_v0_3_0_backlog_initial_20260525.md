@@ -16,6 +16,7 @@
 | Future roadmap / remaining backlog | `docs/86_future_roadmap_and_remaining_backlog_20260525.md` |
 | UAT execution plan | `docs/91_uat_execution_plan_20260526.md` |
 | UAT checklist | `docs/92_uat_checklist_20260526.md` |
+| UAT execution record | `docs/93_uat_execution_record_20260526.md` |
 | Large data performance review | `docs/88_large_data_performance_review_20260525.md` |
 | Asset storage and relative path policy | `docs/89_asset_storage_and_relative_path_policy_20260525.md` |
 | Local SQLite / multi-user policy | `docs/90_local_sqlite_single_user_and_multi_user_policy_20260525.md` |
@@ -26,7 +27,7 @@
 ## Execution policy
 
 - Implementation / documentation / maintenance backlog is complete for this ledger window.
-- UAT preparation is now started.
+- UAT preparation is complete enough to begin local execution.
 - Release preparation remains deferred until UAT is complete and release blockers are cleared.
 - Release-like scripts and CI definitions can still be maintained, but publishing/release preparation is not immediate work unless explicitly selected.
 
@@ -38,7 +39,7 @@ No active implementation / documentation / maintenance backlog remains in this l
 
 | ID | Horizon | Priority | Area | Status | Candidate |
 |---|---|---:|---|---|---|
-| V900-UAT-001 | post-backlog | P1 | UAT | Prepared / checklist ready | Run demo DB based UAT for viewer/editor/admin flows |
+| V900-UAT-001 | post-backlog | P1 | UAT | Ready for local execution | Run demo DB based UAT for viewer/editor/admin flows |
 | V100-REL-001 | post-UAT | P1 | Release | Deferred until UAT complete | Prepare v1.0 release criteria, final UAT, and distribution policy |
 
 ## Completed items summary
@@ -67,6 +68,7 @@ No active implementation / documentation / maintenance backlog remains in this l
 
 - Added `docs/91_uat_execution_plan_20260526.md`.
 - Added `docs/92_uat_checklist_20260526.md`.
+- Added `docs/93_uat_execution_record_20260526.md`.
 - UAT execution has not been recorded yet.
 - Release remains deferred.
 
@@ -87,4 +89,4 @@ No active implementation / documentation / maintenance backlog remains in this l
 
 ## Next action
 
-Execute `V900-UAT-001` using `docs/92_uat_checklist_20260526.md`. Release preparation remains deferred until UAT is complete.
+Run the local UAT setup commands in `docs/93_uat_execution_record_20260526.md`, then execute the checklist in `docs/92_uat_checklist_20260526.md`. Release preparation remains deferred until UAT is complete.
