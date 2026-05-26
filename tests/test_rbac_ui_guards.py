@@ -236,22 +236,22 @@ def test_operations_subtabs_are_role_aware(monkeypatch: pytest.MonkeyPatch) -> N
     }
 
 
-def test_operations_subtabs_visibility_defaults_to_all_visible(
+def test_operations_subtabs_visibility_matches_role_permissions(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     assert _operations_subtab_visible_map(_window_for_role("viewer", monkeypatch)) == {
         "ガイド": True,
-        "Export": True,
-        "Backup": True,
-        "Restore": True,
-        "Import": True,
+        "Export": False,
+        "Backup": False,
+        "Restore": False,
+        "Import": False,
         "Operations Log": True,
     }
 
 
 def test_operations_guide_is_role_specific(monkeypatch: pytest.MonkeyPatch) -> None:
     assert "参照専用" in _operations_guide_text(_window_for_role("viewer", monkeypatch))
-    assert "Export / Backup" in _operations_guide_text(
-        _window_for_role("editor", monkeypatch)
-    )
+    editor_text = _operations_guide_text(_window_for_role("editor", monkeypatch))
+    assert "通常の出力とバックアップ" in editor_text
+    assert "Restore / Import" in editor_text
     assert "Import / Restore" in _operations_guide_text(_window_for_role("admin", monkeypatch))
