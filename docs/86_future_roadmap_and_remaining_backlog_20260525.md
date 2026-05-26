@@ -4,7 +4,7 @@
 
 This document tracks the remaining backlog and future expansion items after the v0.3.0 initial backlog cleanup.
 
-It intentionally includes more than the immediate P2 items so that the remaining work does not disappear when a short backlog is completed.
+It intentionally includes more than the immediate P2 items so that deferred UAT/release gates remain visible after implementation work is completed.
 
 ## Current baseline
 
@@ -12,49 +12,54 @@ It intentionally includes more than the immediate P2 items so that the remaining
 - Current development line: v0.3.0+
 - Main short backlog: `docs/85_v0_3_0_backlog_initial_20260525.md`
 - Open issue source: `docs/97_open_issues_and_constraints.md`
+- Latest `Quality Gates`: pass for `fix: wrap title subtitle layout assertions` / run `26426351458`
 
 ## Execution policy
 
-- Do not start UAT until the implementation / documentation / maintenance backlog is completed.
-- Do not start release preparation until all active backlog items are completed and reviewed.
-- UAT and release items remain tracked here, but they are deferred gates, not immediate work.
+- Implementation / documentation / maintenance backlog is complete for this roadmap window.
+- UAT is the next gate, but release preparation remains deferred until UAT is complete.
 - Continue small direct-main changes with GitHub Actions as the default quality gate.
+- Release-like validation scripts can be maintained before release, but publishing/release preparation stays deferred unless explicitly selected.
 
 ## Remaining backlog / future roadmap
 
 | ID | Horizon | Priority | Area | Status | Candidate |
 |---|---|---:|---|---|---|
-| V030-UX-002 | v0.3.x | P2 | UI | Implemented / Actions pending | Extend native list-first layout beyond name management |
-| V030-OPS-003 | v0.3.x | P2 | CI/Release | Implemented / Actions pending | Verify manual-only heavy workflows and release dry-run artifact definitions without publishing |
-| V040-EXPORT-001 | v0.4.x | P2 | Data/Security | Implemented / Actions pending | Expand sanitized application-data-only export policy and tests |
-| V040-IMPORT-001 | v0.4.x | P2 | Data/Ops | Implemented / Actions pending | Improve import validation, preview, and rollback evidence |
-| V040-AUDIT-001 | v0.4.x | P2 | Audit | Implemented / Actions pending | Strengthen audit log review/export workflow for operations |
-| V040-SEC-001 | v0.4.x | P2 | Security/Ops | Implemented / Actions pending | Add deeper OS file protection guidance and operator checklist |
-| V040-UX-001 | v0.4.x | P2 | UI | Implemented / Actions pending | Improve role-specific visual cues and dashboard readability |
-| V050-PERF-001 | v0.5.x | P3 | Performance | Implemented / Actions pending | Re-check large data performance and table pagination/search behavior |
-| V050-ASSET-001 | v0.5.x | P3 | Assets | Implemented / docs-only | Revisit icon/image asset storage and relative path handling |
-| V050-MULTI-001 | v0.5.x | P3 | Architecture | Implemented / docs-only | Revisit single-user/local SQLite constraints before multi-user use |
-| V900-UAT-001 | post-backlog | P1 | UAT | Deferred until all backlog complete | Run demo DB based UAT for viewer/editor/admin flows |
-| V100-REL-001 | post-UAT | P1 | Release | Deferred until all backlog complete | Prepare v1.0 release criteria, final UAT, and distribution policy |
+| V900-UAT-001 | post-backlog | P1 | UAT | Ready / deferred gate | Run demo DB based UAT for viewer/editor/admin flows |
+| V100-REL-001 | post-UAT | P1 | Release | Deferred until UAT complete | Prepare v1.0 release criteria, final UAT, and distribution policy |
 
 ## Completed in this roadmap window
 
 - V030-MAINT-001: document maintenance review ledger added; no files deleted.
 - V030-DOC-002: existing manuals refreshed for latest tabs, RBAC, data operations, and deferral policy.
+- V030-UX-002: title/subtitle management native list-first layout and tests.
+- V030-OPS-003: Windows EXE workflow artifact alignment and static contract tests.
+- V040-EXPORT-001: sanitized JSON export excludes `change_logs` and non-application/admin tables.
+- V040-IMPORT-001: CSV/JSON import source preview diagnostics added.
+- V040-AUDIT-001: operation history review JSON export added.
+- V040-SEC-001: operator file protection checklist added to Help / Settings.
+- V040-UX-001: structured role capability summary added.
+- V050-PERF-001: large data performance review plan and bulk generator contract tests added.
 - V050-ASSET-001: asset storage and relative path policy documented.
 - V050-MULTI-001: local SQLite single-user and future multi-user policy documented.
 
+## Quality gate closure
+
+- Latest Quality Gates passed after ruff E501 fixes.
+- Earlier failing workflow runs are superseded by the passing run.
+- No generated DB/CSV data was committed.
+
 ## Immediate next items
 
-1. Check GitHub Actions for implemented code changes.
-2. Mark Actions-pending implementation items done if `Quality Gates` passes.
-3. Keep UAT and Release deferred until all backlog work is complete.
+1. Decide whether to start `V900-UAT-001`.
+2. Keep `V100-REL-001` deferred until UAT is complete.
+3. If more implementation work is found during UAT, route it back into a new backlog before release preparation.
 
 ## Deferred gates
 
 | ID | Gate | Trigger |
 |---|---|---|
-| V900-UAT-001 | UAT | Start only after implementation / documentation / maintenance backlog is complete. |
+| V900-UAT-001 | UAT | Can start now if formal UAT is selected. |
 | V100-REL-001 | Release | Start only after UAT is complete and all release blockers are cleared. |
 
 ## Maintenance review policy
@@ -71,6 +76,6 @@ Classify each document as one of the following:
 
 ## Notes
 
-- This file is a planning ledger. It does not imply all candidates must be implemented before the next release.
-- Immediate v0.3.x items are expected to stay small and low-risk unless explicitly promoted.
+- This file is a planning ledger.
+- UAT and release remain separate gates.
 - Release-like validation scripts can be maintained before release, but publishing/release preparation stays deferred.
