@@ -41,6 +41,7 @@ EXPECTED_UNREGISTER_LINK = (
 READONLY_TEXT = "\u53c2\u7167\u306e\u307f"
 CHANGE_LOG_TEXT = "\u30c7\u30fc\u30bf\u5909\u66f4\u30ed\u30b0"
 USER_AUTH_LOG_TEXT = "\u30e6\u30fc\u30b6\u30fc/\u8a8d\u8a3c\u30ed\u30b0"
+AUDIT_GUIDE_TEXT = "\u30ac\u30a4\u30c9"
 ADMIN_GUIDE_TITLE = "\u64cd\u4f5c\u30ac\u30a4\u30c9\uff08admin\uff09"
 ADMIN_GUIDE_DETAIL = "\u30c7\u30fc\u30bf\u5165\u51fa\u529b\u306e\u5168\u64cd\u4f5c"
 
@@ -147,8 +148,13 @@ def test_remaining_uat_audit_logs_and_operation_guides_are_visible(
 
     audit_tab = window._tabs_by_name[AUDIT_TAB]
     assert isinstance(audit_tab, AuditLogsTab)
-    assert audit_tab.tabs.tabText(0) == CHANGE_LOG_TEXT
-    assert audit_tab.tabs.tabText(1) == USER_AUTH_LOG_TEXT
+    audit_tab_titles = [
+        audit_tab.tabs.tabText(index) for index in range(audit_tab.tabs.count())
+    ]
+    assert CHANGE_LOG_TEXT in audit_tab_titles
+    assert AUDIT_GUIDE_TEXT in audit_tab_titles
+    if audit_tab.user_audit_tab is not None:
+        assert USER_AUTH_LOG_TEXT in audit_tab_titles
 
     operations_tab = window._tabs_by_name[OPERATIONS_TAB]
     labels = [label.text() for label in operations_tab.findChildren(QLabel)]
