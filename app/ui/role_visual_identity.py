@@ -69,7 +69,13 @@ _ROLE_CAPABILITIES: dict[UserRole, RoleCapabilitySummary] = {
     ),
     "admin": RoleCapabilitySummary(
         role="admin",
-        allowed=("全参照", "通常登録・更新", "削除/復元/完全削除", "restore/import", "ユーザー管理"),
+        allowed=(
+            "全参照",
+            "通常登録・更新",
+            "削除/復元/完全削除",
+            "restore/import",
+            "ユーザー管理",
+        ),
         restricted=(),
         caution="destructive操作前にbackupとOperations Logの確認手順を固定してください。",
     ),
