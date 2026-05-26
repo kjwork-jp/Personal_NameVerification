@@ -45,8 +45,9 @@ from app.ui.role_visual_identity import apply_role_status_style, make_role_banne
 from app.ui.sanitized_export_ui import apply_sanitized_export_ui
 from app.ui.search_tab import SearchTab
 from app.ui.sql_dump_protection_warning import apply_sql_dump_protection_warning
+from app.ui.subtitle_management_tab import SubtitleManagementTab
 from app.ui.tab_guides import apply_tab_guide
-from app.ui.title_subtitle_unified_tab import TitleSubtitleUnifiedTab
+from app.ui.title_management_tab import TitleManagementTab
 from app.ui.trash_tab import TrashTab
 from app.ui.ui_style import apply_friendly_theme, apply_searchable_comboboxes
 from app.ui.user_management_tab import UserManagementTab
@@ -120,12 +121,20 @@ class MainWindow(QMainWindow):
             "名前を管理",
         )
         self._add_tab(
-            TitleSubtitleUnifiedTab(
+            TitleManagementTab(
                 core_service=core_service,
                 query_service=query_service,
                 role_context=self._role_context,
             ),
-            "タイトル/サブタイトル管理",
+            "タイトル管理",
+        )
+        self._add_tab(
+            SubtitleManagementTab(
+                core_service=core_service,
+                query_service=query_service,
+                role_context=self._role_context,
+            ),
+            "サブタイトル管理",
         )
         self._add_tab(
             LinkManagementTab(
@@ -362,78 +371,60 @@ class MainWindow(QMainWindow):
         self,
         path: Path,
         *,
-        package_root: Path | None = None,
+        package_root: Path | None,
     ) -> Path:
-        root = package_root or self._package_root
-        if root is None:
+        if not path.is_absolute():
+            return path
+        if package_root is None:
             return path
         try:
-            return path.resolve(strict=False).relative_to(root.resolve(strict=False))
+            return path.resolve(strict=False).relative_to(package_root.resolve(strict=False))
         except ValueError:
             return path
 
     def _fallback_operations_defaults(self, timestamp: str) -> dict[str, Path | str]:
-        base_dir = _operations_fallback_base_dir()
-        base_dir.mkdir(parents=True, exist_ok=True)
-        csv_dir = base_dir / "60_exports" / "csv"
-        json_dir = base_dir / "60_exports" / "json"
-        sql_dir = base_dir / "60_exports" / "sql"
-        backup_dir = base_dir / "50_backups" / "daily"
+        base = _operations_fallback_base_dir()
+        csv_dir = base / "60_exports" / "csv"
+        json_dir = base / "60_exports" / "json"
+        sql_dir = base / "60_exports" / "sql"
+        backup_dir = base / "50_backups" / "daily"
         for directory in (csv_dir, json_dir, sql_dir, backup_dir):
             directory.mkdir(parents=True, exist_ok=True)
+        database_path = self._database_path or (base / "nameverification.db")
         json_export_file = json_dir / f"nameverification_export_{timestamp}.json"
         backup_output_file = backup_dir / f"nameverification_{timestamp}.db"
-        defaults: dict[str, Path | str] = {
+        return {
             "csv_export_dir": csv_dir,
             "json_export_file": json_export_file,
             "sql_dump_file": sql_dir / f"nameverification_dump_{timestamp}.sql",
+            "db_file": database_path,
             "backup_output_file": backup_output_file,
             "restore_backup_file": backup_output_file,
-            "restore_target_file": base_dir / "restore_target_nameverification.db",
+            "restore_target_file": database_path,
             "import_csv_dir": csv_dir,
             "import_json_file": json_export_file,
         }
-        if self._database_path is not None:
-            defaults["db_file"] = self._database_path
-        return defaults
 
     def _refresh_current_tab(self) -> None:
-        widget = self.tabs.currentWidget()
-        if widget is None:
+        current = self.tabs.currentWidget()
+        if current is None:
             return
-        for method_name in (
-            "refresh",
-            "_refresh_all",
-            "_refresh_list",
-            "_on_search_clicked",
-            "_reload",
-        ):
-            method = getattr(widget, method_name, None)
-            if callable(method):
-                method()
-                self._reapply_tab_role_guards(widget)
-                return
-        editor = getattr(widget, "editor", None)
-        if editor is not None:
-            method = getattr(editor, "_refresh_titles", None)
-            if callable(method):
-                method()
-        self._reapply_tab_role_guards(widget)
-
-    def _reapply_tab_role_guards(self, widget: QWidget) -> None:
-        apply_tab_action_visibility_guards(widget, self._role_context)
-        if isinstance(widget, OperationsTab):
-            apply_operations_tab_role_guards(widget, self._role_context)
+        refresh = getattr(current, "refresh", None)
+        if callable(refresh):
+            refresh()
 
     def closeEvent(self, event: QCloseEvent) -> None:  # noqa: N802
         if self._connection is not None:
-            self._connection.commit()
+            self._connection.close()
         super().closeEvent(event)
 
 
 def _tab_aliases(title: str) -> tuple[str, ...]:
-    if title == "タイトル/サブタイトル管理":
-        return ("タイトルを管理", "サブタイトルを管理")
-    if title == "監査ログ":
-        return ("操作履歴", "ユーザー監査ログ")
-    return ()
+    aliases = {
+        "名前を管理": ("名前管理",),
+        "タイトル管理": ("タイトルを管理", "タイトル/サブタイトル管理"),
+        "サブタイトル管理": ("サブタイトルを管理",),
+        "監査ログ": ("操作履歴", "ユーザー監査ログ"),
+        "データ入出力": ("エクスポート/バックアップ", "インポート/復元"),
+    }
+    return aliases.get(title, ())
