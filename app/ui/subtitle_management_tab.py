@@ -8,7 +8,7 @@ from PySide6.QtWidgets import QLabel, QVBoxLayout, QWidget
 
 from app.ui.role_context import RoleContext
 from app.ui.title_subtitle_management_tab import TitleSubtitleManagementTab
-from app.ui.ui_style import PageHeader, compact_layout
+from app.ui.ui_style import PageHeader, apply_workflow_accent, compact_layout
 
 
 class SubtitleManagementTab(QWidget):
@@ -30,6 +30,7 @@ class SubtitleManagementTab(QWidget):
         self._hide_internal_columns()
         self._rename_labels()
         self._add_guidance_tooltips()
+        self._apply_subtitle_workflow_accents()
 
         layout = QVBoxLayout(self)
         compact_layout(layout, margins=5, spacing=4)
@@ -38,6 +39,7 @@ class SubtitleManagementTab(QWidget):
             0,
         )
         layout.addWidget(self.editor, 1)
+        self.setProperty("workflow_accented_layout", True)
 
     def _hide_title_creation_controls(self) -> None:
         for widget in [
@@ -81,3 +83,21 @@ class SubtitleManagementTab(QWidget):
     def _add_guidance_tooltips(self) -> None:
         self.editor.subtitle_code_input.setToolTip("未入力の場合は自動生成されます。")
         self.editor.subtitle_sort_order_input.setToolTip("一覧での表示順です。未入力時は 0 として扱います。")
+
+    def _apply_subtitle_workflow_accents(self) -> None:
+        apply_workflow_accent(self.editor.workflow_hint_label, "guide")
+        apply_workflow_accent(self.editor.title_panel_label, "list")
+        apply_workflow_accent(self.editor.title_list_hint_label, "list")
+        apply_workflow_accent(self.editor.title_refresh_button, "list")
+        apply_workflow_accent(self.editor.subtitle_refresh_button, "list")
+        apply_workflow_accent(self.editor.subtitle_create_button, "add")
+        apply_workflow_accent(self.editor.subtitle_update_button, "edit")
+        apply_workflow_accent(self.editor.subtitle_delete_button, "delete")
+        apply_workflow_accent(self.editor.subtitle_restore_button, "delete")
+        apply_workflow_accent(self.editor.subtitle_hard_delete_button, "delete")
+        apply_workflow_accent(self.editor.subtitle_group, "edit")
+        apply_workflow_accent(self.editor.subtitle_panel_label, "edit")
+        apply_workflow_accent(self.editor.subtitle_hint_label, "edit")
+        apply_workflow_accent(self.editor.title_delete_group, "delete")
+        apply_workflow_accent(self.editor.subtitle_delete_group, "delete")
+        self.editor.setProperty("workflow_accented_layout", True)
