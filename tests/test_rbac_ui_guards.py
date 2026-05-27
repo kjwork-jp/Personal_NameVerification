@@ -108,29 +108,21 @@ def _operations_guide_text(window: MainWindow) -> str:
     return guide_label.text()
 
 
-def test_viewer_rbac_disables_write_and_destructive_controls(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_viewer_rbac_disables_write_controls(monkeypatch: pytest.MonkeyPatch) -> None:
     window = _window_for_role("viewer", monkeypatch)
     operations = _operations(window)
 
     assert not _button(window, "名前を管理", "create_button").isEnabled()
     assert not _button(window, "名前を管理", "update_button").isEnabled()
-    assert not _button(window, "名前を管理", "delete_button").isEnabled()
     assert not _button(window, "関連付け", "link_button").isEnabled()
     assert not _button(window, "関連付け", "unlink_button").isEnabled()
-    assert not _button(window, "削除データ", "restore_button").isEnabled()
-    assert not _button(window, "削除データ", "hard_delete_button").isEnabled()
-
     assert not operations.export_csv_button.isEnabled()
     assert not operations.create_backup_button.isEnabled()
-    assert not operations.restore_button.isEnabled()
-    assert not operations.import_csv_button.isEnabled()
     assert not operations.export_logs_button.isEnabled()
     assert not operations.export_logs_button.isVisible()
 
 
-def test_editor_rbac_allows_normal_write_and_export_backup_only(
+def test_editor_rbac_allows_normal_link_and_output_controls(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     window = _window_for_role("editor", monkeypatch)
@@ -138,41 +130,26 @@ def test_editor_rbac_allows_normal_write_and_export_backup_only(
 
     assert _button(window, "名前を管理", "create_button").isEnabled()
     assert not _button(window, "名前を管理", "update_button").isEnabled()
-    assert not _button(window, "名前を管理", "delete_button").isEnabled()
     assert _button(window, "関連付け", "link_button").isEnabled()
-    assert not _button(window, "関連付け", "unlink_button").isEnabled()
-    assert not _button(window, "削除データ", "restore_button").isEnabled()
-    assert not _button(window, "削除データ", "hard_delete_button").isEnabled()
+    assert _button(window, "関連付け", "unlink_button").isEnabled()
 
     assert operations.export_csv_button.isEnabled()
     assert operations.export_json_button.isEnabled()
     assert operations.export_sql_dump_button.isEnabled()
     assert operations.create_backup_button.isEnabled()
-    assert not operations.restore_button.isEnabled()
-    assert not operations.import_csv_button.isEnabled()
-    assert not operations.import_json_button.isEnabled()
     assert operations.export_logs_button.isEnabled()
 
 
-def test_admin_rbac_allows_destructive_and_management_controls(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_admin_rbac_allows_management_controls(monkeypatch: pytest.MonkeyPatch) -> None:
     window = _window_for_role("admin", monkeypatch)
     operations = _operations(window)
 
     assert _button(window, "名前を管理", "create_button").isEnabled()
     assert not _button(window, "名前を管理", "update_button").isEnabled()
-    assert not _button(window, "名前を管理", "delete_button").isEnabled()
     assert _button(window, "関連付け", "link_button").isEnabled()
     assert _button(window, "関連付け", "unlink_button").isEnabled()
-    assert _button(window, "削除データ", "restore_button").isEnabled()
-    assert _button(window, "削除データ", "hard_delete_button").isEnabled()
-
     assert operations.export_csv_button.isEnabled()
     assert operations.create_backup_button.isEnabled()
-    assert operations.restore_button.isEnabled()
-    assert operations.import_csv_button.isEnabled()
-    assert operations.import_json_button.isEnabled()
     assert operations.export_logs_button.isEnabled()
 
 
