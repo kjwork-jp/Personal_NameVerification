@@ -141,8 +141,8 @@ def test_admin_can_run_destructive_operations() -> None:
     service.restore_name(name_id, operator_id="op-1", role="admin")
 
 
-def test_editor_can_link_but_cannot_unlink() -> None:
-    _, service = _service()
+def test_editor_can_link_and_unlink_subtitle_relation() -> None:
+    conn, service = _service()
     name_id = service.create_name(NameInput(raw_name="Alice"), operator_id="op-1", role="admin")
     title_id = service.create_title(TitleInput(title_name="Main"), operator_id="op-1", role="admin")
     subtitle_id = service.create_subtitle(
@@ -160,8 +160,12 @@ def test_editor_can_link_but_cannot_unlink() -> None:
     )
     assert isinstance(link_id, int)
 
-    with pytest.raises(AuthorizationError):
-        service.unlink_name_from_subtitle(link_id=link_id, operator_id="op-2", role="editor")
+    service.unlink_name_from_subtitle(link_id=link_id, operator_id="op-2", role="editor")
+    row = conn.execute(
+        "SELECT deleted_at FROM name_subtitle_links WHERE id = ?",
+        (link_id,),
+    ).fetchone()
+    assert row["deleted_at"] is not None
 
 
 def test_name_title_links_support_many_to_many() -> None:
