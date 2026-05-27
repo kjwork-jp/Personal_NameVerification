@@ -179,7 +179,8 @@ class TrashTab(QWidget):
         self.hard_delete_button.clicked.connect(self._hard_delete_selected)
 
         self.danger_hint_label = make_workflow_accent_label(
-            "注意: 完全削除は元に戻せません。復元/完全削除の前に対象データと操作者IDを確認してください。",
+            "注意: 完全削除は元に戻せません。"
+            "復元/完全削除の前に対象データと操作者IDを確認してください。",
             "delete",
         )
         self.danger_hint_label.setProperty("danger_operation_hint", True)
