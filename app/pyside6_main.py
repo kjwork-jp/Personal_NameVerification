@@ -186,7 +186,6 @@ def main() -> int:
             change_log_jsonl_path=change_log_jsonl_path,
             operations_log_jsonl_path=operations_log_jsonl_path,
             operation_logger=operation_logger,
-            connection=connection,
         )
         window.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, True)
 
