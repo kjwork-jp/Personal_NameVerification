@@ -15,7 +15,10 @@ def require_editor_or_admin(role: ServiceRole, *, action: str) -> None:
 
 
 def require_admin(role: ServiceRole, *, action: str) -> None:
-    if role != "admin":
+    allowed_roles = {"admin"}
+    if action == "unlink_name_from_subtitle":
+        allowed_roles.add("editor")
+    if role not in allowed_roles:
         raise AuthorizationError(f"role={role} is not allowed to {action}")
 
 
