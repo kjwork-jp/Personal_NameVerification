@@ -109,4 +109,8 @@ class SubtitleManagementTab(QWidget):
         apply_workflow_accent(self.editor.subtitle_group, "edit")
         apply_workflow_accent(self.editor.subtitle_panel_label, "edit")
         apply_workflow_accent(self.editor.subtitle_hint_label, "edit")
+        for group in self.editor.findChildren(QGroupBox):
+            if group.title() == "サブタイトル削除":
+                apply_workflow_accent(group, "delete")
+                group.setProperty("danger_operation_group", True)
         self.editor.setProperty("workflow_accented_layout", True)
