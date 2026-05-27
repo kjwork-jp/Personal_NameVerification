@@ -98,6 +98,4 @@ class SubtitleManagementTab(QWidget):
         apply_workflow_accent(self.editor.subtitle_group, "edit")
         apply_workflow_accent(self.editor.subtitle_panel_label, "edit")
         apply_workflow_accent(self.editor.subtitle_hint_label, "edit")
-        apply_workflow_accent(self.editor.title_delete_group, "delete")
-        apply_workflow_accent(self.editor.subtitle_delete_group, "delete")
         self.editor.setProperty("workflow_accented_layout", True)
