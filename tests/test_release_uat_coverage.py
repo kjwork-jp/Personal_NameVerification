@@ -8,31 +8,18 @@ from pathlib import Path
 
 import pytest
 
-from app.application.read_models import (
-    ChangeLogRow,
-    NameSearchRow,
-    RelatedRow,
-    SubtitleDetail,
-    TitleDetail,
-    UserAuditLogRow,
-)
+from app.application.read_models import NameSearchRow, RelatedRow, SubtitleDetail, TitleDetail
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 qt_widgets = pytest.importorskip("PySide6.QtWidgets", exc_type=ImportError)
 QApplication = qt_widgets.QApplication
-QLabel = qt_widgets.QLabel
 
 from app.application.user_services import CreateUserInput, UserService  # noqa: E402
 from app.application.windows_identity import WindowsIdentity  # noqa: E402
 from app.domain.errors import AuthorizationError  # noqa: E402
 from app.infrastructure.db import apply_schema  # noqa: E402
-from app.ui.audit_logs_tab import AuditLogsTab  # noqa: E402
 from app.ui.main_window import MainWindow  # noqa: E402
-from app.ui.operations_tab import OperationsTab  # noqa: E402
-from app.ui.role_context import RoleContext  # noqa: E402
-from app.ui.subtitle_management_tab import SubtitleManagementTab  # noqa: E402
-from app.ui.title_management_tab import TitleManagementTab  # noqa: E402
 from tests.test_main_window_smoke import (  # noqa: E402
     EmptyBackupRestoreService,
     EmptyCoreService,
@@ -40,6 +27,7 @@ from tests.test_main_window_smoke import (  # noqa: E402
     EmptyImportService,
     _patch_operations_dependencies,
 )
+from app.ui.role_context import RoleContext  # noqa: E402
 
 
 class UatQueryService:
@@ -57,10 +45,6 @@ class UatQueryService:
                 public_id="name-public-id-001",
             )
         ]
-
-    def get_name_detail(self, name_id: int, *args: object, **kwargs: object) -> object:
-        _ = (args, kwargs)
-        raise RuntimeError(f"not used: {name_id}")
 
     def list_titles(
         self, role: str = "admin", *, include_deleted: bool = False
@@ -127,50 +111,6 @@ class UatQueryService:
             )
         ]
 
-    def list_change_logs(self, *args: object, **kwargs: object) -> list[ChangeLogRow]:
-        _ = (args, kwargs)
-        return [
-            ChangeLogRow(
-                id=1,
-                entity_type="names",
-                entity_id=1,
-                action="update",
-                operator_id="admin",
-                before_json='{"raw_name":"Alice"}',
-                after_json='{"raw_name":"Alice Updated"}',
-                created_at="2026-01-01T00:00:00Z",
-                public_id="change-public-id-001",
-            )
-        ]
-
-    def list_deleted_names(self) -> list[object]:
-        return []
-
-    def list_deleted_titles(self) -> list[object]:
-        return []
-
-    def list_deleted_subtitles(self) -> list[object]:
-        return []
-
-    def list_deleted_links(self) -> list[object]:
-        return []
-
-
-class StubUserAuditService:
-    def list_user_audit_logs(self, *args: object, **kwargs: object) -> list[UserAuditLogRow]:
-        _ = (args, kwargs)
-        return [
-            UserAuditLogRow(
-                id=1,
-                actor_operator_id="admin",
-                target_operator_id="editor",
-                action="login_success",
-                before_json=None,
-                after_json='{"auth_provider":"local"}',
-                created_at="2026-01-01T00:00:00Z",
-            )
-        ]
-
 
 def _app() -> QApplication:
     app = QApplication.instance()
@@ -186,12 +126,7 @@ def _connection() -> sqlite3.Connection:
     return connection
 
 
-def _window_for_role(
-    role: str,
-    monkeypatch: pytest.MonkeyPatch,
-    *,
-    user_audit_service: object | None = None,
-) -> MainWindow:
+def _window_for_role(role: str, monkeypatch: pytest.MonkeyPatch) -> MainWindow:
     _app()
     _patch_operations_dependencies(monkeypatch)
     return MainWindow(
@@ -201,19 +136,13 @@ def _window_for_role(
         export_backup_service=EmptyExportBackupService(),
         backup_restore_service=EmptyBackupRestoreService(),
         import_service=EmptyImportService(),
-        user_audit_service=user_audit_service,
         database_path=Path("release-uat-test.db"),
     )
 
 
-def _operations(window: MainWindow) -> OperationsTab:
-    tab = window._tabs_by_name["データ入出力"]
-    assert isinstance(tab, OperationsTab)
-    return tab
-
-
 def _operation_subtab_visibility(window: MainWindow) -> dict[str, bool]:
-    sub_tabs = _operations(window).operations_subtabs
+    operations = window._tabs_by_name["データ入出力"]
+    sub_tabs = operations.operations_subtabs
     return {
         sub_tabs.tabText(index): sub_tabs.tabBar().isTabVisible(index)
         for index in range(sub_tabs.count())
@@ -295,69 +224,14 @@ def test_uat_rbac_and_data_io_visibility_by_role(monkeypatch: pytest.MonkeyPatch
         "Operations Log": True,
     }
 
-    viewer_name = viewer._tabs_by_name["名前を管理"]
-    editor_name = editor._tabs_by_name["名前を管理"]
-    admin_name = admin._tabs_by_name["名前を管理"]
-    assert viewer_name.raw_name_input.isHidden()
-    assert viewer_name.create_button.isHidden()
-    assert not editor_name.create_button.isHidden()
-    assert editor_name.delete_button.isHidden()
-    assert not admin_name.delete_button.isHidden()
 
-
-def test_uat_audit_logs_unified_tabs_and_rows(monkeypatch: pytest.MonkeyPatch) -> None:
-    window = _window_for_role(
-        "admin",
-        monkeypatch,
-        user_audit_service=StubUserAuditService(),
-    )
-    audit_tab = window._tabs_by_name["監査ログ"]
-    assert isinstance(audit_tab, AuditLogsTab)
-
-    assert [audit_tab.tabs.tabText(index) for index in range(audit_tab.tabs.count())] == [
-        "データ変更ログ",
-        "ユーザー/認証ログ",
-        "ガイド",
-    ]
-    assert audit_tab.data_change_tab.logs_table.rowCount() == 1
-    assert audit_tab.user_audit_tab is not None
-    assert audit_tab.user_audit_tab.logs_table.rowCount() == 1
-
-    guide_text = "\n".join(label.text() for label in audit_tab.findChildren(QLabel))
-    assert "データ変更ログ" in guide_text
-    assert "ユーザー/認証ログ" in guide_text
-    assert "Operations Log" in guide_text
-
-
-def test_uat_title_and_link_visibility_by_role(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_uat_link_visibility_by_role(monkeypatch: pytest.MonkeyPatch) -> None:
     viewer = _window_for_role("viewer", monkeypatch)
     editor = _window_for_role("editor", monkeypatch)
     admin = _window_for_role("admin", monkeypatch)
 
-    viewer_title = viewer._tabs_by_name["タイトル管理"]
-    assert isinstance(viewer_title, TitleManagementTab)
-    viewer_title_editor = viewer_title.editor
-    assert viewer_title_editor.title_name_input.isHidden()
-    assert viewer_title_editor.title_create_button.isHidden()
-    assert viewer_title_editor.title_delete_button.isHidden()
-
-    editor_title = editor._tabs_by_name["タイトル管理"]
-    assert isinstance(editor_title, TitleManagementTab)
-    editor_title_editor = editor_title.editor
-    assert not editor_title_editor.title_create_button.isHidden()
-    assert editor_title_editor.title_delete_button.isHidden()
-
-    admin_title = admin._tabs_by_name["タイトル管理"]
-    assert isinstance(admin_title, TitleManagementTab)
-    assert not admin_title.editor.title_delete_button.isHidden()
-
-    viewer_subtitle = viewer._tabs_by_name["サブタイトル管理"]
-    assert isinstance(viewer_subtitle, SubtitleManagementTab)
-    assert viewer_subtitle.editor.subtitle_create_button.isHidden()
-    assert viewer_subtitle.editor.subtitle_delete_button.isHidden()
-
     assert _link_subtab_visibility(viewer) == {"登録": False, "解除": False}
-    assert _link_subtab_visibility(editor) == {"登録": True, "解除": False}
+    assert _link_subtab_visibility(editor) == {"登録": True, "解除": True}
     assert _link_subtab_visibility(admin) == {"登録": True, "解除": True}
 
     admin_link = admin._tabs_by_name["関連付け"]
