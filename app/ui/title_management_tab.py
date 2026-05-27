@@ -107,4 +107,8 @@ class TitleManagementTab(QWidget):
         apply_workflow_accent(self.editor.title_hard_delete_button, "delete")
         apply_workflow_accent(self.editor.title_detail_group, "edit")
         apply_workflow_accent(self.editor.selected_title_context_label, "edit")
+        for group in self.editor.findChildren(QGroupBox):
+            if group.title() == "タイトル削除":
+                apply_workflow_accent(group, "delete")
+                group.setProperty("danger_operation_group", True)
         self.editor.setProperty("workflow_accented_layout", True)
