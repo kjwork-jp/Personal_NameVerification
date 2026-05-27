@@ -30,6 +30,7 @@ class TitleManagementTab(QWidget):
         self._hide_internal_columns()
         self._rename_labels()
         self._add_guidance_tooltips()
+        self._wrap_guidance_labels()
         self._apply_title_workflow_accents()
 
         layout = QVBoxLayout(self)
@@ -94,6 +95,16 @@ class TitleManagementTab(QWidget):
         self.editor.title_link_names_list.setToolTip(
             "タイトルに関連付ける名前を選択します。複数選択できます。"
         )
+
+    def _wrap_guidance_labels(self) -> None:
+        for label in self.editor.findChildren(QLabel):
+            label.setWordWrap(True)
+            label.setMinimumHeight(0)
+        self.editor.workflow_hint_label.setText(
+            "一覧・新規追加・編集・削除を分けています。新規追加は選択状態を使いません。"
+        )
+        self.editor.selected_title_context_label.setText("編集対象のタイトルを選択してください。")
+        self.editor.setProperty("title_guidance_labels_wrapped", True)
 
     def _apply_title_workflow_accents(self) -> None:
         apply_workflow_accent(self.editor.workflow_hint_label, "guide")
