@@ -25,7 +25,12 @@ from app.ui.permissions import can_run_destructive_actions
 from app.ui.public_id_display import short_public_id
 from app.ui.role_context import RoleContext, UserRole
 from app.ui.trash_tab_navigation import apply_trash_subtabs
-from app.ui.ui_style import PageHeader, compact_layout
+from app.ui.ui_style import (
+    PageHeader,
+    apply_workflow_accent,
+    compact_layout,
+    make_workflow_accent_label,
+)
 
 
 class TrashReadService(Protocol):
@@ -173,6 +178,14 @@ class TrashTab(QWidget):
         self.restore_button.clicked.connect(self._restore_selected)
         self.hard_delete_button.clicked.connect(self._hard_delete_selected)
 
+        self.danger_hint_label = make_workflow_accent_label(
+            "注意: 完全削除は元に戻せません。復元/完全削除の前に対象データと操作者IDを確認してください。",
+            "delete",
+        )
+        self.danger_hint_label.setProperty("danger_operation_hint", True)
+        apply_workflow_accent(self.hard_delete_button, "delete")
+        self.hard_delete_button.setProperty("danger_operation_button", True)
+
         form = QFormLayout()
         compact_layout(form, margins=2, spacing=3)
         form.addRow("対象", self.entity_selector)
@@ -188,6 +201,7 @@ class TrashTab(QWidget):
         compact_layout(root, margins=5, spacing=4)
         root.addWidget(PageHeader("削除データ", "復元と完全削除をここに集約します。"))
         root.addLayout(form)
+        root.addWidget(self.danger_hint_label)
         root.addLayout(actions)
         root.addWidget(self.message_label)
         root.addWidget(self.list_table, 1)
