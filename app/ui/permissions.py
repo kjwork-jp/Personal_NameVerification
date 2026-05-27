@@ -18,4 +18,4 @@ def can_link(role: UserRole) -> bool:
 
 
 def can_unlink(role: UserRole) -> bool:
-    return role == "admin"
+    return role in {"editor", "admin"}
