@@ -24,23 +24,50 @@ class StubCoreService:
     def __init__(self) -> None:
         self.calls: list[str] = []
 
-    def create_subtitle(self, payload, operator_id: str, role: str = "admin") -> int:  # type: ignore[no-untyped-def]
+    def create_subtitle(
+        self,
+        payload: object,
+        operator_id: str,
+        role: str = "admin",
+    ) -> int:
+        title_id = getattr(payload, "title_id")
+        code = getattr(payload, "subtitle_code")
+        self.calls.append(f"create_subtitle:{title_id}:{code}:{operator_id}:{role}")
+        return 1
+
+    def update_subtitle(
+        self,
+        subtitle_id: int,
+        payload: object,
+        operator_id: str,
+        role: str = "admin",
+    ) -> None:
+        code = getattr(payload, "subtitle_code")
+        self.calls.append(f"update_subtitle:{subtitle_id}:{code}:{operator_id}:{role}")
+
+    def create_title(
+        self,
+        payload: object,
+        operator_id: str,
+        role: str = "admin",
+        *,
+        name_ids: list[int] | None = None,
+    ) -> int:
+        title_name = getattr(payload, "title_name")
         self.calls.append(
-            f"create_subtitle:{payload.title_id}:{payload.subtitle_code}:{operator_id}:{role}"
+            f"create_title:{title_name}:{operator_id}:{role}:{name_ids or []}"
         )
         return 1
 
-    def update_subtitle(self, subtitle_id: int, payload, operator_id: str, role: str = "admin") -> None:  # type: ignore[no-untyped-def]
-        self.calls.append(
-            f"update_subtitle:{subtitle_id}:{payload.subtitle_code}:{operator_id}:{role}"
-        )
-
-    def create_title(self, payload, operator_id: str, role: str = "admin", *, name_ids=None) -> int:  # type: ignore[no-untyped-def]
-        self.calls.append(f"create_title:{payload.title_name}:{operator_id}:{role}:{name_ids or []}")
-        return 1
-
-    def update_title(self, title_id: int, payload, operator_id: str, role: str = "admin") -> None:  # type: ignore[no-untyped-def]
-        self.calls.append(f"update_title:{title_id}:{payload.title_name}:{operator_id}:{role}")
+    def update_title(
+        self,
+        title_id: int,
+        payload: object,
+        operator_id: str,
+        role: str = "admin",
+    ) -> None:
+        title_name = getattr(payload, "title_name")
+        self.calls.append(f"update_title:{title_id}:{title_name}:{operator_id}:{role}")
 
     def link_name_to_subtitle(
         self,
@@ -50,10 +77,17 @@ class StubCoreService:
         operator_id: str,
         role: str = "admin",
     ) -> int:
-        self.calls.append(f"link:{name_id}:{subtitle_id}:{relation_type}:{operator_id}:{role}")
+        self.calls.append(
+            f"link:{name_id}:{subtitle_id}:{relation_type}:{operator_id}:{role}"
+        )
         return 1
 
-    def unlink_name_from_subtitle(self, link_id: int, operator_id: str, role: str = "admin") -> None:
+    def unlink_name_from_subtitle(
+        self,
+        link_id: int,
+        operator_id: str,
+        role: str = "admin",
+    ) -> None:
         self.calls.append(f"unlink:{link_id}:{operator_id}:{role}")
 
     def delete_title(self, title_id: int, operator_id: str, role: str = "admin") -> None:
@@ -62,21 +96,41 @@ class StubCoreService:
     def restore_title(self, title_id: int, operator_id: str, role: str = "admin") -> None:
         self.calls.append(f"restore_title:{title_id}:{operator_id}:{role}")
 
-    def hard_delete_title(self, title_id: int, operator_id: str, role: str = "admin") -> None:
+    def hard_delete_title(
+        self,
+        title_id: int,
+        operator_id: str,
+        role: str = "admin",
+    ) -> None:
         self.calls.append(f"hard_delete_title:{title_id}:{operator_id}:{role}")
 
-    def delete_subtitle(self, subtitle_id: int, operator_id: str, role: str = "admin") -> None:
+    def delete_subtitle(
+        self,
+        subtitle_id: int,
+        operator_id: str,
+        role: str = "admin",
+    ) -> None:
         self.calls.append(f"delete_subtitle:{subtitle_id}:{operator_id}:{role}")
 
-    def restore_subtitle(self, subtitle_id: int, operator_id: str, role: str = "admin") -> None:
+    def restore_subtitle(
+        self,
+        subtitle_id: int,
+        operator_id: str,
+        role: str = "admin",
+    ) -> None:
         self.calls.append(f"restore_subtitle:{subtitle_id}:{operator_id}:{role}")
 
-    def hard_delete_subtitle(self, subtitle_id: int, operator_id: str, role: str = "admin") -> None:
+    def hard_delete_subtitle(
+        self,
+        subtitle_id: int,
+        operator_id: str,
+        role: str = "admin",
+    ) -> None:
         self.calls.append(f"hard_delete_subtitle:{subtitle_id}:{operator_id}:{role}")
 
 
 class StubQueryService:
-    def search_names(self, *args, **kwargs) -> list[NameSearchRow]:  # type: ignore[no-untyped-def]
+    def search_names(self, *args: object, **kwargs: object) -> list[NameSearchRow]:
         _ = (args, kwargs)
         return [
             NameSearchRow(
@@ -91,7 +145,12 @@ class StubQueryService:
             )
         ]
 
-    def list_titles(self, role: str = "admin", *, include_deleted: bool = False) -> list[TitleDetail]:
+    def list_titles(
+        self,
+        role: str = "admin",
+        *,
+        include_deleted: bool = False,
+    ) -> list[TitleDetail]:
         _ = (role, include_deleted)
         return [
             TitleDetail(
@@ -107,7 +166,11 @@ class StubQueryService:
         ]
 
     def list_subtitles(
-        self, title_id: int, role: str = "admin", *, include_deleted: bool = False
+        self,
+        title_id: int,
+        role: str = "admin",
+        *,
+        include_deleted: bool = False,
     ) -> list[SubtitleDetail]:
         _ = (title_id, role, include_deleted)
         return [
@@ -126,11 +189,23 @@ class StubQueryService:
             )
         ]
 
-    def list_names_for_title(self, title_id: int, role: str = "admin", *, include_deleted: bool = False) -> list:
+    def list_names_for_title(
+        self,
+        title_id: int,
+        role: str = "admin",
+        *,
+        include_deleted: bool = False,
+    ) -> list[object]:
         _ = (title_id, role, include_deleted)
         return []
 
-    def list_related_rows(self, name_id: int, role: str = "admin", *, include_deleted: bool = False) -> list[RelatedRow]:
+    def list_related_rows(
+        self,
+        name_id: int,
+        role: str = "admin",
+        *,
+        include_deleted: bool = False,
+    ) -> list[RelatedRow]:
         _ = (name_id, role, include_deleted)
         return [
             RelatedRow(
@@ -155,7 +230,7 @@ def _app() -> QApplication:
     return app
 
 
-def test_subtitle_parent_title_selector_is_searchable_and_refreshes_create_state() -> None:
+def test_subtitle_parent_title_selector_is_searchable_and_refreshes_state() -> None:
     _app()
     tab = SubtitleManagementTab(
         core_service=StubCoreService(),
@@ -200,7 +275,11 @@ def test_subtitle_editor_can_create_and_update_as_editor() -> None:
 
 def test_editor_can_unlink_existing_relation(monkeypatch: pytest.MonkeyPatch) -> None:
     _app()
-    monkeypatch.setattr(link_tab_module, "confirm_destructive_action", lambda *args, **kwargs: True)
+    monkeypatch.setattr(
+        link_tab_module,
+        "confirm_destructive_action",
+        lambda *args, **kwargs: True,
+    )
     core = StubCoreService()
     tab = LinkManagementTab(
         core_service=core,
