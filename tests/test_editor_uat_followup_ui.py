@@ -6,6 +6,7 @@ import os
 
 import pytest
 
+from app.application.core_services import SubtitleInput, TitleInput
 from app.application.read_models import NameSearchRow, RelatedRow, SubtitleDetail, TitleDetail
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
@@ -26,48 +27,50 @@ class StubCoreService:
 
     def create_subtitle(
         self,
-        payload: object,
+        payload: SubtitleInput,
         operator_id: str,
         role: str = "admin",
     ) -> int:
-        title_id = getattr(payload, "title_id")
-        code = getattr(payload, "subtitle_code")
-        self.calls.append(f"create_subtitle:{title_id}:{code}:{operator_id}:{role}")
+        self.calls.append(
+            "create_subtitle:"
+            f"{payload.title_id}:{payload.subtitle_code}:{operator_id}:{role}"
+        )
         return 1
 
     def update_subtitle(
         self,
         subtitle_id: int,
-        payload: object,
+        payload: SubtitleInput,
         operator_id: str,
         role: str = "admin",
     ) -> None:
-        code = getattr(payload, "subtitle_code")
-        self.calls.append(f"update_subtitle:{subtitle_id}:{code}:{operator_id}:{role}")
+        self.calls.append(
+            f"update_subtitle:{subtitle_id}:{payload.subtitle_code}:{operator_id}:{role}"
+        )
 
     def create_title(
         self,
-        payload: object,
+        payload: TitleInput,
         operator_id: str,
         role: str = "admin",
         *,
         name_ids: list[int] | None = None,
     ) -> int:
-        title_name = getattr(payload, "title_name")
         self.calls.append(
-            f"create_title:{title_name}:{operator_id}:{role}:{name_ids or []}"
+            f"create_title:{payload.title_name}:{operator_id}:{role}:{name_ids or []}"
         )
         return 1
 
     def update_title(
         self,
         title_id: int,
-        payload: object,
+        payload: TitleInput,
         operator_id: str,
         role: str = "admin",
     ) -> None:
-        title_name = getattr(payload, "title_name")
-        self.calls.append(f"update_title:{title_id}:{title_name}:{operator_id}:{role}")
+        self.calls.append(
+            f"update_title:{title_id}:{payload.title_name}:{operator_id}:{role}"
+        )
 
     def link_name_to_subtitle(
         self,
