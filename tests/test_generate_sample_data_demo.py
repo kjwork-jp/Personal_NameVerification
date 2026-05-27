@@ -27,6 +27,14 @@ def _count_table(db_path: Path, table_name: str) -> int:
         connection.close()
 
 
+def _count_query(db_path: Path, sql: str) -> int:
+    connection = sqlite3.connect(db_path)
+    try:
+        return int(connection.execute(sql).fetchone()[0])
+    finally:
+        connection.close()
+
+
 def _table_values(db_path: Path, sql: str) -> list[tuple[object, ...]]:
     connection = sqlite3.connect(db_path)
     try:
@@ -162,3 +170,34 @@ def test_generate_bulk_sqlite_respects_medium_uat_link_volume(tmp_path: Path) ->
     assert _count_table(db_path, "subtitles") == 72
     assert _count_table(db_path, "name_title_links") == 80
     assert _count_table(db_path, "name_subtitle_links") == 240
+
+
+def test_generate_bulk_sqlite_seeds_deleted_and_change_log_review_rows(
+    tmp_path: Path,
+) -> None:
+    db_path = tmp_path / "uat_review.db"
+
+    generate_sqlite(
+        db_path=db_path,
+        name_count=80,
+        title_count=18,
+        subtitles_per_title=4,
+        links_per_name=3,
+    )
+
+    assert _count_query(db_path, "SELECT COUNT(*) FROM names WHERE deleted_at IS NOT NULL") == 2
+    assert _count_query(db_path, "SELECT COUNT(*) FROM titles WHERE deleted_at IS NOT NULL") == 1
+    assert _count_query(db_path, "SELECT COUNT(*) FROM subtitles WHERE deleted_at IS NOT NULL") == 1
+    assert _count_query(
+        db_path,
+        "SELECT COUNT(*) FROM name_title_links WHERE deleted_at IS NOT NULL",
+    ) == 1
+    assert _count_query(
+        db_path,
+        "SELECT COUNT(*) FROM name_subtitle_links WHERE deleted_at IS NOT NULL",
+    ) == 3
+    assert _count_table(db_path, "change_logs") == 4
+    assert _table_values(
+        db_path,
+        "SELECT DISTINCT operator_id FROM change_logs ORDER BY operator_id",
+    ) == [("uat-admin",), ("uat-editor",)]
