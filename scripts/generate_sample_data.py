@@ -22,6 +22,7 @@ DEFAULT_SUBTITLES_PER_TITLE = 3
 DEFAULT_LINKS_PER_NAME = 2
 BATCH_SIZE = 5000
 DEMO_TIMESTAMP = "2026-01-01T00:00:00Z"
+UAT_DELETED_TIMESTAMP = "2026-01-02T00:00:00Z"
 DEMO_PASSWORDS: dict[str, str] = {
     "demo-viewer": "demo-viewer-pass",
     "demo-editor": "demo-editor-pass",
@@ -230,6 +231,13 @@ def generate_sqlite(
             now=now,
         ),
     )
+    _seed_bulk_deleted_and_change_log_rows(
+        connection,
+        name_count=name_count,
+        title_count=title_count,
+        subtitle_total=subtitle_total,
+        now=now,
+    )
     connection.commit()
     connection.close()
     print(f"Generated SQLite sample DB: {db_path}")
@@ -324,6 +332,120 @@ def _bulk_name_subtitle_link_rows(
         for offset in range(links_per_name):
             subtitle_id = ((name_id + offset - 1) % subtitle_total) + 1
             yield (name_id, subtitle_id, "primary", now, now)
+
+
+def _seed_bulk_deleted_and_change_log_rows(
+    connection: sqlite3.Connection,
+    *,
+    name_count: int,
+    title_count: int,
+    subtitle_total: int,
+    now: str,
+) -> None:
+    """Seed soft-deleted rows and change logs for manual UAT review."""
+
+    deleted_at = UAT_DELETED_TIMESTAMP
+    if name_count >= 1:
+        connection.execute(
+            """
+            UPDATE names
+            SET deleted_at = ?, updated_at = ?, note = note || ' / UAT deleted name'
+            WHERE id = ?
+            """,
+            (deleted_at, now, name_count),
+        )
+    if name_count >= 2:
+        connection.execute(
+            """
+            UPDATE names
+            SET deleted_at = ?, updated_at = ?, note = note || ' / UAT hard-delete candidate'
+            WHERE id = ?
+            """,
+            (deleted_at, now, name_count - 1),
+        )
+    if title_count >= 1:
+        connection.execute(
+            """
+            UPDATE titles
+            SET deleted_at = ?, updated_at = ?, note = note || ' / UAT deleted title'
+            WHERE id = ?
+            """,
+            (deleted_at, now, title_count),
+        )
+    if subtitle_total >= 1:
+        connection.execute(
+            """
+            UPDATE subtitles
+            SET deleted_at = ?, updated_at = ?, note = note || ' / UAT deleted subtitle'
+            WHERE id = ?
+            """,
+            (deleted_at, now, subtitle_total),
+        )
+
+    connection.execute(
+        """
+        UPDATE name_title_links
+        SET deleted_at = ?, updated_at = ?
+        WHERE id = (SELECT MAX(id) FROM name_title_links)
+        """,
+        (deleted_at, now),
+    )
+    connection.execute(
+        """
+        UPDATE name_subtitle_links
+        SET deleted_at = ?, updated_at = ?
+        WHERE id IN (
+            SELECT id FROM name_subtitle_links ORDER BY id DESC LIMIT 3
+        )
+        """,
+        (deleted_at, now),
+    )
+    connection.executemany(
+        """
+        INSERT INTO change_logs(
+            entity_type, entity_id, action, operator_id, before_json, after_json, created_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        """,
+        [
+            (
+                "names",
+                max(name_count, 1),
+                "soft_delete",
+                "uat-admin",
+                '{"deleted_at": null}',
+                f'{{"deleted_at": "{deleted_at}"}}',
+                now,
+            ),
+            (
+                "titles",
+                max(title_count, 1),
+                "soft_delete",
+                "uat-admin",
+                '{"deleted_at": null}',
+                f'{{"deleted_at": "{deleted_at}"}}',
+                now,
+            ),
+            (
+                "subtitles",
+                max(subtitle_total, 1),
+                "soft_delete",
+                "uat-admin",
+                '{"deleted_at": null}',
+                f'{{"deleted_at": "{deleted_at}"}}',
+                now,
+            ),
+            (
+                "name_subtitle_links",
+                1,
+                "review_seed",
+                "uat-editor",
+                None,
+                '{"note": "UAT change log seed"}',
+                now,
+            ),
+        ],
+    )
 
 
 def _insert_demo_business_data(connection: sqlite3.Connection) -> None:
