@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from PySide6.QtWidgets import QLabel, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QGroupBox, QLabel, QVBoxLayout, QWidget
 
 from app.ui.role_context import RoleContext
 from app.ui.title_subtitle_management_tab import TitleSubtitleManagementTab
@@ -40,11 +40,17 @@ class TitleManagementTab(QWidget):
         )
         layout.addWidget(self.editor, 1)
         self.setProperty("workflow_accented_layout", True)
+        self.setProperty("focused_title_only_layout", True)
 
     def _hide_subtitle_controls(self) -> None:
         for widget in [
             self.editor.selected_title_label,
             self.editor.subtitle_hint_label,
+            self.editor.add_subtitle_title_combo,
+            self.editor.add_subtitle_code_input,
+            self.editor.add_subtitle_name_input,
+            self.editor.add_subtitle_sort_order_input,
+            self.editor.add_subtitle_note_input,
             self.editor.subtitle_code_input,
             self.editor.subtitle_name_input,
             self.editor.subtitle_sort_order_input,
@@ -55,9 +61,15 @@ class TitleManagementTab(QWidget):
             self.editor.subtitle_delete_button,
             self.editor.subtitle_restore_button,
             self.editor.subtitle_hard_delete_button,
+            self.editor.delete_subtitle_selector_combo,
             self.editor.subtitles_table,
         ]:
             widget.hide()
+        for group in self.editor.findChildren(QGroupBox):
+            if "サブタイトル" in group.title():
+                group.hide()
+                group.setProperty("hiddenByFocusedTitleWrapper", True)
+        self.editor.setProperty("subtitle_controls_hidden_for_title_focus", True)
 
     def _hide_internal_columns(self) -> None:
         self.editor.titles_table.setColumnHidden(0, True)
