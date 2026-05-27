@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from PySide6.QtWidgets import QGroupBox, QLabel, QVBoxLayout, QWidget
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QComboBox, QCompleter, QGroupBox, QLabel, QVBoxLayout, QWidget
 
 from app.ui.role_context import RoleContext
 from app.ui.title_subtitle_management_tab import TitleSubtitleManagementTab
@@ -30,6 +31,8 @@ class SubtitleManagementTab(QWidget):
         self._hide_internal_columns()
         self._rename_labels()
         self._add_guidance_tooltips()
+        self._make_title_selectors_searchable()
+        self._connect_subtitle_state_refresh()
         self._apply_subtitle_workflow_accents()
 
         layout = QVBoxLayout(self)
@@ -81,11 +84,13 @@ class SubtitleManagementTab(QWidget):
         }
         long_hint = "タイトルを選択するとサブタイトル操作が有効になります"
         for label in self.editor.findChildren(QLabel):
+            label.setWordWrap(True)
+            label.setMinimumHeight(0)
             text = label.text()
             if text in replacements:
                 label.setText(replacements[text])
             elif text == long_hint:
-                label.setText("上の一覧からタイトルを選ぶと、サブタイトルを管理できます")
+                label.setText("上の一覧または検索欄からタイトルを選ぶと、サブタイトルを管理できます")
             elif text == "タイトル作成時に紐づける名前":
                 label.hide()
             elif text.startswith("紐づき名前:"):
@@ -94,6 +99,31 @@ class SubtitleManagementTab(QWidget):
     def _add_guidance_tooltips(self) -> None:
         self.editor.subtitle_code_input.setToolTip("未入力の場合は自動生成されます。")
         self.editor.subtitle_sort_order_input.setToolTip("一覧での表示順です。未入力時は 0 として扱います。")
+        self.editor.add_subtitle_title_combo.setToolTip(
+            "タイトル名・公開ID・状態の文字列で検索できます。入力して候補を絞り込んでください。"
+        )
+
+    def _make_title_selectors_searchable(self) -> None:
+        for combo in (self.editor.add_subtitle_title_combo, self.editor.title_selector_combo):
+            self._make_combo_searchable(combo)
+        self.editor.setProperty("searchable_title_selector_for_subtitle", True)
+
+    def _make_combo_searchable(self, combo: QComboBox) -> None:
+        combo.setEditable(True)
+        combo.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
+        completer = combo.completer() or QCompleter(combo.model(), combo)
+        completer.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
+        completer.setFilterMode(Qt.MatchFlag.MatchContains)
+        combo.setCompleter(completer)
+
+    def _connect_subtitle_state_refresh(self) -> None:
+        self.editor.add_subtitle_title_combo.currentIndexChanged.connect(
+            lambda _index: self.editor._update_action_states()
+        )
+        self.editor.title_selector_combo.currentIndexChanged.connect(
+            lambda _index: self.editor._update_action_states()
+        )
+        self.editor.setProperty("subtitle_create_state_refresh_connected", True)
 
     def _apply_subtitle_workflow_accents(self) -> None:
         apply_workflow_accent(self.editor.workflow_hint_label, "guide")
