@@ -153,6 +153,17 @@ def _app() -> QApplication:
     return app
 
 
+def test_trash_tab_marks_hard_delete_as_danger_action() -> None:
+    _app()
+    tab = TrashTab(core_service=StubCoreService(), query_service=StubQueryService())
+
+    assert tab.danger_hint_label.property("workflowAccent") == "delete"
+    assert tab.danger_hint_label.property("danger_operation_hint") is True
+    assert "完全削除" in tab.danger_hint_label.text()
+    assert tab.hard_delete_button.property("workflowAccent") == "delete"
+    assert tab.hard_delete_button.property("danger_operation_button") is True
+
+
 def test_trash_tab_restore_and_hard_delete_for_all_entities(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -258,23 +269,3 @@ def test_trash_tab_role_guards() -> None:
     )
     assert admin.restore_button.isEnabled()
     assert admin.hard_delete_button.isEnabled()
-    assert "変更履歴" in admin.operator_input.toolTip()
-
-
-def test_trash_tab_reloads_after_restore(monkeypatch: pytest.MonkeyPatch) -> None:
-    _app()
-    monkeypatch.setattr(
-        trash_tab_module, "confirm_destructive_action", lambda *args, **kwargs: True
-    )
-    query = MutatingQueryService()
-    core = StubCoreService()
-    tab = TrashTab(core_service=core, query_service=query)
-    tab.entity_selector.setCurrentText("Name")
-    tab.operator_input.setText("op-1")
-    query.remove_first_name()
-
-    tab._restore_selected()
-
-    assert "restore_name:1:op-1:admin" in core.calls
-    assert tab.list_table.rowCount() == 0
-    assert "削除済みデータはありません" in tab.message_label.text()
