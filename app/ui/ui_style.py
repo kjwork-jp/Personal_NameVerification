@@ -7,8 +7,10 @@ from PySide6.QtWidgets import (
     QApplication,
     QComboBox,
     QCompleter,
+    QGroupBox,
     QLabel,
     QLayout,
+    QPushButton,
     QVBoxLayout,
     QWidget,
 )
@@ -18,6 +20,14 @@ _STATUS_COLORS = {
     "success": ("#7ee787", "#26382f", "#3d7a55"),
     "warning": ("#ffd166", "#3b3325", "#8a6d2d"),
     "error": ("#ff8a8a", "#3b292d", "#8a3d45"),
+}
+
+_WORKFLOW_ACCENTS = {
+    "list": ("#bfdbfe", "#1e3a5f", "#60a5fa", "#2563eb"),
+    "add": ("#bbf7d0", "#173b28", "#4ade80", "#16a34a"),
+    "edit": ("#ddd6fe", "#2e245c", "#a78bfa", "#7c3aed"),
+    "delete": ("#fecaca", "#4a1f25", "#fb7185", "#dc2626"),
+    "guide": ("#a5f3fc", "#17394a", "#22d3ee", "#0891b2"),
 }
 
 
@@ -157,6 +167,79 @@ def set_status_message(label: QLabel, message: str, *, level: str = "info") -> N
         "padding: 4px 6px;"
         "}"
     )
+
+
+def apply_workflow_accent(widget: QWidget, accent: str) -> None:
+    """Apply a shared workflow color accent to labels, groups, and buttons."""
+
+    text_color, background_color, border_color, button_color = _WORKFLOW_ACCENTS[accent]
+    widget.setProperty("workflowAccent", accent)
+    if isinstance(widget, QLabel):
+        widget.setWordWrap(True)
+        widget.setStyleSheet(
+            "QLabel {"
+            f"color: {text_color};"
+            f"background: {background_color};"
+            f"border: 1px solid {border_color};"
+            "border-radius: 6px;"
+            "padding: 4px 6px;"
+            "font-weight: 600;"
+            "}"
+        )
+        return
+    if isinstance(widget, QGroupBox):
+        widget.setStyleSheet(
+            "QGroupBox {"
+            f"border: 1px solid {border_color};"
+            "border-radius: 7px;"
+            "margin-top: 6px;"
+            "padding: 5px;"
+            f"background: {background_color};"
+            "}"
+            "QGroupBox::title {"
+            "subcontrol-origin: margin;"
+            "left: 8px;"
+            "padding: 0 4px;"
+            f"color: {text_color};"
+            "font-weight: 700;"
+            "}"
+        )
+        return
+    if isinstance(widget, QPushButton):
+        widget.setStyleSheet(
+            "QPushButton {"
+            f"background: {button_color};"
+            "color: #ffffff;"
+            "border: none;"
+            "border-radius: 7px;"
+            "padding: 4px 9px;"
+            "font-weight: 700;"
+            "}"
+            "QPushButton:hover {"
+            f"background: {border_color};"
+            "}"
+            "QPushButton:disabled {"
+            "background: #414955;"
+            "color: #9aa5b5;"
+            "}"
+        )
+        return
+    widget.setStyleSheet(
+        "QWidget {"
+        f"background: {background_color};"
+        f"border: 1px solid {border_color};"
+        "border-radius: 6px;"
+        "}"
+    )
+
+
+def make_workflow_accent_label(text: str, accent: str) -> QLabel:
+    """Create a standard workflow hint label with a semantic accent."""
+
+    label = QLabel(text)
+    label.setObjectName("WorkflowAccentLabel")
+    apply_workflow_accent(label, accent)
+    return label
 
 
 def make_combo_searchable(combo: QComboBox) -> None:
