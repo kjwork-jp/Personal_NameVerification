@@ -18,8 +18,9 @@ It supplements:
 |---|---|
 | Editor UAT report | User reported editor login and several allowed/blocked operations were OK, but found subtitle, link-unlink, search, and layout issues. |
 | Prior viewer UAT | Viewer operation controls were confirmed hidden, not merely disabled. |
-| Quality Gates before follow-up fixes | A prior run passed pytest but failed at ruff due to `B009`. |
-| Latest retained fix commit | `ac2d182c8aae39b12b1721cddc968cf88196f7e5` / `test: replace constant getattr in editor UAT tests`. |
+| Quality Gates before follow-up fixes | Prior runs failed on old editor-unlink expectations and ruff formatting/lint issues. |
+| Latest passing fix commit | `6d9550f75dd1ecec32f9b7d9a2a084d8e76f6e48` / `test: fix release UAT ruff issues`. |
+| Latest passing run | `26549117150`; pytest, ruff, black, and mypy all passed. |
 
 ## 3. Editor UAT result summary
 
@@ -59,15 +60,21 @@ It supplements:
 | `b91aae8` | Release UAT tests | Aligned editor link UAT visibility. |
 | `e5f5052` | Follow-up tests | Fixed editor UAT follow-up lint formatting, but a later ruff B009 remained. |
 | `ac2d182c8aae39b12b1721cddc968cf88196f7e5` | Follow-up tests | Replaced constant-name `getattr()` calls with typed payload access. |
+| `706034c6c47feb08b0b69f5b2e1c89c762bd960c` | Follow-up tests | Shortened editor UAT regression tests after additional ruff failure. |
+| `6d9550f75dd1ecec32f9b7d9a2a084d8e76f6e48` | Release UAT tests | Fixed final release UAT ruff issues. |
 
 ## 6. Current quality-gate status
 
 | Item | Status | Note |
 |---|---|---|
-| Known previous failing run | FAIL | pytest passed; ruff failed with B009 before `ac2d182`. |
-| Latest retained fix commit | CONFIRMED PUSHED | `ac2d182c8aae39b12b1721cddc968cf88196f7e5`. |
-| Actions lookup from connector | LIMITED | Commit workflow-run lookup returned no push-run rows, so the final push-run result still requires `Quality Gates` run confirmation. |
-| Release readiness | BLOCKED | Requires latest Quality Gates PASS plus editor re-UAT. |
+| Known previous failing runs | RESOLVED | Prior failures were caused by old editor-unlink expectations and ruff issues. |
+| Latest retained fix commit | PASS | `6d9550f75dd1ecec32f9b7d9a2a084d8e76f6e48`. |
+| Latest Quality Gates run | PASS | Run `26549117150`. |
+| pytest | PASS | Confirmed by Quality Gates job. |
+| ruff | PASS | Confirmed by Quality Gates job. |
+| black check | PASS | Confirmed by Quality Gates job. |
+| mypy | PASS | Confirmed by Quality Gates job. |
+| Release readiness | BLOCKED | Requires editor re-UAT evidence despite Quality Gates passing. |
 
 ## 7. Re-UAT checklist
 
@@ -90,12 +97,11 @@ It supplements:
 | Subtitle title search | FIX APPLIED / RE-UAT REQUIRED |
 | Link unlink/removal | FIX APPLIED / RE-UAT REQUIRED |
 | UI layout | FIX APPLIED / RE-UAT REQUIRED |
-| Latest Quality Gates | CONFIRMATION REQUIRED |
-| Release readiness | Not final until Quality Gates and editor re-UAT pass. |
+| Latest Quality Gates | PASS |
+| Release readiness | Not final until editor re-UAT passes. |
 
 ## 9. Recommended next action
 
-1. Confirm the latest `Quality Gates` result for `ac2d182c8aae39b12b1721cddc968cf88196f7e5` or later.
-2. If Quality Gates passes, rerun editor UAT for subtitle add/edit, title search, relation unlink, and layout.
-3. If re-UAT passes, synchronize `docs/72`, `docs/75`, `docs/88`, `docs/89`, `docs/90`, and `docs/97`.
-4. Keep release preparation blocked until these checks are complete.
+1. Rerun editor UAT for subtitle add/edit, title search, relation unlink, and layout.
+2. If re-UAT passes, synchronize `docs/72`, `docs/75`, `docs/88`, `docs/89`, `docs/90`, and `docs/97`.
+3. Keep release preparation blocked until these checks are complete.
