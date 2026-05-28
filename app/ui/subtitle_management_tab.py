@@ -5,10 +5,21 @@ from __future__ import annotations
 from typing import Any
 
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QComboBox, QCompleter, QGroupBox, QLabel, QVBoxLayout, QWidget
+from PySide6.QtWidgets import (
+    QComboBox,
+    QCompleter,
+    QGroupBox,
+    QLabel,
+    QPushButton,
+    QTableWidget,
+    QTableWidgetItem,
+    QVBoxLayout,
+    QWidget,
+)
 
+from app.ui.public_id_display import short_public_id
 from app.ui.role_context import RoleContext
-from app.ui.title_subtitle_management_tab import TitleSubtitleManagementTab
+from app.ui.title_subtitle_management_tab import TitleSubtitleManagementTab, _call_with_optional_role
 from app.ui.ui_style import PageHeader, apply_workflow_accent, compact_layout
 
 
@@ -32,6 +43,7 @@ class SubtitleManagementTab(QWidget):
         self._rename_labels()
         self._add_guidance_tooltips()
         self._make_title_selectors_searchable()
+        self._replace_list_tab_with_subtitle_list()
         self._connect_subtitle_state_refresh()
         self._apply_subtitle_workflow_accents()
         self._apply_subtitle_workflow_defaults()
@@ -122,6 +134,73 @@ class SubtitleManagementTab(QWidget):
                 lambda text, target=combo: self._select_matching_title(target, text)
             )
 
+    def _replace_list_tab_with_subtitle_list(self) -> None:
+        subtitle_list_tab = self._build_subtitle_list_tab()
+        index = self.editor.workflow_tabs.indexOf(self.editor.list_tab)
+        if index >= 0:
+            self.editor.workflow_tabs.removeTab(index)
+            self.editor.workflow_tabs.insertTab(index, subtitle_list_tab, "一覧")
+            self.editor.workflow_tabs.setCurrentIndex(index)
+        self.editor.list_tab = subtitle_list_tab
+        self._refresh_subtitle_list()
+        self.editor.setProperty("subtitle_list_tab_replaced", True)
+
+    def _build_subtitle_list_tab(self) -> QWidget:
+        panel = QWidget()
+        layout = QVBoxLayout(panel)
+        compact_layout(layout, margins=2, spacing=4)
+        label = QLabel("一覧: 登録済みサブタイトルを親タイトル別に確認します。")
+        label.setWordWrap(True)
+        self.subtitle_list_table = QTableWidget(0, 8)
+        self.subtitle_list_table.setHorizontalHeaderLabels(
+            ["公開ID", "親タイトル", "管理番号", "サブタイトル名", "状態", "表示順", "更新日時", "備考"]
+        )
+        self.subtitle_list_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        self.subtitle_list_refresh_button = QPushButton("サブタイトル一覧を再読込")
+        self.subtitle_list_refresh_button.clicked.connect(self._refresh_subtitle_list_from_source)
+        layout.addWidget(label)
+        layout.addWidget(self.subtitle_list_table, 1)
+        layout.addWidget(self.subtitle_list_refresh_button)
+        return panel
+
+    def _refresh_subtitle_list_from_source(self) -> None:
+        selected = self.editor._selected_title.id if self.editor._selected_title else None
+        self.editor._refresh_titles(selected)
+        self._refresh_subtitle_list()
+        self._ensure_practical_title_selection()
+
+    def _refresh_subtitle_list(self) -> None:
+        rows: list[tuple[str, str, str, str, str, str, str, str]] = []
+        for title in self.editor._titles:
+            try:
+                subtitles = _call_with_optional_role(
+                    self.editor._query_service.list_subtitles,
+                    title.id,
+                    role=self.editor._role_context.role,
+                    include_deleted=True,
+                )
+            except Exception as exc:  # noqa: BLE001
+                self.editor._set_message(f"サブタイトル一覧取得に失敗しました: {exc}", is_error=True)
+                return
+            for subtitle in subtitles:
+                rows.append(
+                    (
+                        short_public_id(subtitle.public_id),
+                        title.title_name,
+                        subtitle.subtitle_code,
+                        subtitle.subtitle_name,
+                        "削除済み" if subtitle.deleted_at else "有効",
+                        str(subtitle.sort_order),
+                        subtitle.updated_at,
+                        subtitle.note or "",
+                    )
+                )
+        self.subtitle_list_table.setRowCount(len(rows))
+        for row_index, row in enumerate(rows):
+            for column_index, value in enumerate(row):
+                self.subtitle_list_table.setItem(row_index, column_index, QTableWidgetItem(value))
+        self.subtitle_list_table.resizeColumnsToContents()
+
     def _connect_subtitle_state_refresh(self) -> None:
         self.editor.add_subtitle_title_combo.currentIndexChanged.connect(
             lambda _index: self.editor._update_action_states()
@@ -132,6 +211,8 @@ class SubtitleManagementTab(QWidget):
         self.editor.workflow_tabs.currentChanged.connect(
             lambda _index: self._ensure_practical_title_selection()
         )
+        self.editor.subtitle_create_button.clicked.connect(lambda: self._refresh_subtitle_list())
+        self.editor.subtitle_update_button.clicked.connect(lambda: self._refresh_subtitle_list())
         self.editor.setProperty("subtitle_create_state_refresh_connected", True)
 
     def _apply_subtitle_workflow_defaults(self) -> None:
@@ -193,6 +274,7 @@ class SubtitleManagementTab(QWidget):
         apply_workflow_accent(self.editor.subtitle_group, "edit")
         apply_workflow_accent(self.editor.subtitle_panel_label, "edit")
         apply_workflow_accent(self.editor.subtitle_hint_label, "edit")
+        apply_workflow_accent(self.subtitle_list_refresh_button, "list")
         for group in self.editor.findChildren(QGroupBox):
             if group.title() == "サブタイトル削除":
                 apply_workflow_accent(group, "delete")
