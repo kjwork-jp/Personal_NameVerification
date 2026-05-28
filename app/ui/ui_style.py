@@ -4,13 +4,16 @@ from __future__ import annotations
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
+    QAbstractItemView,
     QApplication,
     QComboBox,
     QCompleter,
     QGroupBox,
+    QHeaderView,
     QLabel,
     QLayout,
     QPushButton,
+    QTableWidget,
     QVBoxLayout,
     QWidget,
 )
@@ -240,6 +243,21 @@ def make_workflow_accent_label(text: str, accent: str) -> QLabel:
     label.setObjectName("WorkflowAccentLabel")
     apply_workflow_accent(label, accent)
     return label
+
+
+def apply_readable_table(table: QTableWidget, *, stretch_last_section: bool = True) -> None:
+    """Apply readable defaults to dense data tables."""
+
+    table.setAlternatingRowColors(True)
+    table.setWordWrap(False)
+    table.setShowGrid(False)
+    table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+    table.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
+    table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+    table.verticalHeader().setVisible(False)
+    table.horizontalHeader().setStretchLastSection(stretch_last_section)
+    table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+    table.setProperty("readable_table", True)
 
 
 def make_combo_searchable(combo: QComboBox) -> None:
