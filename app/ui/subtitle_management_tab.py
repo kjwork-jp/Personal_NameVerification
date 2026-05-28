@@ -38,12 +38,16 @@ class SubtitleManagementTab(QWidget):
             query_service=query_service,
             role_context=role_context,
         )
+        self.parent_summary_add = self._build_parent_summary_label()
+        self.parent_summary_edit = self._build_parent_summary_label()
+        self.parent_summary_remove = self._build_parent_summary_label()
         self._hide_title_creation_controls()
         self._hide_internal_columns()
         self._rename_labels()
         self._add_guidance_tooltips()
         self._make_title_selectors_searchable()
         self._replace_list_tab_with_subtitle_list()
+        self._insert_parent_summary_cards()
         self._connect_subtitle_state_refresh()
         self._apply_subtitle_workflow_accents()
         self._apply_subtitle_workflow_defaults()
@@ -57,6 +61,25 @@ class SubtitleManagementTab(QWidget):
         layout.addWidget(self.editor, 1)
         self.setProperty("workflow_accented_layout", True)
         self.setProperty("focused_subtitle_only_layout", True)
+
+    def _build_parent_summary_label(self) -> QLabel:
+        label = QLabel(self._parent_summary_text(None))
+        label.setWordWrap(True)
+        label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+        label.setProperty("parent_title_summary_card", True)
+        return label
+
+    def _insert_parent_summary_cards(self) -> None:
+        add_layout = self.editor.add_tab.layout()
+        edit_layout = self.editor.edit_tab.layout()
+        remove_layout = self.editor.delete_tab.layout()
+        if add_layout is not None:
+            add_layout.insertWidget(1, self.parent_summary_add)
+        if edit_layout is not None:
+            edit_layout.insertWidget(1, self.parent_summary_edit)
+        if remove_layout is not None:
+            remove_layout.insertWidget(1, self.parent_summary_remove)
+        self.editor.setProperty("parent_title_summary_cards", True)
 
     def _hide_title_creation_controls(self) -> None:
         for widget in [
@@ -203,10 +226,10 @@ class SubtitleManagementTab(QWidget):
 
     def _connect_subtitle_state_refresh(self) -> None:
         self.editor.add_subtitle_title_combo.currentIndexChanged.connect(
-            lambda _index: self.editor._update_action_states()
+            lambda _index: self._on_parent_title_changed()
         )
         self.editor.title_selector_combo.currentIndexChanged.connect(
-            lambda _index: self.editor._update_action_states()
+            lambda _index: self._on_parent_title_changed()
         )
         self.editor.workflow_tabs.currentChanged.connect(
             lambda _index: self._ensure_practical_title_selection()
@@ -217,6 +240,7 @@ class SubtitleManagementTab(QWidget):
 
     def _apply_subtitle_workflow_defaults(self) -> None:
         self._ensure_practical_title_selection()
+        self._update_parent_summary_cards()
         self.editor.setProperty("subtitle_auto_selects_first_title", True)
         self.editor.setProperty("subtitle_search_text_auto_selects_title", True)
 
@@ -226,6 +250,7 @@ class SubtitleManagementTab(QWidget):
             self._prefer_first_active_title_for_create()
         elif current in {self.editor.edit_tab, self.editor.delete_tab}:
             self._prefer_first_active_title_for_edit()
+        self._update_parent_summary_cards()
         self.editor._update_action_states()
 
     def _prefer_first_active_title_for_create(self) -> None:
@@ -245,6 +270,10 @@ class SubtitleManagementTab(QWidget):
                 self.editor._select_title_by_id(row.id)
                 return
 
+    def _on_parent_title_changed(self) -> None:
+        self._update_parent_summary_cards()
+        self.editor._update_action_states()
+
     def _select_matching_title(self, combo: QComboBox, text: str) -> None:
         query = text.strip().casefold()
         if not query:
@@ -257,8 +286,44 @@ class SubtitleManagementTab(QWidget):
                     title_id = combo.itemData(index)
                     if title_id is not None:
                         self.editor._select_title_by_id(int(title_id))
+                self._update_parent_summary_cards()
                 self.editor._update_action_states()
                 return
+
+    def _update_parent_summary_cards(self) -> None:
+        create_title = self._title_by_id(self.editor.add_subtitle_title_combo.currentData())
+        selected_title = self._selected_title_detail()
+        fallback_title = selected_title or create_title
+        self.parent_summary_add.setText(self._parent_summary_text(create_title))
+        self.parent_summary_edit.setText(self._parent_summary_text(fallback_title))
+        self.parent_summary_remove.setText(self._parent_summary_text(fallback_title))
+        self.editor.setProperty("parent_title_summary_split", True)
+
+    def _selected_title_detail(self) -> Any | None:
+        selected = self.editor._selected_title
+        if selected is None:
+            return None
+        return self._title_by_id(selected.id)
+
+    def _title_by_id(self, title_id: object) -> Any | None:
+        if title_id is None:
+            return None
+        for title in self.editor._titles:
+            if title.id == int(title_id):
+                return title
+        return None
+
+    def _parent_summary_text(self, title: Any | None) -> str:
+        if title is None:
+            return "親タイトル\nタイトル名  未選択\n公開ID      -\n状態        -"
+        state = "削除済み" if title.deleted_at else "有効"
+        public_id = title.public_id or "未採番"
+        return (
+            "親タイトル\n"
+            f"タイトル名  {title.title_name}\n"
+            f"公開ID      {public_id}\n"
+            f"状態        {state}"
+        )
 
     def _apply_subtitle_workflow_accents(self) -> None:
         apply_workflow_accent(self.editor.workflow_hint_label, "guide")
@@ -275,6 +340,12 @@ class SubtitleManagementTab(QWidget):
         apply_workflow_accent(self.editor.subtitle_panel_label, "edit")
         apply_workflow_accent(self.editor.subtitle_hint_label, "edit")
         apply_workflow_accent(self.subtitle_list_refresh_button, "list")
+        for label in (
+            self.parent_summary_add,
+            self.parent_summary_edit,
+            self.parent_summary_remove,
+        ):
+            apply_workflow_accent(label, "guide")
         for group in self.editor.findChildren(QGroupBox):
             if group.title() == "サブタイトル削除":
                 apply_workflow_accent(group, "delete")
