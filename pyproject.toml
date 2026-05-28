@@ -104,6 +104,7 @@ disable_error_code = [
     "arg-type",
     "assignment",
     "attr-defined",
+    "call-overload",
     "index",
     "method-assign",
     "misc",
