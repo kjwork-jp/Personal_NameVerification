@@ -15,6 +15,10 @@ on:
       - "*.md"
   workflow_dispatch:
 
+permissions:
+  contents: read
+  statuses: write
+
 jobs:
   quality-gates:
     name: pytest / ruff / black / mypy
@@ -22,7 +26,17 @@ jobs:
     timeout-minutes: 30
     env:
       QT_QPA_PLATFORM: offscreen
+      GH_TOKEN: ${{ github.token }}
     steps:
+      - name: Publish pending status
+        shell: pwsh
+        run: |
+          gh api repos/${{ github.repository }}/statuses/${{ github.sha }} `
+            -f state=pending `
+            -f context="chatgpt/quality-gates" `
+            -f description="Quality Gates are running" `
+            -f target_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
       - name: Checkout
         uses: actions/checkout@v4
 
@@ -53,3 +67,23 @@ jobs:
       - name: Run mypy
         shell: pwsh
         run: mypy app
+
+      - name: Publish success status
+        if: success()
+        shell: pwsh
+        run: |
+          gh api repos/${{ github.repository }}/statuses/${{ github.sha }} `
+            -f state=success `
+            -f context="chatgpt/quality-gates" `
+            -f description="pytest, ruff, black, and mypy passed" `
+            -f target_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+      - name: Publish failure status
+        if: failure()
+        shell: pwsh
+        run: |
+          gh api repos/${{ github.repository }}/statuses/${{ github.sha }} `
+            -f state=failure `
+            -f context="chatgpt/quality-gates" `
+            -f description="Quality Gates failed; inspect the Actions run" `
+            -f target_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
