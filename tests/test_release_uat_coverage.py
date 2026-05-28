@@ -20,6 +20,7 @@ from app.application.windows_identity import WindowsIdentity  # noqa: E402
 from app.domain.errors import AuthorizationError  # noqa: E402
 from app.infrastructure.db import apply_schema  # noqa: E402
 from app.ui.main_window import MainWindow  # noqa: E402
+from app.ui.role_context import RoleContext  # noqa: E402
 from tests.test_main_window_smoke import (  # noqa: E402
     EmptyBackupRestoreService,
     EmptyCoreService,
@@ -27,7 +28,6 @@ from tests.test_main_window_smoke import (  # noqa: E402
     EmptyImportService,
     _patch_operations_dependencies,
 )
-from app.ui.role_context import RoleContext  # noqa: E402
 
 
 class UatQueryService:
@@ -235,6 +235,8 @@ def test_uat_link_visibility_by_role(monkeypatch: pytest.MonkeyPatch) -> None:
     assert _link_subtab_visibility(admin) == {"登録": True, "解除": True}
 
     admin_link = admin._tabs_by_name["関連付け"]
-    assert admin_link.register_name_combo.itemText(0) == "名前: Alice（公開ID: name-public-id-001）"
+    assert admin_link.register_name_combo.itemText(0) == (
+        "名前: Alice（公開ID: name-public-id-001）"
+    )
     assert "..." not in admin_link.register_name_combo.itemText(0)
     assert "…" not in admin_link.register_name_combo.itemText(0)
