@@ -26,7 +26,7 @@ from app.ui.input_defaults import default_operator_id, friendly_error_message
 from app.ui.permissions import can_create_or_update, can_run_destructive_actions
 from app.ui.public_id_display import short_public_id
 from app.ui.role_context import RoleContext, UserRole
-from app.ui.ui_style import PageHeader, compact_layout, set_status_message
+from app.ui.ui_style import PageHeader, apply_readable_table, compact_layout, set_status_message
 
 
 class NameWriteService(Protocol):
@@ -161,8 +161,7 @@ class NameManagementTab(QWidget):
             ]
         )
         self.names_table.setColumnHidden(0, True)
-        self.names_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
-        self.names_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        apply_readable_table(self.names_table)
         self.names_table.itemSelectionChanged.connect(self._on_row_selected)
 
         self.refresh_button = QPushButton("一覧を再読込")
