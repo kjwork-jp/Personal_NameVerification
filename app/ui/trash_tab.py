@@ -27,6 +27,7 @@ from app.ui.role_context import RoleContext, UserRole
 from app.ui.trash_tab_navigation import apply_trash_subtabs
 from app.ui.ui_style import (
     PageHeader,
+    apply_readable_table,
     apply_workflow_accent,
     compact_layout,
     make_workflow_accent_label,
@@ -166,8 +167,7 @@ class TrashTab(QWidget):
             ]
         )
         self.list_table.setColumnHidden(0, True)
-        self.list_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
-        self.list_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        apply_readable_table(self.list_table)
         self.list_table.itemSelectionChanged.connect(self._on_selected)
         self.detail_label = QLabel("詳細: 未選択")
 
