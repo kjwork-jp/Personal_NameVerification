@@ -124,12 +124,12 @@ def test_audit_log_tab_reload_with_filters_and_detail() -> None:
         "limit": 50,
     }
     assert tab.logs_table.rowCount() == 1
-    assert "raw_name: A" in tab.before_json_view.toPlainText()
-    assert "note: null" in tab.before_json_view.toPlainText()
-    assert "raw_name: B" in tab.after_json_view.toPlainText()
-    assert "note: memo" in tab.after_json_view.toPlainText()
-    assert "raw_name: A → B" in tab.diff_view.toPlainText()
-    assert "note: null → memo" in tab.diff_view.toPlainText()
+    assert '"note": null' in tab.before_json_view.toPlainText()
+    assert '"raw_name": "A"' in tab.before_json_view.toPlainText()
+    assert '"note": "memo"' in tab.after_json_view.toPlainText()
+    assert '"raw_name": "B"' in tab.after_json_view.toPlainText()
+    assert "note: None -> 'memo'" in tab.diff_view.toPlainText()
+    assert "raw_name: 'A' -> 'B'" in tab.diff_view.toPlainText()
     assert tab.before_json_view.isReadOnly()
     assert tab.after_json_view.isReadOnly()
     assert tab.diff_view.isReadOnly()
@@ -163,9 +163,8 @@ def test_audit_log_tab_exports_visible_rows_as_review_json(tmp_path: Path) -> No
     assert payload["rows"][0]["entity_type"] == "names"
     assert payload["rows"][0]["action"] == "update"
     assert payload["rows"][0]["operator_id"] == "op-1"
-    assert payload["rows"][0]["before"]["raw_name"] == "A"
-    assert payload["rows"][0]["after"]["raw_name"] == "B"
-    assert "raw_name: A → B" in payload["rows"][0]["diff_text"]
+    assert payload["rows"][0]["before_json"] == '{"raw_name":"A","note":null}'
+    assert payload["rows"][0]["after_json"] == '{"raw_name":"B","note":"memo"}'
     assert "JSON出力しました" in tab.message_label.text()
 
 
@@ -177,7 +176,7 @@ def test_audit_log_tab_raw_fallback_for_invalid_json() -> None:
 
     assert tab.before_json_view.toPlainText() == "not-json"
     assert tab.after_json_view.toPlainText() == "also-not-json"
-    assert "解析できません" in tab.diff_view.toPlainText()
+    assert tab.diff_view.toPlainText() == ""
 
 
 def test_audit_log_tab_limit_is_spinbox() -> None:
