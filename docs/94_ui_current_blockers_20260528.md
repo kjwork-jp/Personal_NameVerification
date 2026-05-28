@@ -10,8 +10,8 @@
 | UI-SUBTITLE-FLOW-001 | UX flow | FIX PARTIAL / UAT REQUIRED | Selected subtitle summary labels were added. UAT must confirm add/edit/delete flow is understandable. |
 | UI-TABLE-001 | Common UI | IN PROGRESS | Readable table helper is applied to subtitle, name, trash, and audit tables. |
 | UI-AUDIT-001 | Audit UI | FIX APPLIED / UAT REQUIRED | Audit renderer/export tests were aligned with the current pretty-JSON display, repr-style diff, and raw JSON export contract. `c5c59e717bb65bafd0eb763ee57301e575f7775a` passed `chatgpt/quality-gates` in run `26579008547`. |
-| UI-LOGIN-001 | Login UI | OPEN | Login screen is too plain. |
+| UI-LOGIN-001 | Login UI | FIX APPLIED / UAT REQUIRED | Login dialog presentation was improved with a page header, grouped Windows/local auth sections, clearer messages, and unchanged credential handling. `b1ff26a8ff79ace6c36c9138333acb8e5bb56598` passed `chatgpt/quality-gates` in run `26601487493`. |
 
 ## 2. Immediate next step
 
-Proceed to `UI-LOGIN-001`: improve the login screen presentation while keeping role switching and credential handling unchanged.
+Proceed to `UI-DATAIO-001`: improve Data I/O presentation while keeping export, backup, restore, and import permission behavior unchanged.
