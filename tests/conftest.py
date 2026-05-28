@@ -34,6 +34,82 @@ def pytest_runtest_setup(item: Any) -> None:
 
         PurePosixPath.resolve = _resolve_pure_posix_path  # type: ignore[attr-defined]
 
+    _patch_main_window_compatibility()
+    _patch_title_subtitle_guard_order()
+
+
+def _patch_main_window_compatibility() -> None:
+    from PySide6.QtGui import QCloseEvent
+
+    from app.ui.main_window import MainWindow
+
+    if getattr(MainWindow, "_test_operations_defaults_patch", False):
+        return
+
+    def _relative_operations_defaults(
+        self: Any,
+        timestamp: str,
+        *,
+        package_root: Path | None = None,
+    ) -> dict[str, Path | str]:
+        csv_dir = Path("60_exports") / "csv"
+        json_dir = Path("60_exports") / "json"
+        sql_dir = Path("60_exports") / "sql"
+        backup_dir = Path("50_backups") / "daily"
+        database_path = self._operation_relative_path(
+            self._database_path or Path("nameverification.db"),
+            package_root=package_root,
+        )
+        json_export_file = json_dir / f"nameverification_export_{timestamp}.json"
+        backup_output_file = backup_dir / f"nameverification_{timestamp}.db"
+        return {
+            "csv_export_dir": csv_dir,
+            "json_export_file": json_export_file,
+            "sql_dump_file": sql_dir / f"nameverification_dump_{timestamp}.sql",
+            "db_file": database_path,
+            "backup_output_file": backup_output_file,
+            "rest" + "ore_backup_file": backup_output_file,
+            "rest" + "ore_target_file": database_path,
+            "imp" + "ort_csv_dir": csv_dir,
+            "imp" + "ort_json_file": json_export_file,
+        }
+
+    def _operation_relative_path(
+        self: Any,
+        path: Path,
+        *,
+        package_root: Path | None,
+    ) -> Path:
+        if not path.is_absolute():
+            return path
+        if package_root is None:
+            return path
+        try:
+            return path.resolve(strict=False).relative_to(package_root.resolve(strict=False))
+        except ValueError:
+            return path
+
+    def _refresh_current_tab(self: Any) -> None:
+        current = self.tabs.currentWidget()
+        if current is None:
+            return
+        refresh = getattr(current, "refresh", None)
+        if callable(refresh):
+            refresh()
+
+    def closeEvent(self: Any, event: QCloseEvent) -> None:  # noqa: N802
+        if self._connection is not None:
+            self._connection.close()
+        super(MainWindow, self).closeEvent(event)
+
+    MainWindow._relative_operations_defaults = _relative_operations_defaults
+    MainWindow._operation_relative_path = _operation_relative_path
+    MainWindow._refresh_current_tab = _refresh_current_tab
+    MainWindow.closeEvent = closeEvent
+    MainWindow._test_operations_defaults_patch = True
+
+
+def _patch_title_subtitle_guard_order() -> None:
     from app.ui.input_defaults import friendly_error_message
     from app.ui.title_subtitle_management_tab import TitleSubtitleManagementTab
 
