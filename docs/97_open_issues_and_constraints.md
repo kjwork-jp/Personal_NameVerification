@@ -1,5 +1,16 @@
 # 97_open_issues_and_constraints.md
 
+## 2026-05-28追記: viewer/editor UAT follow-up後の最新状態
+
+- viewer UATの解釈を修正済み。viewerでは復元・完全削除・Restore・Import等の実行ボタンは「表示されているが拒否」ではなく、UI上で非表示になることを `docs/89_account_switch_viewer_uat_20260527.md` に記録済み。
+- アカウント切替時のDB close問題は `fix: avoid closing shared database on account switch` で解消済み。viewer切替後のログイン問題もユーザー確認済み。
+- editor UATでは、ログイン、名前追加/編集、タイトル追加/編集、削除データ制限、Restore/Import制限、Export/BackupはPASS扱い。
+- editor UATで、サブタイトル追加/編集不可、サブタイトル追加画面での親タイトル検索不可、関連付け解除不可、タイトル編集/説明文周辺のUI崩れが検出された。
+- 上記editor指摘に対し、サブタイトル管理の親タイトルselector検索化、サブタイトル作成状態更新、タイトル/サブタイトル説明ラベル折返し、editorの関連付け解除許可、関連テスト更新を実施済み。
+- 最新Quality Gatesは `6d9550f75dd1ecec32f9b7d9a2a084d8e76f6e48` / run `26549117150` で、pytest / ruff / black / mypy が全PASS。
+- editor UAT follow-upの詳細は `docs/90_editor_uat_followup_20260527.md` を参照。
+- 現時点のrelease readinessは、コード品質ゲートはPASSだが、editor再UATと最終docs同期が未完了のためBLOCKED。
+
 ## 2026-05-21追記: v0.2.0-rc1 Go/No-Go直前状態
 
 - 認証・ユーザー管理は、初回admin setup、local password login、Windows認証ログイン、DB role取得、user management、user audit log、RBAC UI hardeningまで進行済み。
@@ -7,26 +18,43 @@
 - Windows認証ユーザーは初回ログイン時に `viewer` として自動登録する方針で実装済み。
 - MainWindowでは title bar / status bar に `ログイン中: <operator_id> / 権限: <role>` を常時表示する。
 - viewerは完全参照専用へ寄せ、主要更新系UIは非表示または操作不可へ整理済み。
-- editorは通常登録/更新、関連付け登録、export/backupを許可し、destructive/import/restore/user管理/user audit log操作を禁止する方針。
+- editorは通常登録/更新、関連付け登録、関連付け解除、export/backupを許可し、destructive/import/restore/user管理/user audit log操作を禁止する方針。
 - adminはdestructive/import/restore/user管理/user audit logを含む管理者権限。ただし最後の有効admin降格・無効化は禁止。
 - 操作履歴とユーザー監査ログは `監査ログ` タブへ統合済み。
-- タイトル管理とサブタイトル管理は `タイトル/サブタイトル管理` タブへ統合済み。
+- タイトル管理とサブタイトル管理は `タイトル/サブタイトル管理` タブを基盤としつつ、現在は `タイトル管理` / `サブタイトル管理` の focused wrapper で操作性を改善中。
 - データ入出力はロール別に表示サブタブを絞る方針へ更新済み。
 - 関連付け画面の `名前/公開ID` 表記、検索/一覧の公開ID省略問題は改善済み。
 - アカウント切替時の白画面・小窓・プロセス残存はportable GUIで再確認済み。
 - 現在利用中DBへのGUI restoreは `RESTORE-LOCK-001` として、destructive confirmation前かつrestore service呼出前にブロックする実装へ変更済み。
 - invalid restore/import inputは `INVALID-IO-001` として、before-operation backupを作成しないこと、およびOperations Logへerrorを記録することの証跡テストを追加済み。
 - SQL dumpはv0.2.0ではfull DB dumpを維持し、`users` table、`password_hash`、`password_salt`等を含み得る保護対象ファイルとしてUI上に警告を表示する方針へ決定済み。
-- 品質ゲートは 2026-05-21 時点で `pytest -q` / `ruff check .` / `black --check .` / `mypy app` 全OKを確認済み。
 - 最新状況の横断台帳は `docs/75_v0_2_0_current_status_and_improvement_ledger.md` を参照する。
 - v0.2.0-rc1 release evidenceは `docs/78_release_evidence_v0_2_0_rc1.md` を参照する。
 
 ## 未解決事項
 
+### P1: editor再UAT
+
+- `BUG-SUBTITLE-001-UAT`
+  - editorでサブタイトル追加・編集が実行可能であることを再確認する。
+- `UX-SUBTITLE-002-UAT`
+  - サブタイトル追加/編集画面で、親タイトルをタイトル名の一部で検索できることを再確認する。
+- `BUG-LINK-001-UAT`
+  - editorで既存関連付けを解除できることを再確認する。
+- `BUG-EDITOR-001-UAT`
+  - タイトル編集画面および説明コメント周辺のUI崩れが許容範囲まで軽減していることを再確認する。
+
+### P1: docs synchronization
+
+- `DOC-SYNC-001`
+  - `docs/72`, `docs/75`, `docs/88`, `docs/89`, `docs/90`, `docs/97` の記述を、viewer/editor UATと最新Quality Gates結果に同期する。
+- `UAT-07-001〜003`
+  - 操作マニュアル、UAT記録、現況台帳の整合確認を行う。
+
 ### P1: release decision
 
 - `RELEASE-001` release Go/No-Go判定
-  - v0.2.0-rc1 release evidenceを確認し、Go/No-Goを決定する。
+  - editor再UATとdocs同期がPASSした後、Go/No-Goを決定する。
   - Goの場合、final release tagging / package再生成要否 / 配布対象zipの確定方針を決める。
 
 ### P2: UI / usability改善
@@ -50,6 +78,12 @@
 
 ## 解消済み・実装済み扱い
 
+- `GATE-EDITOR-FOLLOWUP-001` editor UAT follow-up後の品質ゲート再確認は、`6d9550f75dd1ecec32f9b7d9a2a084d8e76f6e48` / run `26549117150` で pytest / ruff / black / mypy 全PASS確認済み。
+- `DOC-89-CORRECT-001` viewer実行ボタン非表示判定への修正は `docs/89_account_switch_viewer_uat_20260527.md` に反映済み。
+- `DOC-90-EDITOR-UAT` editor UAT指摘・修正commit・Quality Gates PASS状態は `docs/90_editor_uat_followup_20260527.md` に記録済み。
+- `ACC-SWITCH-DB-001` アカウント切替時のDB close問題は解消済み。shared SQLite connectionの所有権を `MainWindow` から外し、`pyside6_main.main()` 側で管理する。
+- `VIEWER-HIDDEN-BUTTON-001` viewerでは復元・完全削除・Restore・Import等の実行ボタンが非表示であることを証跡化済み。
+- `EDITOR-FIX-001` サブタイトル追加/編集、親タイトル検索、関連付け解除、UI説明ラベル折返しに対する修正はmainへ反映済み。
 - `GATE-001` 最新main品質ゲート再確認は、2026-05-21時点で `pytest -q` / `ruff check .` / `black --check .` / `mypy app` 全OK確認済み。
 - `GATE-INVALID-IO-001` INVALID-IO-001追加後の品質ゲート再確認は、2026-05-21時点で全OK確認済み。
 - `GATE-EXPORT-SEC-001` EXPORT-SEC-001追加後の品質ゲート再確認は、2026-05-21時点で全OK確認済み。
@@ -112,4 +146,3 @@
 - v0.1.0系ではCSV/JSON importは空DB限定とし、非空DBへのmerge/overwrite/upsert importは扱わない。
 - v0.1.0系ではSQL importは扱わず、DB全体復旧はrestoreで扱う。
 - v0.1.0系ではアイコン・画像資産は実装対象外とし、将来扱う場合はassets配下の相対パス管理を第一候補とする。
-- 複数ユーザー運用・第三者配布・機微情報投入では、アプリ内認証だけでなく、OS ACL / BitLocker / EFS / 配布先制限などの運用保護を併用する。
