@@ -32,7 +32,6 @@ from app.ui.crud_list_first import apply_crud_list_first
 from app.ui.help_settings_tab import HelpSettingsTab
 from app.ui.link_management_tab import LinkManagementTab
 from app.ui.name_management_tab import NameManagementTab
-from app.ui.operations_guided_tab import GuidedOperationsTab
 from app.ui.operations_log import OperationsJsonlLogger
 from app.ui.operations_tab import OperationLoggerLike, OperationsTab
 from app.ui.operations_tab_navigation import apply_operations_subtabs
@@ -177,7 +176,7 @@ class MainWindow(QMainWindow):
             operation_logger = self._operation_logger
             if operation_logger is None and operations_log_jsonl_path is not None:
                 operation_logger = OperationsJsonlLogger(log_path=operations_log_jsonl_path)
-            operations_tab = GuidedOperationsTab(
+            operations_tab = OperationsTab(
                 export_backup_service=export_backup_service,
                 backup_restore_service=backup_restore_service,
                 import_service=import_service,
