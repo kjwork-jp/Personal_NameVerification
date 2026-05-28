@@ -34,6 +34,7 @@ class SubtitleManagementTab(QWidget):
         self._make_title_selectors_searchable()
         self._connect_subtitle_state_refresh()
         self._apply_subtitle_workflow_accents()
+        self._apply_subtitle_workflow_defaults()
 
         layout = QVBoxLayout(self)
         compact_layout(layout, margins=5, spacing=4)
@@ -90,7 +91,7 @@ class SubtitleManagementTab(QWidget):
             if text in replacements:
                 label.setText(replacements[text])
             elif text == long_hint:
-                label.setText("上の一覧または検索欄からタイトルを選ぶと、サブタイトルを管理できます")
+                label.setText("タイトルを選ぶと、サブタイトルを管理できます")
             elif text == "タイトル作成時に紐づける名前":
                 label.hide()
             elif text.startswith("紐づき名前:"):
@@ -98,9 +99,9 @@ class SubtitleManagementTab(QWidget):
 
     def _add_guidance_tooltips(self) -> None:
         self.editor.subtitle_code_input.setToolTip("未入力の場合は自動生成されます。")
-        self.editor.subtitle_sort_order_input.setToolTip("一覧での表示順です。未入力時は 0 として扱います。")
+        self.editor.subtitle_sort_order_input.setToolTip("一覧での表示順です。未入力時は 0 です。")
         self.editor.add_subtitle_title_combo.setToolTip(
-            "タイトル名・公開ID・状態の文字列で検索できます。入力して候補を絞り込んでください。"
+            "入力すると、タイトル名・公開IDを部分一致で検索し、最初の候補を自動選択します。"
         )
 
     def _make_title_selectors_searchable(self) -> None:
@@ -115,6 +116,11 @@ class SubtitleManagementTab(QWidget):
         completer.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
         completer.setFilterMode(Qt.MatchFlag.MatchContains)
         combo.setCompleter(completer)
+        line_edit = combo.lineEdit()
+        if line_edit is not None:
+            line_edit.textEdited.connect(
+                lambda text, target=combo: self._select_matching_title(target, text)
+            )
 
     def _connect_subtitle_state_refresh(self) -> None:
         self.editor.add_subtitle_title_combo.currentIndexChanged.connect(
@@ -123,7 +129,55 @@ class SubtitleManagementTab(QWidget):
         self.editor.title_selector_combo.currentIndexChanged.connect(
             lambda _index: self.editor._update_action_states()
         )
+        self.editor.workflow_tabs.currentChanged.connect(
+            lambda _index: self._ensure_practical_title_selection()
+        )
         self.editor.setProperty("subtitle_create_state_refresh_connected", True)
+
+    def _apply_subtitle_workflow_defaults(self) -> None:
+        self._ensure_practical_title_selection()
+        self.editor.setProperty("subtitle_auto_selects_first_title", True)
+        self.editor.setProperty("subtitle_search_text_auto_selects_title", True)
+
+    def _ensure_practical_title_selection(self) -> None:
+        current = self.editor.workflow_tabs.currentWidget()
+        if current is self.editor.add_tab:
+            self._prefer_first_active_title_for_create()
+        elif current in {self.editor.edit_tab, self.editor.delete_tab}:
+            self._prefer_first_active_title_for_edit()
+        self.editor._update_action_states()
+
+    def _prefer_first_active_title_for_create(self) -> None:
+        combo = self.editor.add_subtitle_title_combo
+        if combo.currentData() is not None:
+            return
+        for index in range(1, combo.count()):
+            if combo.itemData(index) is not None:
+                combo.setCurrentIndex(index)
+                return
+
+    def _prefer_first_active_title_for_edit(self) -> None:
+        if self.editor._selected_title is not None:
+            return
+        for row in self.editor._titles:
+            if row.deleted_at is None:
+                self.editor._select_title_by_id(row.id)
+                return
+
+    def _select_matching_title(self, combo: QComboBox, text: str) -> None:
+        query = text.strip().casefold()
+        if not query:
+            return
+        for index in range(1, combo.count()):
+            label = combo.itemText(index).casefold()
+            if query in label:
+                combo.setCurrentIndex(index)
+                if combo is self.editor.title_selector_combo:
+                    title_id = combo.itemData(index)
+                    if title_id is not None:
+                        self.editor._select_title_by_id(int(title_id))
+                self.editor._update_action_states()
+                return
 
     def _apply_subtitle_workflow_accents(self) -> None:
         apply_workflow_accent(self.editor.workflow_hint_label, "guide")
