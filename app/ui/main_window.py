@@ -32,6 +32,7 @@ from app.ui.crud_list_first import apply_crud_list_first
 from app.ui.help_settings_tab import HelpSettingsTab
 from app.ui.link_management_tab import LinkManagementTab
 from app.ui.name_management_tab import NameManagementTab
+from app.ui.operations_guided_tab import GuidedOperationsTab
 from app.ui.operations_log import OperationsJsonlLogger
 from app.ui.operations_tab import OperationLoggerLike, OperationsTab
 from app.ui.operations_tab_navigation import apply_operations_subtabs
@@ -176,7 +177,7 @@ class MainWindow(QMainWindow):
             operation_logger = self._operation_logger
             if operation_logger is None and operations_log_jsonl_path is not None:
                 operation_logger = OperationsJsonlLogger(log_path=operations_log_jsonl_path)
-            operations_tab = OperationsTab(
+            operations_tab = GuidedOperationsTab(
                 export_backup_service=export_backup_service,
                 backup_restore_service=backup_restore_service,
                 import_service=import_service,
@@ -339,92 +340,51 @@ class MainWindow(QMainWindow):
         }
         return defaults
 
-    def _relative_operations_defaults(
-        self,
-        timestamp: str,
-        *,
-        package_root: Path | None = None,
-    ) -> dict[str, Path | str]:
-        csv_dir = Path("60_exports") / "csv"
-        json_dir = Path("60_exports") / "json"
-        sql_dir = Path("60_exports") / "sql"
-        backup_dir = Path("50_backups") / "daily"
-        database_path = self._operation_relative_path(
-            self._database_path or Path("nameverification.db"),
-            package_root=package_root,
-        )
-        json_export_file = json_dir / f"nameverification_export_{timestamp}.json"
-        backup_output_file = backup_dir / f"nameverification_{timestamp}.db"
-        return {
-            "csv_export_dir": csv_dir,
-            "json_export_file": json_export_file,
-            "sql_dump_file": sql_dir / f"nameverification_dump_{timestamp}.sql",
-            "db_file": database_path,
-            "backup_output_file": backup_output_file,
-            "restore_backup_file": backup_output_file,
-            "restore_target_file": database_path,
-            "import_csv_dir": csv_dir,
-            "import_json_file": json_export_file,
-        }
-
-    def _operation_relative_path(
-        self,
-        path: Path,
-        *,
-        package_root: Path | None,
-    ) -> Path:
-        if not path.is_absolute():
-            return path
-        if package_root is None:
-            return path
-        try:
-            return path.resolve(strict=False).relative_to(package_root.resolve(strict=False))
-        except ValueError:
-            return path
-
     def _fallback_operations_defaults(self, timestamp: str) -> dict[str, Path | str]:
         base = _operations_fallback_base_dir()
-        csv_dir = base / "60_exports" / "csv"
-        json_dir = base / "60_exports" / "json"
-        sql_dir = base / "60_exports" / "sql"
-        backup_dir = base / "50_backups" / "daily"
-        for directory in (csv_dir, json_dir, sql_dir, backup_dir):
-            directory.mkdir(parents=True, exist_ok=True)
+        exports = base / "exports"
+        backups = base / "backups"
+        exports.mkdir(parents=True, exist_ok=True)
+        backups.mkdir(parents=True, exist_ok=True)
         database_path = self._database_path or (base / "nameverification.db")
-        json_export_file = json_dir / f"nameverification_export_{timestamp}.json"
-        backup_output_file = backup_dir / f"nameverification_{timestamp}.db"
         return {
-            "csv_export_dir": csv_dir,
-            "json_export_file": json_export_file,
-            "sql_dump_file": sql_dir / f"nameverification_dump_{timestamp}.sql",
+            "csv_export_dir": exports / "csv",
+            "json_export_file": exports / f"nameverification_export_{timestamp}.json",
+            "sql_dump_file": exports / f"nameverification_dump_{timestamp}.sql",
             "db_file": database_path,
-            "backup_output_file": backup_output_file,
-            "restore_backup_file": backup_output_file,
+            "backup_output_file": backups / f"nameverification_{timestamp}.db",
+            "restore_backup_file": backups / f"nameverification_{timestamp}.db",
             "restore_target_file": database_path,
-            "import_csv_dir": csv_dir,
-            "import_json_file": json_export_file,
+            "import_csv_dir": exports / "csv",
+            "import_json_file": exports / f"nameverification_export_{timestamp}.json",
         }
 
-    def _refresh_current_tab(self) -> None:
-        current = self.tabs.currentWidget()
-        if current is None:
-            return
-        refresh = getattr(current, "refresh", None)
-        if callable(refresh):
-            refresh()
-
-    def closeEvent(self, event: QCloseEvent) -> None:  # noqa: N802
-        if self._connection is not None:
-            self._connection.close()
-        super().closeEvent(event)
+    def _refresh_current_tab(self, index: int) -> None:
+        widget = self.tabs.widget(index)
+        for method_name in ("refresh", "reload", "_refresh_list", "_reload"):
+            method = getattr(widget, method_name, None)
+            if callable(method):
+                method()
+                break
 
 
 def _tab_aliases(title: str) -> tuple[str, ...]:
-    aliases = {
-        "名前を管理": ("名前管理",),
-        "タイトル管理": ("タイトルを管理", "タイトル/サブタイトル管理"),
-        "サブタイトル管理": ("サブタイトルを管理",),
-        "監査ログ": ("操作履歴", "ユーザー監査ログ"),
-        "データ入出力": ("エクスポート/バックアップ", "インポート/復元"),
-    }
-    return aliases.get(title, ())
+    if title == "検索":
+        return ("Search", "search")
+    if title == "名前を管理":
+        return ("Name", "Names", "名前")
+    if title == "タイトル管理":
+        return ("Title", "Titles", "タイトル")
+    if title == "サブタイトル管理":
+        return ("Subtitle", "Subtitles", "サブタイトル")
+    if title == "関連付け":
+        return ("Link", "Links", "関連")
+    if title == "削除データ":
+        return ("Trash", "ゴミ箱")
+    if title == "監査ログ":
+        return ("Audit", "AuditLogs", "監査")
+    if title == "データ入出力":
+        return ("Operations", "操作", "DataIO")
+    if title == "ヘルプ / 設定":
+        return ("Help", "Settings", "HelpSettings")
+    return ()
