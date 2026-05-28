@@ -6,7 +6,7 @@ import os
 
 import pytest
 
-from app.application.core_services import SubtitleInput, TitleInput
+from app.application.core_services import SubtitleInput
 from app.application.read_models import NameSearchRow, RelatedRow, SubtitleDetail, TitleDetail
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
@@ -32,9 +32,9 @@ class StubCoreService:
         role: str = "admin",
     ) -> int:
         self.calls.append(
-            "create_subtitle:"
-            f"{payload.title_id}:{payload.subtitle_code}:{operator_id}:{role}"
+            f"create_subtitle:{payload.title_id}:{payload.subtitle_code}"
         )
+        self.calls.append(f"operator:{operator_id}:{role}")
         return 1
 
     def update_subtitle(
@@ -44,33 +44,8 @@ class StubCoreService:
         operator_id: str,
         role: str = "admin",
     ) -> None:
-        self.calls.append(
-            f"update_subtitle:{subtitle_id}:{payload.subtitle_code}:{operator_id}:{role}"
-        )
-
-    def create_title(
-        self,
-        payload: TitleInput,
-        operator_id: str,
-        role: str = "admin",
-        *,
-        name_ids: list[int] | None = None,
-    ) -> int:
-        self.calls.append(
-            f"create_title:{payload.title_name}:{operator_id}:{role}:{name_ids or []}"
-        )
-        return 1
-
-    def update_title(
-        self,
-        title_id: int,
-        payload: TitleInput,
-        operator_id: str,
-        role: str = "admin",
-    ) -> None:
-        self.calls.append(
-            f"update_title:{title_id}:{payload.title_name}:{operator_id}:{role}"
-        )
+        self.calls.append(f"update_subtitle:{subtitle_id}:{payload.subtitle_code}")
+        self.calls.append(f"operator:{operator_id}:{role}")
 
     def link_name_to_subtitle(
         self,
@@ -80,9 +55,8 @@ class StubCoreService:
         operator_id: str,
         role: str = "admin",
     ) -> int:
-        self.calls.append(
-            f"link:{name_id}:{subtitle_id}:{relation_type}:{operator_id}:{role}"
-        )
+        self.calls.append(f"link:{name_id}:{subtitle_id}:{relation_type}")
+        self.calls.append(f"operator:{operator_id}:{role}")
         return 1
 
     def unlink_name_from_subtitle(
@@ -91,45 +65,8 @@ class StubCoreService:
         operator_id: str,
         role: str = "admin",
     ) -> None:
-        self.calls.append(f"unlink:{link_id}:{operator_id}:{role}")
-
-    def delete_title(self, title_id: int, operator_id: str, role: str = "admin") -> None:
-        self.calls.append(f"delete_title:{title_id}:{operator_id}:{role}")
-
-    def restore_title(self, title_id: int, operator_id: str, role: str = "admin") -> None:
-        self.calls.append(f"restore_title:{title_id}:{operator_id}:{role}")
-
-    def hard_delete_title(
-        self,
-        title_id: int,
-        operator_id: str,
-        role: str = "admin",
-    ) -> None:
-        self.calls.append(f"hard_delete_title:{title_id}:{operator_id}:{role}")
-
-    def delete_subtitle(
-        self,
-        subtitle_id: int,
-        operator_id: str,
-        role: str = "admin",
-    ) -> None:
-        self.calls.append(f"delete_subtitle:{subtitle_id}:{operator_id}:{role}")
-
-    def restore_subtitle(
-        self,
-        subtitle_id: int,
-        operator_id: str,
-        role: str = "admin",
-    ) -> None:
-        self.calls.append(f"restore_subtitle:{subtitle_id}:{operator_id}:{role}")
-
-    def hard_delete_subtitle(
-        self,
-        subtitle_id: int,
-        operator_id: str,
-        role: str = "admin",
-    ) -> None:
-        self.calls.append(f"hard_delete_subtitle:{subtitle_id}:{operator_id}:{role}")
+        self.calls.append(f"unlink:{link_id}")
+        self.calls.append(f"operator:{operator_id}:{role}")
 
 
 class StubQueryService:
@@ -233,13 +170,13 @@ def _app() -> QApplication:
     return app
 
 
-def test_subtitle_parent_title_selector_is_searchable_and_refreshes_state() -> None:
+def _role() -> RoleContext:
+    return RoleContext(role="editor", operator_id="op-1")
+
+
+def test_subtitle_parent_title_selector_is_searchable() -> None:
     _app()
-    tab = SubtitleManagementTab(
-        core_service=StubCoreService(),
-        query_service=StubQueryService(),
-        role_context=RoleContext(role="editor", operator_id="op-1"),
-    )
+    tab = SubtitleManagementTab(StubCoreService(), StubQueryService(), _role())
 
     combo = tab.editor.add_subtitle_title_combo
     assert combo.isEditable()
@@ -254,11 +191,7 @@ def test_subtitle_parent_title_selector_is_searchable_and_refreshes_state() -> N
 def test_subtitle_editor_can_create_and_update_as_editor() -> None:
     _app()
     core = StubCoreService()
-    tab = SubtitleManagementTab(
-        core_service=core,
-        query_service=StubQueryService(),
-        role_context=RoleContext(role="editor", operator_id="op-1"),
-    )
+    tab = SubtitleManagementTab(core, StubQueryService(), _role())
 
     tab.editor.workflow_tabs.setCurrentWidget(tab.editor.add_tab)
     tab.editor.add_subtitle_title_combo.setCurrentIndex(1)
@@ -272,8 +205,9 @@ def test_subtitle_editor_can_create_and_update_as_editor() -> None:
     tab.editor.subtitle_code_input.setText("S1-U")
     tab.editor._update_subtitle()
 
-    assert "create_subtitle:10:SNEW:op-1:editor" in core.calls
-    assert "update_subtitle:100:S1-U:op-1:editor" in core.calls
+    assert "create_subtitle:10:SNEW" in core.calls
+    assert "update_subtitle:100:S1-U" in core.calls
+    assert "operator:op-1:editor" in core.calls
 
 
 def test_editor_can_unlink_existing_relation(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -284,25 +218,18 @@ def test_editor_can_unlink_existing_relation(monkeypatch: pytest.MonkeyPatch) ->
         lambda *args, **kwargs: True,
     )
     core = StubCoreService()
-    tab = LinkManagementTab(
-        core_service=core,
-        query_service=StubQueryService(),
-        role_context=RoleContext(role="editor", operator_id="op-2"),
-    )
+    tab = LinkManagementTab(core, StubQueryService(), _role())
 
     assert tab.unlink_button.isEnabled()
     tab._unlink_link()
 
-    assert "unlink:500:op-2:editor" in core.calls
+    assert "unlink:500" in core.calls
+    assert "operator:op-1:editor" in core.calls
 
 
 def test_title_management_guidance_labels_are_wrapped() -> None:
     _app()
-    tab = TitleManagementTab(
-        core_service=StubCoreService(),
-        query_service=StubQueryService(),
-        role_context=RoleContext(role="editor", operator_id="op-1"),
-    )
+    tab = TitleManagementTab(StubCoreService(), StubQueryService(), _role())
 
     assert tab.editor.property("title_guidance_labels_wrapped") is True
     assert tab.editor.workflow_hint_label.wordWrap()
