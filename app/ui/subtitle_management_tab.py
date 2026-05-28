@@ -20,7 +20,7 @@ from PySide6.QtWidgets import (
 from app.ui.public_id_display import short_public_id
 from app.ui.role_context import RoleContext
 from app.ui.title_subtitle_management_tab import TitleSubtitleManagementTab, _call_with_optional_role
-from app.ui.ui_style import PageHeader, apply_workflow_accent, compact_layout
+from app.ui.ui_style import PageHeader, apply_readable_table, apply_workflow_accent, compact_layout
 
 
 class SubtitleManagementTab(QWidget):
@@ -197,7 +197,7 @@ class SubtitleManagementTab(QWidget):
         self.subtitle_list_table.setHorizontalHeaderLabels(
             ["公開ID", "親タイトル", "管理番号", "サブタイトル名", "状態", "表示順", "更新日時", "備考"]
         )
-        self.subtitle_list_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        apply_readable_table(self.subtitle_list_table)
         self.subtitle_list_refresh_button = QPushButton("サブタイトル一覧を再読込")
         self.subtitle_list_refresh_button.clicked.connect(self._refresh_subtitle_list_from_source)
         layout.addWidget(label)
