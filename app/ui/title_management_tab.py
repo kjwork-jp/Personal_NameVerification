@@ -31,7 +31,9 @@ class TitleManagementTab(QWidget):
         self._rename_labels()
         self._add_guidance_tooltips()
         self._wrap_guidance_labels()
+        self._connect_title_defaults()
         self._apply_title_workflow_accents()
+        self._ensure_title_selected_for_edit()
 
         layout = QVBoxLayout(self)
         compact_layout(layout, margins=5, spacing=4)
@@ -92,19 +94,33 @@ class TitleManagementTab(QWidget):
                 label.setText(text.replace("紐づき名前", "関連する名前"))
 
     def _add_guidance_tooltips(self) -> None:
-        self.editor.title_link_names_list.setToolTip(
-            "タイトルに関連付ける名前を選択します。複数選択できます。"
-        )
+        self.editor.title_link_names_list.setToolTip("タイトルに関連付ける名前を選択します。")
 
     def _wrap_guidance_labels(self) -> None:
         for label in self.editor.findChildren(QLabel):
             label.setWordWrap(True)
             label.setMinimumHeight(0)
-        self.editor.workflow_hint_label.setText(
-            "一覧・新規追加・編集・削除を分けています。新規追加は選択状態を使いません。"
-        )
+        self.editor.workflow_hint_label.setText("一覧・新規追加・編集・削除を分けています。")
         self.editor.selected_title_context_label.setText("編集対象のタイトルを選択してください。")
+        self.editor.title_detail_group.setMaximumHeight(190)
         self.editor.setProperty("title_guidance_labels_wrapped", True)
+
+    def _connect_title_defaults(self) -> None:
+        self.editor.workflow_tabs.currentChanged.connect(
+            lambda _index: self._ensure_title_selected_for_edit()
+        )
+        self.editor.setProperty("title_auto_selects_first_title", True)
+
+    def _ensure_title_selected_for_edit(self) -> None:
+        current = self.editor.workflow_tabs.currentWidget()
+        if current not in {self.editor.edit_tab, self.editor.delete_tab}:
+            return
+        if self.editor._selected_title is not None:
+            return
+        for row in self.editor._titles:
+            if row.deleted_at is None:
+                self.editor._select_title_by_id(row.id)
+                return
 
     def _apply_title_workflow_accents(self) -> None:
         apply_workflow_accent(self.editor.workflow_hint_label, "guide")
