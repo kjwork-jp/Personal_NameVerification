@@ -29,7 +29,13 @@ from PySide6.QtWidgets import (
 from app.application.read_models import ChangeLogRow
 from app.ui.public_id_display import short_public_id
 from app.ui.role_context import RoleContext, UserRole
-from app.ui.ui_style import PageHeader, compact_layout, make_combo_searchable, set_status_message
+from app.ui.ui_style import (
+    PageHeader,
+    apply_readable_table,
+    compact_layout,
+    make_combo_searchable,
+    set_status_message,
+)
 
 ENTITY_TYPE_OPTIONS = [
     "all",
@@ -133,8 +139,7 @@ class AuditLogTab(QWidget):
         )
         self.logs_table.setColumnHidden(0, True)
         self.logs_table.setColumnHidden(3, True)
-        self.logs_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
-        self.logs_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        apply_readable_table(self.logs_table)
         self.logs_table.itemSelectionChanged.connect(self._on_selected)
 
         self.detail_summary_label = QLabel("選択中の操作: 未選択")
@@ -339,18 +344,16 @@ def _parse_json_object(value: str | None) -> dict[str, Any] | None:
     if not value:
         return None
     try:
-        parsed = json.loads(value)
+        data = json.loads(value)
     except json.JSONDecodeError:
         return None
-    return parsed if isinstance(parsed, dict) else None
+    return data if isinstance(data, dict) else None
 
 
-def _format_json_like(raw_value: str | None, parsed: dict[str, Any] | None) -> str:
-    if not raw_value:
-        return "（なし）"
+def _format_json_like(value: str | None, parsed: dict[str, Any] | None) -> str:
     if parsed is None:
-        return raw_value
-    return "\n".join(f"{key}: {_format_value(parsed[key])}" for key in sorted(parsed))
+        return value or ""
+    return json.dumps(parsed, ensure_ascii=False, indent=2, sort_keys=True)
 
 
 def _format_diff(
@@ -358,26 +361,20 @@ def _format_diff(
     after: dict[str, Any] | None,
 ) -> str:
     if before is None and after is None:
-        return "変更差分を解析できません。変更前/変更後の内容を確認してください。"
+        return ""
     before = before or {}
     after = after or {}
     keys = sorted(set(before) | set(after))
-    if not keys:
-        return "差分はありません。"
     lines: list[str] = []
     for key in keys:
-        before_value = before.get(key, "（なし）")
-        after_value = after.get(key, "（なし）")
-        marker = "=" if before_value == after_value else "→"
-        lines.append(
-            f"{key}: {_format_value(before_value)} {marker} {_format_value(after_value)}"
-        )
-    return "\n".join(lines)
+        before_value = before.get(key)
+        after_value = after.get(key)
+        if before_value != after_value:
+            lines.append(f"{key}: {before_value!r} -> {after_value!r}")
+    return "\n".join(lines) if lines else "差分なし"
 
 
-def _row_export_payload(row: ChangeLogRow) -> dict[str, object]:
-    before = _parse_json_object(row.before_json)
-    after = _parse_json_object(row.after_json)
+def _row_export_payload(row: ChangeLogRow) -> dict[str, Any]:
     return {
         "id": row.id,
         "public_id": row.public_id,
@@ -386,15 +383,6 @@ def _row_export_payload(row: ChangeLogRow) -> dict[str, object]:
         "action": row.action,
         "operator_id": row.operator_id,
         "created_at": row.created_at,
-        "before": before if before is not None else row.before_json,
-        "after": after if after is not None else row.after_json,
-        "diff_text": _format_diff(before, after),
+        "before_json": row.before_json,
+        "after_json": row.after_json,
     }
-
-
-def _format_value(value: Any) -> str:
-    if value is None:
-        return "null"
-    if isinstance(value, str):
-        return value
-    return json.dumps(value, ensure_ascii=False, sort_keys=True)
