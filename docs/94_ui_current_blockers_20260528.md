@@ -9,9 +9,9 @@
 | UI-SUBTITLE-PARENT-001 | UI readability | FIX APPLIED / UAT REQUIRED | Compatible parent-title summary labels were added. UAT must confirm title name, public ID, and state are split and readable. |
 | UI-SUBTITLE-FLOW-001 | UX flow | FIX PARTIAL / UAT REQUIRED | Selected subtitle summary labels were added. UAT must confirm add/edit/delete flow is understandable. |
 | UI-TABLE-001 | Common UI | IN PROGRESS | Readable table helper is applied to subtitle, name, trash, and audit tables. |
-| UI-AUDIT-001 | Audit UI | OPEN | Audit renderer/export contract still needs a permanent decision and test alignment before release readiness. |
+| UI-AUDIT-001 | Audit UI | FIX APPLIED / UAT REQUIRED | Audit renderer/export tests were aligned with the current pretty-JSON display, repr-style diff, and raw JSON export contract. `c5c59e717bb65bafd0eb763ee57301e575f7775a` passed `chatgpt/quality-gates` in run `26579008547`. |
 | UI-LOGIN-001 | Login UI | OPEN | Login screen is too plain. |
 
 ## 2. Immediate next step
 
-Proceed to `UI-AUDIT-001`: decide the audit renderer/export contract, align implementation and tests, and then continue the remaining UI table and login improvements.
+Proceed to `UI-LOGIN-001`: improve the login screen presentation while keeping role switching and credential handling unchanged.
