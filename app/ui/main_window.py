@@ -7,7 +7,7 @@ from datetime import datetime
 from pathlib import Path
 
 from PySide6.QtCore import Signal
-from PySide6.QtGui import QAction, QCloseEvent
+from PySide6.QtGui import QAction
 from PySide6.QtWidgets import (
     QLabel,
     QMainWindow,
