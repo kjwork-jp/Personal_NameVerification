@@ -39,8 +39,6 @@ def pytest_runtest_setup(item: Any) -> None:
 
 
 def _patch_main_window_compatibility() -> None:
-    from PySide6.QtGui import QCloseEvent
-
     import app.ui.main_window as main_window_module
     from app.ui.main_window import MainWindow
 
@@ -98,7 +96,7 @@ def _patch_main_window_compatibility() -> None:
         if callable(refresh):
             refresh()
 
-    def closeEvent(self: Any, event: QCloseEvent) -> None:  # noqa: N802
+    def closeEvent(self: Any, event: Any) -> None:  # noqa: N802
         if self._connection is not None:
             self._connection.close()
         super(MainWindow, self).closeEvent(event)
