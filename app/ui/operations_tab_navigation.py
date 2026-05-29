@@ -12,8 +12,13 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from app.ui.operations_guidance import DATA_IO_PAGE_DESCRIPTION, DATA_IO_PAGE_TITLE
-from app.ui.ui_style import PageHeader
+from app.ui.operations_guidance import (
+    DATA_IO_GROUP_DESCRIPTIONS,
+    DATA_IO_PAGE_DESCRIPTION,
+    DATA_IO_PAGE_TITLE,
+    DATA_IO_RESULT_DESCRIPTION,
+)
+from app.ui.ui_style import PageHeader, make_workflow_accent_label
 
 _GUIDE_TEXT_BY_ROLE = {
     "viewer": """
@@ -95,6 +100,7 @@ def apply_operations_subtabs(widget: QWidget) -> None:
         return
 
     logs_group = _take_group_box_by_title(root_layout, "Operations 実行ログ")
+    _insert_result_hint(root_layout, widget)
 
     sub_tabs = QTabWidget(widget)
     sub_tabs.setObjectName("operationsSubTabs")
@@ -142,11 +148,36 @@ def _page_with_group(group: QGroupBox) -> QWidget:
     layout = QVBoxLayout(page)
     layout.setContentsMargins(4, 4, 4, 4)
     layout.setSpacing(6)
+    description = _group_description(group.title())
+    if description:
+        description_label = make_workflow_accent_label(description, "guide")
+        description_label.setProperty("data_io_group_description", True)
+        layout.addWidget(description_label)
     group.setParent(page)
     layout.addWidget(group)
     layout.addStretch(1)
     group.show()
     return page
+
+
+def _group_description(group_title: str) -> str:
+    group_key = group_title.split("（", maxsplit=1)[0]
+    return DATA_IO_GROUP_DESCRIPTIONS.get(group_key, "")
+
+
+def _insert_result_hint(root_layout: QVBoxLayout, widget: QWidget) -> None:
+    result_view = getattr(widget, "result_view", None)
+    if not isinstance(result_view, QWidget):
+        return
+    for index in range(root_layout.count()):
+        item = root_layout.itemAt(index)
+        if item is None:
+            continue
+        if item.widget() is result_view:
+            hint = make_workflow_accent_label(DATA_IO_RESULT_DESCRIPTION, "guide")
+            hint.setProperty("data_io_result_hint", True)
+            root_layout.insertWidget(index, hint)
+            return
 
 
 def _take_first_grid_layout(root_layout: QVBoxLayout) -> tuple[int, QGridLayout | None]:
