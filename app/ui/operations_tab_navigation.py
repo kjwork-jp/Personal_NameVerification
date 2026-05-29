@@ -12,6 +12,9 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from app.ui.operations_guidance import DATA_IO_PAGE_DESCRIPTION, DATA_IO_PAGE_TITLE
+from app.ui.ui_style import PageHeader
+
 _GUIDE_TEXT_BY_ROLE = {
     "viewer": """
 データ入出力タブの操作ガイド（viewer）
@@ -122,6 +125,9 @@ def _build_guide_page(role: str) -> QWidget:
     layout = QVBoxLayout(page)
     layout.setContentsMargins(10, 10, 10, 10)
     layout.setSpacing(8)
+    header = PageHeader(DATA_IO_PAGE_TITLE, DATA_IO_PAGE_DESCRIPTION)
+    header.setProperty("data_io_navigation_header", True)
+    layout.addWidget(header)
     label = QLabel(_GUIDE_TEXT_BY_ROLE.get(role, _GUIDE_TEXT_BY_ROLE["admin"]))
     label.setObjectName("operationsRoleGuideLabel")
     label.setWordWrap(True)
