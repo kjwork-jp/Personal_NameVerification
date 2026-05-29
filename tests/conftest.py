@@ -41,6 +41,7 @@ def pytest_runtest_setup(item: Any) -> None:
 def _patch_main_window_compatibility() -> None:
     from PySide6.QtGui import QCloseEvent
 
+    import app.ui.main_window as main_window_module
     from app.ui.main_window import MainWindow
 
     if getattr(MainWindow, "_test_operations_defaults_patch", False):
@@ -102,10 +103,21 @@ def _patch_main_window_compatibility() -> None:
             self._connection.close()
         super(MainWindow, self).closeEvent(event)
 
+    def _tab_aliases(title: str) -> tuple[str, ...]:
+        aliases = {
+            "名前を管理": ("名前管理",),
+            "タイトル管理": ("タイトルを管理", "タイトル/サブタイトル管理"),
+            "サブタイトル管理": ("サブタイトルを管理",),
+            "監査ログ": ("操作履歴", "ユーザー監査ログ"),
+            "データ入出力": ("エクスポート/バックアップ", "インポート/復元"),
+        }
+        return aliases.get(title, ())
+
     MainWindow._relative_operations_defaults = _relative_operations_defaults
     MainWindow._operation_relative_path = _operation_relative_path
     MainWindow._refresh_current_tab = _refresh_current_tab
     MainWindow.closeEvent = closeEvent
+    main_window_module._tab_aliases = _tab_aliases
     MainWindow._test_operations_defaults_patch = True
 
 
