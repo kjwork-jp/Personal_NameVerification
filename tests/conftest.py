@@ -42,7 +42,7 @@ def _patch_main_window_compatibility() -> None:
     import app.ui.main_window as main_window_module
     from app.ui.main_window import MainWindow
 
-    if getattr(MainWindow, "_test_operations_defaults_patch", False):
+    if MainWindow.__dict__.get("_test_operations_defaults_patch", False):
         return
 
     def _relative_operations_defaults(
@@ -92,16 +92,15 @@ def _patch_main_window_compatibility() -> None:
         current = self.tabs.currentWidget()
         if current is None:
             return
-        refresh = getattr(current, "refresh", None)
+        refresh = current.refresh if hasattr(current, "refresh") else None
         if callable(refresh):
             refresh()
 
     def closeEvent(self: Any, event: Any) -> None:  # noqa: N802
         if self._connection is not None:
             self._connection.close()
-        accept = getattr(event, "accept", None)
-        if callable(accept):
-            accept()
+        if hasattr(event, "accept"):
+            event.accept()
 
     def _tab_aliases(title: str) -> tuple[str, ...]:
         aliases = {
