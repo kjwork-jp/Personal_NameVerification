@@ -60,7 +60,6 @@ exclude = [
   "build",
   "dist",
   "old",
-  "app/ui/operations_guided_tab.py",
   "app/ui/operations_test_fixes.py",
 ]
 
