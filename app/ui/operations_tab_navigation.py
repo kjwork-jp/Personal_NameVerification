@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
 
 from app.ui.operations_guidance import (
     DATA_IO_GROUP_DESCRIPTIONS,
+    DATA_IO_LOG_DESCRIPTION,
     DATA_IO_PAGE_DESCRIPTION,
     DATA_IO_PAGE_TITLE,
     DATA_IO_RESULT_DESCRIPTION,
@@ -161,6 +162,8 @@ def _page_with_group(group: QGroupBox) -> QWidget:
 
 
 def _group_description(group_title: str) -> str:
+    if group_title.startswith("Operations 実行ログ"):
+        return DATA_IO_LOG_DESCRIPTION
     group_key = group_title.split("（", maxsplit=1)[0]
     return DATA_IO_GROUP_DESCRIPTIONS.get(group_key, "")
 
