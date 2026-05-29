@@ -99,7 +99,9 @@ def _patch_main_window_compatibility() -> None:
     def closeEvent(self: Any, event: Any) -> None:  # noqa: N802
         if self._connection is not None:
             self._connection.close()
-        super(MainWindow, self).closeEvent(event)
+        accept = getattr(event, "accept", None)
+        if callable(accept):
+            accept()
 
     def _tab_aliases(title: str) -> tuple[str, ...]:
         aliases = {
