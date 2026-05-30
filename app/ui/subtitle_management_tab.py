@@ -10,6 +10,7 @@ from PySide6.QtWidgets import (
     QCompleter,
     QGroupBox,
     QLabel,
+    QLineEdit,
     QPushButton,
     QTableWidget,
     QTableWidgetItem,
@@ -43,6 +44,7 @@ class SubtitleManagementTab(QWidget):
         self.parent_summary_remove = self._build_parent_summary_label()
         self.subtitle_summary_edit = self._build_subtitle_summary_label()
         self.subtitle_summary_remove = self._build_subtitle_summary_label()
+        self._subtitle_list_rows: list[tuple[str, ...]] = []
         self._hide_title_creation_controls()
         self._hide_internal_columns()
         self._rename_labels()
@@ -193,14 +195,23 @@ class SubtitleManagementTab(QWidget):
         compact_layout(layout, margins=2, spacing=4)
         label = QLabel("一覧: 登録済みサブタイトルを親タイトル別に確認します。")
         label.setWordWrap(True)
+        self.subtitle_list_search_input = QLineEdit()
+        self.subtitle_list_search_input.setPlaceholderText(
+            "親タイトル・管理番号・サブタイトル名・状態・備考を横断検索"
+        )
+        self.subtitle_list_search_input.setObjectName("subtitleCrossParentSearchInput")
+        self.subtitle_list_search_input.setProperty("cross_parent_subtitle_search", True)
+        self.subtitle_list_search_input.textChanged.connect(lambda _text: self._apply_subtitle_list_filter())
         self.subtitle_list_table = QTableWidget(0, 8)
         self.subtitle_list_table.setHorizontalHeaderLabels(
             ["公開ID", "親タイトル", "管理番号", "サブタイトル名", "状態", "表示順", "更新日時", "備考"]
         )
         apply_readable_table(self.subtitle_list_table)
+        self.subtitle_list_table.setProperty("cross_parent_subtitle_list", True)
         self.subtitle_list_refresh_button = QPushButton("サブタイトル一覧を再読込")
         self.subtitle_list_refresh_button.clicked.connect(self._refresh_subtitle_list_from_source)
         layout.addWidget(label)
+        layout.addWidget(self.subtitle_list_search_input)
         layout.addWidget(self.subtitle_list_table, 1)
         layout.addWidget(self.subtitle_list_refresh_button)
         return panel
@@ -212,7 +223,7 @@ class SubtitleManagementTab(QWidget):
         self._ensure_practical_title_selection()
 
     def _refresh_subtitle_list(self) -> None:
-        rows: list[tuple[str, str, str, str, str, str, str, str]] = []
+        rows: list[tuple[str, ...]] = []
         for title in self.editor._titles:
             try:
                 subtitles = _call_with_optional_role(
@@ -237,10 +248,26 @@ class SubtitleManagementTab(QWidget):
                         subtitle.note or "",
                     )
                 )
+        self._subtitle_list_rows = rows
+        self._apply_subtitle_list_filter()
+
+    def _apply_subtitle_list_filter(self) -> None:
+        query = self.subtitle_list_search_input.text().strip().casefold()
+        rows = self._subtitle_list_rows
+        if query:
+            rows = [row for row in rows if query in " ".join(row).casefold()]
+        self._populate_subtitle_list_table(rows)
+        self.subtitle_list_table.setProperty("filtered_cross_parent_subtitle_rows", bool(query))
+
+    def _populate_subtitle_list_table(self, rows: list[tuple[str, ...]]) -> None:
         self.subtitle_list_table.setRowCount(len(rows))
         for row_index, row in enumerate(rows):
             for column_index, value in enumerate(row):
-                self.subtitle_list_table.setItem(row_index, column_index, QTableWidgetItem(value))
+                item = QTableWidgetItem(value)
+                item.setToolTip(value)
+                if column_index in {4, 5}:
+                    item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+                self.subtitle_list_table.setItem(row_index, column_index, item)
         self.subtitle_list_table.resizeColumnsToContents()
 
     def _connect_subtitle_state_refresh(self) -> None:
