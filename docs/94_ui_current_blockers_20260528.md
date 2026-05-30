@@ -1,66 +1,47 @@
 # 94_ui_current_blockers_20260528.md
 
-## 1. Current blockers
+## 1. Current status
 
-| ID | Type | Status | Details |
+This document is synchronized with the final UAT evidence recorded in:
+
+- `docs/96_final_uat_evidence_20260530.md`
+
+The previously listed blockers are no longer active release blockers for the observed UAT scope.
+
+## 2. Resolved / accepted items
+
+| ID | Type | Current status | Evidence / note |
 |---|---|---|---|
-| QG-RUFF-001 | Quality Gate | RESOLVED | Green baseline restored. `122c04ce70db4cece313b1a717f15c78fbf0f601` passed `chatgpt/quality-gates` in run `26563517296`. |
-| UI-SUBTITLE-LIST-001 | UI bug | FIX APPLIED / UAT REQUIRED | Subtitle list replacement is included in the current passing baseline. UAT must confirm the list shows subtitles, not title rows. |
-| UI-SUBTITLE-PARENT-001 | UI readability | FIX APPLIED / UAT REQUIRED | Compatible parent-title summary labels were added. UAT must confirm title name, public ID, and state are split and readable. |
-| UI-SUBTITLE-FLOW-001 | UX flow | FIX PARTIAL / UAT REQUIRED | Selected subtitle summary labels were added. UAT must confirm add/edit/delete flow is understandable. |
-| UI-TABLE-001 | Common UI | IN PROGRESS | Readable table helper is applied to subtitle, name, trash, and audit tables. |
-| UI-AUDIT-001 | Audit UI | FIX APPLIED / UAT REQUIRED | Audit renderer/export tests were aligned with the current pretty-JSON display, repr-style diff, and raw JSON export contract. `c5c59e717bb65bafd0eb763ee57301e575f7775a` passed `chatgpt/quality-gates` in run `26579008547`. |
-| UI-LOGIN-001 | Login UI | FIX APPLIED / UAT REQUIRED | Login dialog presentation was improved with a page header, grouped Windows/local auth sections, clearer messages, and unchanged credential handling. `b1ff26a8ff79ace6c36c9138333acb8e5bb56598` passed `chatgpt/quality-gates` in run `26601487493`. |
-| UI-DATAIO-001 | Data I/O UI | PLANNED / SAFE PATH REQUIRED | Do not reintroduce `GuidedOperationsTab` as a MainWindow wrapper. Improve the existing `OperationsTab` in small slices or with helper widgets that do not change service calls, RBAC guards, path defaults, or confirmation behavior. |
+| QG-RUFF-001 | Quality Gate | RESOLVED | Latest confirmed implementation Quality Gates are green: `138c15321845f56a756124e1fc9978446e23a5fb` / run `26660843878`. |
+| UI-SUBTITLE-LIST-001 | UI bug | UAT PASS | Screenshot UAT shows subtitle-specific rows and columns, not title rows. |
+| UI-SUBTITLE-PARENT-001 | UI readability | UAT PASS | Parent title is split into title name, public ID, and state. |
+| UI-SUBTITLE-FLOW-001 | UX flow | UAT PASS | Edit/delete screenshots show concrete selected subtitle targets. |
+| UI-TABLE-001 | Common UI | ACCEPTED FOR CURRENT UAT | Readability is sufficient for the observed release-critical scope. Broader table polish remains follow-up. |
+| UI-AUDIT-001 | Audit UI | UAT PASS FOR DISPLAY | Pretty/diff-style audit display is visible in screenshots. Audit export evidence is optional unless release policy requires it. |
+| UI-LOGIN-001 | Login UI | UAT PASS | Login screen and role context are visible. |
+| UI-DATAIO-001 | Data I/O UI | UAT PASS | Guide, group descriptions, result hint, `[OK] CSV export 成功`, and Operations Log guidance are visible. |
+| SUBTITLE-ROW-COUNT-SPEC | Subtitle Management | ACCEPTED SPEC | Edit/delete candidate list is scoped to the selected parent title. Four rows under `sample-title-0000017` are valid for the observed parent-scoped behavior. Cross-parent editing/search is a future enhancement if requested. |
 
-## 2. Pending UAT checklist
+## 3. Remaining release blockers
 
-### UI-LOGIN-001
-
-| Check | Expected result | Evidence |
+| ID | Status | Details |
 |---|---|---|
-| Windows login | Windows authentication section is visible and login behavior is unchanged. | Screenshot of login dialog and successful main window. |
-| Local login | Local authentication section is visible and Enter key login still works. | Screenshot or note with operator ID only. |
-| Error message | Empty operator/password and invalid credential errors remain understandable. | Screenshot of each error message. |
-| Role context | Main window still shows operator ID and role after login. | Screenshot of status bar or role banner. |
+| None | CLOSED | No active release blocker remains in this document for the observed final UAT scope. |
 
-### UI-AUDIT-001
+## 4. Follow-up backlog, not release blockers
 
-| Check | Expected result | Evidence |
-|---|---|---|
-| Before/after view | JSON values are readable as pretty JSON. | Screenshot of selected audit row details. |
-| Diff view | Text diff uses repr-style value transitions. | Screenshot of diff area. |
-| Invalid JSON fallback | Invalid JSON is shown as raw text without crashing. | Test data note or screenshot. |
-| Export | Export preserves raw `before_json` and `after_json`. | Export file sample or checksum note. |
+| ID | Priority | Scope | Treatment |
+|---|---:|---|---|
+| AUDIT-EXPORT-EVIDENCE-OPTIONAL | P2 | Capture explicit audit export evidence. | Optional unless release policy requires export evidence. |
+| CROSS-PARENT-SUBTITLE-SEARCH | P2 | Search/edit subtitles across all parent titles. | Enhancement only. Current release accepts parent-scoped candidate lists. |
+| UI-POLISH-FOLLOWUP | P2/P3 | Broader design-system, navigation, empty-state, keyboard, copy, and accessibility polish. | Follow-up backlog, not current release blocker. |
 
-### UI-SUBTITLE-FLOW-001
+## 5. Release decision dependency
 
-| Check | Expected result | Evidence |
-|---|---|---|
-| Add flow | Selected parent title is obvious before adding subtitle. | Screenshot of add tab. |
-| Edit flow | Selected subtitle and parent title are both visible before update. | Screenshot of edit tab. |
-| Delete flow | Selected subtitle is visible before delete action. | Screenshot of delete tab. |
-| Guard behavior | Deleted parent/subtitle cannot be updated. | Error message screenshot or test note. |
+Release readiness now depends on the final release decision document/status, not on unresolved blockers in this file.
 
-### UI-SUBTITLE-PARENT/LIST-UAT
+Recommended next step:
 
-| Check | Expected result | Evidence |
-|---|---|---|
-| Parent title summary | Parent title is split into readable lines: title name, public ID, and state. | Screenshot of subtitle add/edit area. |
-| Subtitle list content | Subtitle list shows subtitle rows, not title rows. | Screenshot of subtitle list. |
-| Subtitle row readability | Each row has enough context to identify subtitle value and parent relation. | Screenshot of table/list row. |
-| Empty/search state | Search/no-result state does not look like a broken title list. | Screenshot or note. |
-
-## 3. Data I/O safe implementation path
-
-| Slice | Scope | Rule |
-|---|---|---|
-| S1-A | Add page guidance inside existing `OperationsTab` | Prefer adding a header/label directly to existing layout with matching tests. Do not use MainWindow wrapper replacement. |
-| S1-B | Update compact-layout tests intentionally | If root layout index changes, update the test expectation in the same commit. |
-| S2 | Add group descriptions | Add short labels inside existing Export/Backup/Restore/Import groups only. |
-| S3 | Result area polish | Add guidance around result area while keeping `[OK]` and `[ERROR]` message semantics unchanged. |
-| S4 | Operations log polish | Add hint text only; do not change filters, pagination, source switching, or export. |
-
-## 4. Immediate next step
-
-Proceed to `UI-DATAIO-001-S1`: add Data I/O page guidance directly to the existing `OperationsTab` with matching tests, keeping service behavior and RBAC unchanged.
+1. Record final release readiness decision.
+2. If release-ready, keep optional items as follow-up backlog.
+3. If blocked later, create new explicit defect IDs instead of reopening historical blocker rows.
