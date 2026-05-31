@@ -8,6 +8,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QGroupBox, QLabel, QVBoxLayout, QWidget
 
 from app.ui.dialogs import confirm_destructive_action
+from app.ui.navigation_polish import apply_workflow_tab_navigation
 from app.ui.permissions import can_run_destructive_actions
 from app.ui.role_context import RoleContext
 from app.ui.title_subtitle_management_tab import TitleSubtitleManagementTab
@@ -42,6 +43,7 @@ class TitleManagementTab(QWidget):
         self._install_title_summary_refresh()
         self._install_title_delete_danger_copy()
         self._apply_title_workflow_accents()
+        apply_workflow_tab_navigation(self.editor.workflow_tabs)
         self._ensure_title_selected_for_edit()
         self._refresh_title_summary_cards()
 
