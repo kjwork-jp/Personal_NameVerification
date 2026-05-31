@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Protocol
 
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QComboBox,
     QFormLayout,
@@ -28,9 +29,9 @@ from app.application.read_models import NameSearchRow, NameTitleLinkRow, Subtitl
 from app.ui.dialogs import confirm_destructive_action
 from app.ui.input_defaults import friendly_error_message, generate_subtitle_code
 from app.ui.permissions import can_create_or_update, can_run_destructive_actions
-from app.ui.public_id_display import short_public_id
+from app.ui.public_id_display import public_id_detail, short_public_id
 from app.ui.role_context import RoleContext, UserRole
-from app.ui.ui_style import compact_layout, set_status_message
+from app.ui.ui_style import apply_readable_table, compact_layout, set_status_message
 
 
 class TitleSubtitleWriteService(Protocol):
@@ -226,8 +227,7 @@ class TitleSubtitleManagementTab(QWidget):
             ["内部ID", "公開ID", "タイトル名", "状態", "更新日時", "備考", "関連する名前"]
         )
         self.titles_table.setColumnHidden(0, True)
-        self.titles_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
-        self.titles_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        apply_readable_table(self.titles_table)
         self.titles_table.itemSelectionChanged.connect(self._on_title_selected)
 
         self.subtitles_table = QTableWidget(0, 10)
@@ -247,8 +247,7 @@ class TitleSubtitleManagementTab(QWidget):
         )
         self.subtitles_table.setColumnHidden(0, True)
         self.subtitles_table.setColumnHidden(2, True)
-        self.subtitles_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
-        self.subtitles_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        apply_readable_table(self.subtitles_table)
         self.subtitles_table.itemSelectionChanged.connect(self._on_subtitle_selected)
 
         self.title_refresh_button = QPushButton("タイトル一覧を再読込")
@@ -463,6 +462,27 @@ class TitleSubtitleManagementTab(QWidget):
     def _apply_role_guards(self) -> None:
         self._update_action_states()
 
+    def _table_item(
+        self,
+        text: str,
+        *,
+        tooltip: str | None = None,
+        align_center: bool = False,
+    ) -> QTableWidgetItem:
+        item = QTableWidgetItem(text)
+        if tooltip is not None:
+            item.setToolTip(tooltip)
+        if align_center:
+            item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+        return item
+
+    def _public_id_item(self, public_id: str | None) -> QTableWidgetItem:
+        return self._table_item(
+            short_public_id(public_id),
+            tooltip=f"公開ID: {public_id_detail(public_id)}",
+            align_center=True,
+        )
+
     def _refresh_titles(self, selected_title_id: int | None = None) -> None:
         try:
             self._titles = _call_with_optional_role(
@@ -478,9 +498,9 @@ class TitleSubtitleManagementTab(QWidget):
         for row_index, row in enumerate(self._titles):
             linked_names = self._linked_names_text(row.id)
             self.titles_table.setItem(row_index, 0, QTableWidgetItem(str(row.id)))
-            self.titles_table.setItem(row_index, 1, QTableWidgetItem(short_public_id(row.public_id)))
+            self.titles_table.setItem(row_index, 1, self._public_id_item(row.public_id))
             self.titles_table.setItem(row_index, 2, QTableWidgetItem(row.title_name))
-            self.titles_table.setItem(row_index, 3, QTableWidgetItem("削除済み" if row.deleted_at else "有効"))
+            self.titles_table.setItem(row_index, 3, self._table_item("削除済み" if row.deleted_at else "有効", align_center=True))
             self.titles_table.setItem(row_index, 4, QTableWidgetItem(row.updated_at))
             self.titles_table.setItem(row_index, 5, QTableWidgetItem(row.note or ""))
             self.titles_table.setItem(row_index, 6, QTableWidgetItem(linked_names))
@@ -543,13 +563,13 @@ class TitleSubtitleManagementTab(QWidget):
         self.subtitles_table.setRowCount(len(self._subtitles))
         for row_index, row in enumerate(self._subtitles):
             self.subtitles_table.setItem(row_index, 0, QTableWidgetItem(str(row.id)))
-            self.subtitles_table.setItem(row_index, 1, QTableWidgetItem(short_public_id(row.public_id)))
+            self.subtitles_table.setItem(row_index, 1, self._public_id_item(row.public_id))
             self.subtitles_table.setItem(row_index, 2, QTableWidgetItem(str(row.title_id)))
             self.subtitles_table.setItem(row_index, 3, QTableWidgetItem(title_name))
             self.subtitles_table.setItem(row_index, 4, QTableWidgetItem(row.subtitle_code))
             self.subtitles_table.setItem(row_index, 5, QTableWidgetItem(row.subtitle_name))
-            self.subtitles_table.setItem(row_index, 6, QTableWidgetItem("削除済み" if row.deleted_at else "有効"))
-            self.subtitles_table.setItem(row_index, 7, QTableWidgetItem(str(row.sort_order)))
+            self.subtitles_table.setItem(row_index, 6, self._table_item("削除済み" if row.deleted_at else "有効", align_center=True))
+            self.subtitles_table.setItem(row_index, 7, self._table_item(str(row.sort_order), align_center=True))
             self.subtitles_table.setItem(row_index, 8, QTableWidgetItem(row.updated_at))
             self.subtitles_table.setItem(row_index, 9, QTableWidgetItem(row.note or ""))
         self._populate_delete_subtitle_combo()

@@ -18,7 +18,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from app.ui.public_id_display import short_public_id
+from app.ui.public_id_display import public_id_detail, short_public_id
 from app.ui.role_context import RoleContext
 from app.ui.title_subtitle_management_tab import TitleSubtitleManagementTab, _call_with_optional_role
 from app.ui.ui_style import PageHeader, apply_readable_table, apply_workflow_accent, compact_layout
@@ -239,6 +239,7 @@ class SubtitleManagementTab(QWidget):
                 rows.append(
                     (
                         short_public_id(subtitle.public_id),
+                        public_id_detail(subtitle.public_id),
                         title.title_name,
                         subtitle.subtitle_code,
                         subtitle.subtitle_name,
@@ -262,9 +263,11 @@ class SubtitleManagementTab(QWidget):
     def _populate_subtitle_list_table(self, rows: list[tuple[str, ...]]) -> None:
         self.subtitle_list_table.setRowCount(len(rows))
         for row_index, row in enumerate(rows):
-            for column_index, value in enumerate(row):
+            display_values = (row[0], *row[2:])
+            tooltip_values = (f"公開ID: {row[1]}", *row[2:])
+            for column_index, value in enumerate(display_values):
                 item = QTableWidgetItem(value)
-                item.setToolTip(value)
+                item.setToolTip(tooltip_values[column_index])
                 if column_index in {4, 5}:
                     item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
                 self.subtitle_list_table.setItem(row_index, column_index, item)
