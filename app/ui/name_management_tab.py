@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Protocol
 
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QComboBox,
     QFormLayout,
@@ -24,7 +25,7 @@ from app.application.read_models import NameDetail, NameSearchRow
 from app.ui.dialogs import confirm_destructive_action
 from app.ui.input_defaults import default_operator_id, friendly_error_message
 from app.ui.permissions import can_create_or_update, can_run_destructive_actions
-from app.ui.public_id_display import short_public_id
+from app.ui.public_id_display import public_id_detail, short_public_id
 from app.ui.role_context import RoleContext, UserRole
 from app.ui.ui_style import PageHeader, apply_readable_table, compact_layout, set_status_message
 
@@ -168,8 +169,8 @@ class NameManagementTab(QWidget):
         self.create_button = QPushButton("名前を新規作成")
         self.update_button = QPushButton("名前を更新")
         self.delete_button = QPushButton("名前をゴミ箱に入れる")
-        self.restore_button = QPushButton("復元")
-        self.hard_delete_button = QPushButton("完全削除")
+        self.restore_button = QPushButton("削除済み名前を復元")
+        self.hard_delete_button = QPushButton("削除済み名前を完全削除")
         self.restore_button.hide()
         self.hard_delete_button.hide()
 
@@ -355,10 +356,31 @@ class NameManagementTab(QWidget):
         self.delete_button.setToolTip(
             disabled if not can_destructive else "選択行をゴミ箱に入れます"
         )
-        self.restore_button.setToolTip("復元は削除データタブで行います")
-        self.hard_delete_button.setToolTip("完全削除は削除データタブで行います")
+        self.restore_button.setToolTip("削除済み名前の復元は削除データタブで行います")
+        self.hard_delete_button.setToolTip("削除済み名前の完全削除は削除データタブで行います")
         if not can_write:
             self._set_message("viewerは名前の追加・更新・削除を実行できません", is_error=True)
+
+    def _table_item(
+        self,
+        text: str,
+        *,
+        tooltip: str | None = None,
+        align_center: bool = False,
+    ) -> QTableWidgetItem:
+        item = QTableWidgetItem(text)
+        if tooltip is not None:
+            item.setToolTip(tooltip)
+        if align_center:
+            item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+        return item
+
+    def _public_id_item(self, public_id: str | None) -> QTableWidgetItem:
+        return self._table_item(
+            short_public_id(public_id),
+            tooltip=f"公開ID: {public_id_detail(public_id)}",
+            align_center=True,
+        )
 
     def _refresh_list(self) -> None:
         try:
@@ -377,18 +399,37 @@ class NameManagementTab(QWidget):
         self.delete_name_selector.addItem("未選択", None)
         for i, row in enumerate(self._rows):
             self.names_table.setItem(i, 0, QTableWidgetItem(str(row.id)))
-            self.names_table.setItem(i, 1, QTableWidgetItem(short_public_id(row.public_id)))
+            self.names_table.setItem(i, 1, self._public_id_item(row.public_id))
             self.names_table.setItem(i, 2, QTableWidgetItem(row.raw_name))
             self.names_table.setItem(i, 3, QTableWidgetItem(row.normalized_name))
             self.names_table.setItem(
                 i,
                 4,
-                QTableWidgetItem("削除済み" if row.deleted_at else "有効"),
+                self._table_item(
+                    "削除済み" if row.deleted_at else "有効",
+                    align_center=True,
+                ),
             )
-            self.names_table.setItem(i, 5, QTableWidgetItem(str(row.title_related_count)))
-            self.names_table.setItem(i, 6, QTableWidgetItem(str(row.subtitle_related_count)))
-            self.names_table.setItem(i, 7, QTableWidgetItem(str(row.linked_count)))
-            self.names_table.setItem(i, 8, QTableWidgetItem(row.note or ""))
+            self.names_table.setItem(
+                i,
+                5,
+                self._table_item(str(row.title_related_count), align_center=True),
+            )
+            self.names_table.setItem(
+                i,
+                6,
+                self._table_item(str(row.subtitle_related_count), align_center=True),
+            )
+            self.names_table.setItem(
+                i,
+                7,
+                self._table_item(str(row.linked_count), align_center=True),
+            )
+            self.names_table.setItem(
+                i,
+                8,
+                self._table_item(row.note or "", tooltip=row.note or ""),
+            )
             status = "削除済み" if row.deleted_at else "有効"
             self.delete_name_selector.addItem(f"{row.raw_name}（{status}）", row.id)
         self.delete_name_selector.blockSignals(False)
