@@ -28,6 +28,7 @@ from app.application.core_services import SubtitleInput, TitleInput
 from app.application.read_models import NameSearchRow, NameTitleLinkRow, SubtitleDetail, TitleDetail
 from app.ui.dialogs import confirm_destructive_action
 from app.ui.input_defaults import friendly_error_message, generate_subtitle_code
+from app.ui.navigation_polish import apply_workflow_tab_navigation
 from app.ui.permissions import can_create_or_update, can_run_destructive_actions
 from app.ui.public_id_display import public_id_detail, short_public_id
 from app.ui.role_context import RoleContext, UserRole
@@ -292,6 +293,7 @@ class TitleSubtitleManagementTab(QWidget):
         self.workflow_tabs.addTab(self.edit_tab, "編集")
         self.workflow_tabs.addTab(self.delete_tab, "削除")
         self.workflow_tabs.addTab(self.guide_tab, "ガイド")
+        apply_workflow_tab_navigation(self.workflow_tabs)
         self.workflow_tabs.currentChanged.connect(self._on_workflow_tab_changed)
 
         root = QVBoxLayout(self)

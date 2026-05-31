@@ -18,6 +18,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from app.ui.navigation_polish import apply_workflow_tab_navigation
 from app.ui.public_id_display import public_id_detail, short_public_id
 from app.ui.role_context import RoleContext
 from app.ui.title_subtitle_management_tab import TitleSubtitleManagementTab, _call_with_optional_role
@@ -51,6 +52,7 @@ class SubtitleManagementTab(QWidget):
         self._add_guidance_tooltips()
         self._make_title_selectors_searchable()
         self._replace_list_tab_with_subtitle_list()
+        apply_workflow_tab_navigation(self.editor.workflow_tabs)
         self._insert_parent_summary_cards()
         self._insert_subtitle_summary_cards()
         self._connect_subtitle_state_refresh()
