@@ -4,8 +4,11 @@ from __future__ import annotations
 
 from typing import Any
 
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QGroupBox, QLabel, QVBoxLayout, QWidget
 
+from app.ui.dialogs import confirm_destructive_action
+from app.ui.permissions import can_run_destructive_actions
 from app.ui.role_context import RoleContext
 from app.ui.title_subtitle_management_tab import TitleSubtitleManagementTab
 from app.ui.ui_style import PageHeader, apply_workflow_accent, compact_layout
@@ -26,14 +29,21 @@ class TitleManagementTab(QWidget):
             query_service=query_service,
             role_context=role_context,
         )
+        self.title_delete_target_summary = self._build_title_summary_label(
+            heading="削除対象タイトル"
+        )
         self._hide_subtitle_controls()
         self._hide_internal_columns()
         self._rename_labels()
         self._add_guidance_tooltips()
         self._wrap_guidance_labels()
+        self._insert_delete_target_summary()
         self._connect_title_defaults()
+        self._install_title_summary_refresh()
+        self._install_title_delete_danger_copy()
         self._apply_title_workflow_accents()
         self._ensure_title_selected_for_edit()
+        self._refresh_title_summary_cards()
 
         layout = QVBoxLayout(self)
         compact_layout(layout, margins=5, spacing=4)
@@ -44,6 +54,13 @@ class TitleManagementTab(QWidget):
         layout.addWidget(self.editor, 1)
         self.setProperty("workflow_accented_layout", True)
         self.setProperty("focused_title_only_layout", True)
+
+    def _build_title_summary_label(self, *, heading: str) -> QLabel:
+        label = QLabel(self._title_summary_text(None, heading=heading))
+        label.setWordWrap(True)
+        label.setMinimumHeight(0)
+        label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+        return label
 
     def _hide_subtitle_controls(self) -> None:
         for widget in [
@@ -101,15 +118,87 @@ class TitleManagementTab(QWidget):
             label.setWordWrap(True)
             label.setMinimumHeight(0)
         self.editor.workflow_hint_label.setText("一覧・新規追加・編集・削除を分けています。")
-        self.editor.selected_title_context_label.setText("編集対象のタイトルを選択してください。")
-        self.editor.title_detail_group.setMaximumHeight(190)
+        self.editor.selected_title_context_label.setText(self._title_summary_text(None))
+        self.editor.selected_title_context_label.setTextInteractionFlags(
+            Qt.TextInteractionFlag.TextSelectableByMouse
+        )
+        self.editor.selected_title_context_label.setProperty("selected_title_summary_card", True)
+        self.editor.title_detail_group.setMaximumHeight(220)
         self.editor.setProperty("title_guidance_labels_wrapped", True)
+
+    def _insert_delete_target_summary(self) -> None:
+        self.title_delete_target_summary.setProperty("title_delete_target_summary_card", True)
+        for group in self.editor.findChildren(QGroupBox):
+            if group.title() == "タイトル削除":
+                group_layout = group.layout()
+                if group_layout is not None:
+                    group_layout.insertWidget(0, self.title_delete_target_summary)
+                return
 
     def _connect_title_defaults(self) -> None:
         self.editor.workflow_tabs.currentChanged.connect(
             lambda _index: self._ensure_title_selected_for_edit()
         )
         self.editor.setProperty("title_auto_selects_first_title", True)
+
+    def _install_title_summary_refresh(self) -> None:
+        original_update_selected_title_label = self.editor._update_selected_title_label
+
+        def update_selected_title_label_with_split_summary(title: Any | None = None) -> None:
+            original_update_selected_title_label(title)
+            self._refresh_title_summary_cards()
+
+        self.editor._update_selected_title_label = update_selected_title_label_with_split_summary
+        self.editor.titles_table.itemSelectionChanged.connect(
+            lambda: self._refresh_title_summary_cards()
+        )
+        self.editor.title_selector_combo.currentIndexChanged.connect(
+            lambda _index: self._refresh_title_summary_cards()
+        )
+        self.editor.delete_title_selector_combo.currentIndexChanged.connect(
+            lambda _index: self._refresh_title_summary_cards()
+        )
+        self.editor.setProperty("title_summary_split", True)
+
+    def _install_title_delete_danger_copy(self) -> None:
+        self.editor.title_delete_button.setText("選択中タイトルをゴミ箱に入れる")
+        self.editor.title_restore_button.setText("削除済みタイトルを復元")
+        self.editor.title_hard_delete_button.setText("削除済みタイトルを完全削除")
+
+        def mutate_title_with_target_copy(
+            label: str,
+            method_name: str,
+            *,
+            require_deleted: bool,
+        ) -> None:
+            if not can_run_destructive_actions(self.editor._role_context.role):
+                self.editor._set_message(f"このロールではタイトル{label}できません", is_error=True)
+                return
+            selected = self.editor._require_selected_title()
+            operator_id = self.editor._require_operator_id()
+            if selected is None or operator_id is None:
+                return
+            if selected.deleted != require_deleted:
+                self.editor._set_message("対象の状態が操作条件に合いません", is_error=True)
+                return
+            target = self._selected_title_detail()
+            if not confirm_destructive_action(
+                self.editor,
+                self._title_destructive_dialog_title(label),
+                self._title_destructive_confirmation_text(label, target, selected.id, method_name),
+            ):
+                return
+            getattr(self.editor._core_service, method_name)(
+                selected.id,
+                operator_id=operator_id,
+                role=self.editor._role_context.role,
+            )
+            self.editor._set_message(f"タイトルを{label}しました")
+            self.editor._refresh_titles(None if method_name == "hard_delete_title" else selected.id)
+            self._refresh_title_summary_cards()
+
+        self.editor._mutate_title = mutate_title_with_target_copy  # type: ignore[method-assign]
+        self.editor.setProperty("title_delete_danger_copy", True)
 
     def _ensure_title_selected_for_edit(self) -> None:
         current = self.editor.workflow_tabs.currentWidget()
@@ -121,6 +210,63 @@ class TitleManagementTab(QWidget):
             if row.deleted_at is None:
                 self.editor._select_title_by_id(row.id)
                 return
+
+    def _selected_title_detail(self) -> Any | None:
+        selected = self.editor._selected_title
+        if selected is None:
+            return None
+        for row in self.editor._titles:
+            if row.id == selected.id:
+                return row
+        return None
+
+    def _refresh_title_summary_cards(self) -> None:
+        title = self._selected_title_detail()
+        self.editor.selected_title_context_label.setText(self._title_summary_text(title))
+        self.title_delete_target_summary.setText(
+            self._title_summary_text(title, heading="削除対象タイトル")
+        )
+
+    def _title_summary_text(self, title: Any | None, *, heading: str = "選択中タイトル") -> str:
+        if title is None:
+            return f"{heading}\nタイトル名  未選択\n公開ID      -\n状態        -\n関連名      -"
+        state = "削除済み" if title.deleted_at else "有効"
+        public_id = title.public_id or "未採番"
+        linked_names = self.editor._linked_names_text(title.id) or "なし"
+        return (
+            f"{heading}\n"
+            f"タイトル名  {title.title_name}\n"
+            f"公開ID      {public_id}\n"
+            f"状態        {state}\n"
+            f"関連名      {linked_names}"
+        )
+
+    def _title_destructive_dialog_title(self, label: str) -> str:
+        return f"タイトルを{label}確認"
+
+    def _title_destructive_confirmation_text(
+        self,
+        label: str,
+        title: Any | None,
+        selected_id: int,
+        method_name: str,
+    ) -> str:
+        title_name = title.title_name if title is not None else f"ID={selected_id}"
+        public_id = (title.public_id or "未採番") if title is not None else "-"
+        state = "削除済み" if title is not None and title.deleted_at else "有効"
+        risk = "この操作は元に戻せません。" if method_name == "hard_delete_title" else ""
+        if method_name == "delete_title":
+            risk = "通常の編集対象から外れます。必要に応じて後で復元できます。"
+        elif method_name == "restore_title":
+            risk = "復元後は通常の編集対象に戻ります。"
+        return (
+            f"対象タイトル: {title_name}\n"
+            f"公開ID: {public_id}\n"
+            f"状態: {state}\n"
+            f"操作: {label}\n"
+            f"注意: {risk}\n\n"
+            "実行してよろしいですか？"
+        )
 
     def _apply_title_workflow_accents(self) -> None:
         apply_workflow_accent(self.editor.workflow_hint_label, "guide")
@@ -134,6 +280,7 @@ class TitleManagementTab(QWidget):
         apply_workflow_accent(self.editor.title_hard_delete_button, "delete")
         apply_workflow_accent(self.editor.title_detail_group, "edit")
         apply_workflow_accent(self.editor.selected_title_context_label, "edit")
+        apply_workflow_accent(self.title_delete_target_summary, "delete")
         for group in self.editor.findChildren(QGroupBox):
             if group.title() == "タイトル削除":
                 apply_workflow_accent(group, "delete")
