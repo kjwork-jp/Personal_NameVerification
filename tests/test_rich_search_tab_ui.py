@@ -12,6 +12,8 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 qt_widgets = pytest.importorskip("PySide6.QtWidgets", exc_type=ImportError)
 QApplication = qt_widgets.QApplication
+qt_core = pytest.importorskip("PySide6.QtCore", exc_type=ImportError)
+QItemSelectionModel = qt_core.QItemSelectionModel
 
 from app.ui.rich_search_tab import SearchTab  # noqa: E402
 from app.ui.role_context import RoleContext  # noqa: E402
@@ -108,13 +110,14 @@ def test_rich_search_tab_shows_result_and_selection_summaries() -> None:
     assert "検索結果 2件" in summary
     assert "表示中 2件" in summary
     assert "選択中 1件" in summary
+    assert "関連 2件" in summary
     assert "有効 1件" in summary
     assert "削除済み 1件" in summary
 
     selection = tab.selection_summary_label.text()
     assert "選択中の名前: Alice" in selection
     assert "公開ID: name-public-id-1" in selection
-    assert "関連合計 1件" in selection
+    assert "関連合計 2件" in selection
 
 
 def test_rich_search_tab_updates_summary_when_selection_changes() -> None:
@@ -129,3 +132,23 @@ def test_rich_search_tab_updates_summary_when_selection_changes() -> None:
     selection = tab.selection_summary_label.text()
     assert "選択中の名前: Deleted Bob" in selection
     assert "関連合計 0件" in selection
+
+
+def test_rich_search_tab_counts_multiple_selected_rows() -> None:
+    _app()
+    tab = SearchTab(
+        query_service=StubSearchQueryService(),
+        role_context=RoleContext(role="admin", operator_id="op-1"),
+    )
+
+    tab.results_table.clearSelection()
+    tab.results_table.selectRow(0)
+    selection_model = tab.results_table.selectionModel()
+    assert selection_model is not None
+    selection_model.select(
+        tab.results_table.model().index(1, 0),
+        QItemSelectionModel.SelectionFlag.Select | QItemSelectionModel.SelectionFlag.Rows,
+    )
+    tab._update_rich_search_summaries()
+
+    assert "選択中 2件" in tab.summary_label.text()
