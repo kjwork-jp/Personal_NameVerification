@@ -17,9 +17,8 @@ from app.application.read_models import (  # noqa: E402
     NameSearchRow,
     RelatedRow,
 )
-from app.ui.role_context import RoleContext  # noqa: E402
-
 from app.ui.rich_search_tab import SearchTab  # noqa: E402
+from app.ui.role_context import RoleContext  # noqa: E402
 
 
 class StubSearchQueryService:
