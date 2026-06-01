@@ -199,7 +199,7 @@ class TitleManagementTab(QWidget):
             self.editor._refresh_titles(None if method_name == "hard_delete_title" else selected.id)
             self._refresh_title_summary_cards()
 
-        self.editor._mutate_title = mutate_title_with_target_copy  # type: ignore[method-assign]
+        self.editor._mutate_title = mutate_title_with_target_copy
         self.editor.setProperty("title_delete_danger_copy", True)
 
     def _ensure_title_selected_for_edit(self) -> None:
