@@ -4,9 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from PySide6.QtWidgets import QLabel, QVBoxLayout
-
 from app.ui.search_tab import SearchTab as BaseSearchTab
+from PySide6.QtWidgets import QLabel, QVBoxLayout
 
 
 class SearchTab(BaseSearchTab):
