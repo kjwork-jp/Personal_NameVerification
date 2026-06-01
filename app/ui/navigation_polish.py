@@ -1,5 +1,7 @@
 """Navigation polish helpers for workflow tab guidance."""
 
+# ruff: noqa: I001
+
 from __future__ import annotations
 
 from PySide6.QtWidgets import QTabWidget
