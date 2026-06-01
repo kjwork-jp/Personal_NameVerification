@@ -43,7 +43,7 @@ from app.ui.restore_current_db_guard import apply_restore_current_db_guard
 from app.ui.role_context import RoleContext
 from app.ui.role_visual_identity import apply_role_status_style, make_role_banner
 from app.ui.sanitized_export_ui import apply_sanitized_export_ui
-from app.ui.search_tab import SearchTab
+from app.ui.rich_search_tab import SearchTab
 from app.ui.sql_dump_protection_warning import apply_sql_dump_protection_warning
 from app.ui.subtitle_management_tab import SubtitleManagementTab
 from app.ui.tab_guides import apply_tab_guide
@@ -349,13 +349,38 @@ class MainWindow(QMainWindow):
         json_dir = Path("60_exports") / "json"
         sql_dir = Path("60_exports") / "sql"
         backup_dir = Path("50_backups") / "daily"
-        database_path = self._operation_relative_path(
-            self._database_path or Path("nameverification.db"),
-            package_root=package_root,
+        database_path = Path("30_prod_db") / "nameverification.db"
+        if package_root is not None:
+            for directory in (csv_dir, json_dir, sql_dir, backup_dir):
+                (package_root / directory).mkdir(parents=True, exist_ok=True)
+        return {
+            "csv_export_dir": csv_dir,
+            "json_export_file": json_dir / f"nameverification_export_{timestamp}.json",
+            "sql_dump_file": sql_dir / f"nameverification_dump_{timestamp}.sql",
+            "db_file": database_path,
+            "backup_output_file": backup_dir / f"nameverification_{timestamp}.db",
+            "restore_backup_file": backup_dir / f"nameverification_{timestamp}.db",
+            "restore_target_file": database_path,
+            "import_csv_dir": csv_dir,
+            "import_json_file": json_dir / f"nameverification_export_{timestamp}.json",
+        }
+
+    def _fallback_operations_defaults(self, timestamp: str) -> dict[str, Path | str]:
+        base_dir = _operations_fallback_base_dir()
+        csv_dir = base_dir / "60_exports" / "csv"
+        json_dir = base_dir / "60_exports" / "json"
+        sql_dir = base_dir / "60_exports" / "sql"
+        backup_dir = base_dir / "50_backups" / "daily"
+        for directory in (csv_dir, json_dir, sql_dir, backup_dir):
+            directory.mkdir(parents=True, exist_ok=True)
+        database_path = (
+            self._database_path.expanduser().resolve(strict=False)
+            if self._database_path is not None
+            else base_dir / "30_prod_db" / "nameverification.db"
         )
         json_export_file = json_dir / f"nameverification_export_{timestamp}.json"
         backup_output_file = backup_dir / f"nameverification_{timestamp}.db"
-        return {
+        defaults: dict[str, Path | str] = {
             "csv_export_dir": csv_dir,
             "json_export_file": json_export_file,
             "sql_dump_file": sql_dir / f"nameverification_dump_{timestamp}.sql",
@@ -366,65 +391,16 @@ class MainWindow(QMainWindow):
             "import_csv_dir": csv_dir,
             "import_json_file": json_export_file,
         }
-
-    def _operation_relative_path(
-        self,
-        path: Path,
-        *,
-        package_root: Path | None,
-    ) -> Path:
-        if not path.is_absolute():
-            return path
-        if package_root is None:
-            return path
-        try:
-            return path.resolve(strict=False).relative_to(package_root.resolve(strict=False))
-        except ValueError:
-            return path
-
-    def _fallback_operations_defaults(self, timestamp: str) -> dict[str, Path | str]:
-        base = _operations_fallback_base_dir()
-        csv_dir = base / "60_exports" / "csv"
-        json_dir = base / "60_exports" / "json"
-        sql_dir = base / "60_exports" / "sql"
-        backup_dir = base / "50_backups" / "daily"
-        for directory in (csv_dir, json_dir, sql_dir, backup_dir):
-            directory.mkdir(parents=True, exist_ok=True)
-        database_path = self._database_path or (base / "nameverification.db")
-        json_export_file = json_dir / f"nameverification_export_{timestamp}.json"
-        backup_output_file = backup_dir / f"nameverification_{timestamp}.db"
-        return {
-            "csv_export_dir": csv_dir,
-            "json_export_file": json_export_file,
-            "sql_dump_file": sql_dir / f"nameverification_dump_{timestamp}.sql",
-            "db_file": database_path,
-            "backup_output_file": backup_output_file,
-            "restore_backup_file": backup_output_file,
-            "restore_target_file": database_path,
-            "import_csv_dir": csv_dir,
-            "import_json_file": json_export_file,
-        }
-
-    def _refresh_current_tab(self) -> None:
-        current = self.tabs.currentWidget()
-        if current is None:
-            return
-        refresh = getattr(current, "refresh", None)
-        if callable(refresh):
-            refresh()
+        return defaults
 
     def closeEvent(self, event: QCloseEvent) -> None:  # noqa: N802
         if self._connection is not None:
             self._connection.close()
+            self._connection = None
         super().closeEvent(event)
 
 
 def _tab_aliases(title: str) -> tuple[str, ...]:
-    aliases = {
-        "名前を管理": ("名前管理",),
-        "タイトル管理": ("タイトルを管理", "タイトル/サブタイトル管理"),
-        "サブタイトル管理": ("サブタイトルを管理",),
-        "監査ログ": ("操作履歴", "ユーザー監査ログ"),
-        "データ入出力": ("エクスポート/バックアップ", "インポート/復元"),
-    }
-    return aliases.get(title, ())
+    if title == "名前を管理":
+        return ("名前管理",)
+    return ()
