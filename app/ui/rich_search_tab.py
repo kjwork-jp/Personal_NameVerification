@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from PySide6.QtWidgets import QLabel, QVBoxLayout
 
 from app.ui.search_tab import SearchTab as BaseSearchTab
@@ -10,7 +12,7 @@ from app.ui.search_tab import SearchTab as BaseSearchTab
 class SearchTab(BaseSearchTab):
     """Add summary and selection context to the existing search tab."""
 
-    def __init__(self, *args, **kwargs) -> None:  # type: ignore[no-untyped-def]
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self.summary_label = QLabel("")
         self.summary_label.setObjectName("SearchSummaryBar")
@@ -31,7 +33,10 @@ class SearchTab(BaseSearchTab):
         layout = self.layout()
         if isinstance(layout, QVBoxLayout):
             layout.insertWidget(1, self.summary_label)
-            layout.insertWidget(max(layout.count() - 1, 1), self.selection_summary_label)
+            layout.insertWidget(
+                max(layout.count() - 1, 1),
+                self.selection_summary_label,
+            )
         self._update_rich_search_summaries()
 
     def _on_search_clicked(self) -> None:
@@ -85,8 +90,9 @@ class SearchTab(BaseSearchTab):
             )
             return
         selected = self._search_rows[summary_row_index]
+        public_id = selected.public_id or "未採番"
         self.selection_summary_label.setText(
-            f"選択中の名前: {selected.raw_name} / 公開ID: {selected.public_id or '未採番'} / "
+            f"選択中の名前: {selected.raw_name} / 公開ID: {public_id} / "
             f"タイトル関連 {selected.title_related_count}件 / "
             f"サブタイトル関連 {selected.subtitle_related_count}件 / "
             f"関連合計 {related_total}件"
