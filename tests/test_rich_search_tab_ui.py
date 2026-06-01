@@ -12,9 +12,14 @@ qt_widgets = pytest.importorskip("PySide6.QtWidgets", exc_type=ImportError)
 QAbstractItemView = qt_widgets.QAbstractItemView
 QApplication = qt_widgets.QApplication
 
-from app.application.read_models import NameDetail, NameSearchRow, RelatedRow  # noqa: E402
-from app.ui.rich_search_tab import SearchTab  # noqa: E402
+from app.application.read_models import (  # noqa: E402
+    NameDetail,
+    NameSearchRow,
+    RelatedRow,
+)
 from app.ui.role_context import RoleContext  # noqa: E402
+
+from app.ui.rich_search_tab import SearchTab  # noqa: E402
 
 
 class StubSearchQueryService:
