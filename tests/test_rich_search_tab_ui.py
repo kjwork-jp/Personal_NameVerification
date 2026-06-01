@@ -18,8 +18,17 @@ from app.ui.role_context import RoleContext  # noqa: E402
 
 
 class StubSearchQueryService:
-    def search_names(self, *args, **kwargs) -> list[NameSearchRow]:  # type: ignore[no-untyped-def]
-        _ = (args, kwargs)
+    def search_names(
+        self,
+        query: str | None = None,
+        role: str = "admin",
+        *,
+        exact_match: bool = False,
+        title_id: int | None = None,
+        has_links: bool | None = None,
+        include_deleted: bool = False,
+    ) -> list[NameSearchRow]:
+        _ = (query, role, exact_match, title_id, has_links, include_deleted)
         return [
             NameSearchRow(
                 id=1,
