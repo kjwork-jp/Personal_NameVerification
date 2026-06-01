@@ -13,8 +13,10 @@ class SearchTab(BaseSearchTab):
     """Add summary and selection context to the existing search tab."""
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
-        super().__init__(*args, **kwargs)
+        self._rich_search_ready = False
         self.summary_label = QLabel("")
+        self.selection_summary_label = QLabel("")
+        super().__init__(*args, **kwargs)
         self.summary_label.setObjectName("SearchSummaryBar")
         self.summary_label.setWordWrap(True)
         self.summary_label.setStyleSheet(
@@ -22,7 +24,6 @@ class SearchTab(BaseSearchTab):
             "border: 1px solid #22d3ee; border-radius: 6px; "
             "padding: 5px 7px; font-weight: 700; }"
         )
-        self.selection_summary_label = QLabel("")
         self.selection_summary_label.setObjectName("SearchSelectionSummary")
         self.selection_summary_label.setWordWrap(True)
         self.selection_summary_label.setStyleSheet(
@@ -37,16 +38,17 @@ class SearchTab(BaseSearchTab):
                 max(layout.count() - 1, 1),
                 self.selection_summary_label,
             )
+        self._rich_search_ready = True
         self._update_rich_search_summaries()
 
     def _on_search_clicked(self) -> None:
         super()._on_search_clicked()
-        if hasattr(self, "summary_label"):
+        if self._rich_search_ready:
             self._update_rich_search_summaries()
 
     def _on_selection_changed(self) -> None:
         super()._on_selection_changed()
-        if hasattr(self, "summary_label"):
+        if self._rich_search_ready:
             self._update_rich_search_summaries()
 
     def _selected_row_indexes(self) -> list[int]:
