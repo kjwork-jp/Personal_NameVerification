@@ -44,27 +44,50 @@ class SearchTab(BaseSearchTab):
         if hasattr(self, "summary_label"):
             self._update_rich_search_summaries()
 
+    def _selected_row_indexes(self) -> list[int]:
+        selection_model = self.results_table.selectionModel()
+        if selection_model is None:
+            current = self.results_table.currentRow()
+            return [current] if 0 <= current < len(self._search_rows) else []
+        rows = sorted({index.row() for index in selection_model.selectedRows()})
+        return [row for row in rows if 0 <= row < len(self._search_rows)]
+
+    def _summary_row_index(self, selected_rows: list[int]) -> int | None:
+        current = self.results_table.currentRow()
+        if 0 <= current < len(self._search_rows):
+            return current
+        if selected_rows:
+            return selected_rows[0]
+        return None
+
+    def _related_total_for_row(self, row_index: int | None) -> int:
+        if row_index is None:
+            return 0
+        selected = self._search_rows[row_index]
+        return selected.title_related_count + selected.subtitle_related_count
+
     def _update_rich_search_summaries(self) -> None:
         total = len(self._search_rows)
         deleted = sum(1 for row in self._search_rows if row.deleted_at)
-        selected_index = self.results_table.currentRow()
-        selected_count = 1 if 0 <= selected_index < total else 0
-        related_count = self.related_table.rowCount()
+        selected_rows = self._selected_row_indexes()
+        selected_count = len(selected_rows)
+        summary_row_index = self._summary_row_index(selected_rows)
+        related_total = self._related_total_for_row(summary_row_index)
         include_deleted = "ON" if self.include_deleted_checkbox.isChecked() else "OFF"
         self.summary_label.setText(
             f"検索結果 {total}件 / 表示中 {total}件 / 選択中 {selected_count}件 / "
-            f"関連 {related_count}件 / 有効 {total - deleted}件 / "
+            f"関連 {related_total}件 / 有効 {total - deleted}件 / "
             f"削除済み {deleted}件 / 削除済み含む {include_deleted}"
         )
-        if selected_count == 0:
+        if summary_row_index is None:
             self.selection_summary_label.setText(
                 "選択中の名前: 未選択 / 公開ID: - / 関連合計 0件"
             )
             return
-        selected = self._search_rows[selected_index]
+        selected = self._search_rows[summary_row_index]
         self.selection_summary_label.setText(
             f"選択中の名前: {selected.raw_name} / 公開ID: {selected.public_id or '未採番'} / "
             f"タイトル関連 {selected.title_related_count}件 / "
             f"サブタイトル関連 {selected.subtitle_related_count}件 / "
-            f"関連合計 {related_count}件"
+            f"関連合計 {related_total}件"
         )
