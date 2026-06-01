@@ -21,7 +21,7 @@ permissions:
 
 jobs:
   quality-gates:
-    name: pytest / ruff / black / mypy
+    name: ruff / black / mypy / pytest
     runs-on: windows-latest
     timeout-minutes: 30
     env:
@@ -52,10 +52,6 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -e ".[dev]"
 
-      - name: Run pytest
-        shell: pwsh
-        run: pytest -q --basetemp tmp/pytest-actions-${{ github.run_id }}
-
       - name: Run ruff
         shell: pwsh
         run: ruff check .
@@ -68,6 +64,10 @@ jobs:
         shell: pwsh
         run: mypy app
 
+      - name: Run pytest
+        shell: pwsh
+        run: pytest -q --basetemp tmp/pytest-actions-${{ github.run_id }}
+
       - name: Publish success status
         if: success()
         shell: pwsh
@@ -75,7 +75,7 @@ jobs:
           gh api repos/${{ github.repository }}/statuses/${{ github.sha }} `
             -f state=success `
             -f context="chatgpt/quality-gates" `
-            -f description="pytest, ruff, black, and mypy passed" `
+            -f description="ruff, black, mypy, and pytest passed" `
             -f target_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
       - name: Publish failure status
