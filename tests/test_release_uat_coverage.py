@@ -13,7 +13,9 @@ from app.application.read_models import NameSearchRow, RelatedRow, SubtitleDetai
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 qt_widgets = pytest.importorskip("PySide6.QtWidgets", exc_type=ImportError)
+qt_core = pytest.importorskip("PySide6.QtCore", exc_type=ImportError)
 QApplication = qt_widgets.QApplication
+Qt = qt_core.Qt
 
 from app.application.user_services import CreateUserInput, UserService  # noqa: E402
 from app.application.windows_identity import WindowsIdentity  # noqa: E402
@@ -235,8 +237,9 @@ def test_uat_link_visibility_by_role(monkeypatch: pytest.MonkeyPatch) -> None:
     assert _link_subtab_visibility(admin) == {"登録": True, "解除": True}
 
     admin_link = admin._tabs_by_name["関連付け"]
-    assert admin_link.register_name_combo.itemText(0) == (
-        "名前: Alice（公開ID: name-public-id-001）"
-    )
+    assert admin_link.register_name_combo.itemText(0) == "Alice"
     assert "..." not in admin_link.register_name_combo.itemText(0)
     assert "…" not in admin_link.register_name_combo.itemText(0)
+    tooltip = admin_link.register_name_combo.itemData(0, Qt.ItemDataRole.ToolTipRole)
+    assert "公開ID: name-public-id-001" in tooltip
+    assert "内部ID: 1" in tooltip
