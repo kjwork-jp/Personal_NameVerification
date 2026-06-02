@@ -107,13 +107,17 @@ def _app() -> QApplication:
     return app
 
 
-def test_title_management_split_summary_and_danger_copy_properties() -> None:
+def _title_tab() -> TitleManagementTab:
     _app()
-    tab = TitleManagementTab(
+    return TitleManagementTab(
         core_service=StubCoreService(),
         query_service=StubQueryService(),
         role_context=RoleContext(role="admin", operator_id="op-1"),
     )
+
+
+def test_title_management_split_summary_and_danger_copy_properties() -> None:
+    tab = _title_tab()
 
     tab.editor.workflow_tabs.setCurrentWidget(tab.editor.edit_tab)
     tab.editor.titles_table.selectRow(0)
@@ -136,3 +140,21 @@ def test_title_management_split_summary_and_danger_copy_properties() -> None:
     assert tab.editor.title_delete_button.text() == "選択中タイトルをゴミ箱に入れる"
     assert tab.editor.title_restore_button.text() == "削除済みタイトルを復元"
     assert tab.editor.title_hard_delete_button.text() == "削除済みタイトルを完全削除"
+
+
+def test_title_list_summary_shows_totals_and_selection_count() -> None:
+    tab = _title_tab()
+
+    summary = tab.title_list_summary_label.text()
+    assert tab.property("title_list_summary_counters") is True
+    assert tab.editor.property("title_list_summary_counters") is True
+    assert tab.title_list_summary_label.property("title_list_summary_counter") is True
+    assert "一覧 2件" in summary
+    assert "選択中 0件" in summary
+    assert "有効 1件" in summary
+    assert "削除済み 1件" in summary
+    assert "関連名あり 1件" in summary
+
+    tab.editor.titles_table.selectRow(0)
+
+    assert "選択中 1件" in tab.title_list_summary_label.text()
