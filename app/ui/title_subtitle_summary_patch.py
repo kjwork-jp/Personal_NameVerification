@@ -10,6 +10,8 @@ from PySide6.QtWidgets import QLabel
 from app.ui.ui_style import apply_workflow_accent
 
 _PATCHED_ATTR = "_title_subtitle_summary_counters_installed"
+_LINKED_NAMES_COLUMN = 6
+_EMPTY_LINKED_NAMES = {"", "なし", "-"}
 
 
 def install_title_subtitle_summary_counters() -> None:
@@ -104,7 +106,7 @@ def _update_summary_label(tab: Any) -> None:
     active_titles = total_titles - deleted_titles
     selected_title_count = 1 if getattr(tab, "_selected_title", None) is not None else 0
     selected_subtitle_count = 1 if getattr(tab, "_selected_subtitle", None) is not None else 0
-    linked_titles = sum(1 for row in titles if tab._linked_names_text(row.id))
+    linked_titles = _linked_title_count_from_rendered_table(tab)
     total_subtitles = len(subtitles)
     deleted_subtitles = sum(1 for row in subtitles if row.deleted_at)
     active_subtitles = total_subtitles - deleted_subtitles
@@ -119,3 +121,21 @@ def _update_summary_label(tab: Any) -> None:
         f"有効サブタイトル {active_subtitles}件 / "
         f"削除済みサブタイトル {deleted_subtitles}件"
     )
+
+
+def _linked_title_count_from_rendered_table(tab: Any) -> int:
+    """Count linked-title rows from the already rendered title table.
+
+    The base table already populates the linked-name column during title refresh.
+    Reading that rendered value avoids issuing one list_names_for_title query per title
+    during ordinary selection/action-state updates.
+    """
+    table = getattr(tab, "titles_table", None)
+    if table is None:
+        return 0
+    count = 0
+    for row in range(table.rowCount()):
+        item = table.item(row, _LINKED_NAMES_COLUMN)
+        if item is not None and item.text().strip() not in _EMPTY_LINKED_NAMES:
+            count += 1
+    return count
