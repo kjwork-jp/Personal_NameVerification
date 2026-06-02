@@ -30,6 +30,7 @@ class TitleManagementTab(QWidget):
             query_service=query_service,
             role_context=role_context,
         )
+        self.title_list_summary_label = self._build_title_list_summary_label()
         self.title_delete_target_summary = self._build_title_summary_label(
             heading="削除対象タイトル"
         )
@@ -38,6 +39,7 @@ class TitleManagementTab(QWidget):
         self._rename_labels()
         self._add_guidance_tooltips()
         self._wrap_guidance_labels()
+        self._insert_title_list_summary()
         self._insert_delete_target_summary()
         self._connect_title_defaults()
         self._install_title_summary_refresh()
@@ -46,6 +48,7 @@ class TitleManagementTab(QWidget):
         apply_workflow_tab_navigation(self.editor.workflow_tabs)
         self._ensure_title_selected_for_edit()
         self._refresh_title_summary_cards()
+        self._update_title_list_summary()
 
         layout = QVBoxLayout(self)
         compact_layout(layout, margins=5, spacing=4)
@@ -56,6 +59,15 @@ class TitleManagementTab(QWidget):
         layout.addWidget(self.editor, 1)
         self.setProperty("workflow_accented_layout", True)
         self.setProperty("focused_title_only_layout", True)
+        self.setProperty("title_list_summary_counters", True)
+
+    def _build_title_list_summary_label(self) -> QLabel:
+        label = QLabel("一覧 0件 / 選択中 0件 / 有効 0件 / 削除済み 0件 / 関連名あり 0件")
+        label.setWordWrap(True)
+        label.setMinimumHeight(0)
+        label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+        label.setProperty("title_list_summary_counter", True)
+        return label
 
     def _build_title_summary_label(self, *, heading: str) -> QLabel:
         label = QLabel(self._title_summary_text(None, heading=heading))
@@ -128,6 +140,12 @@ class TitleManagementTab(QWidget):
         self.editor.title_detail_group.setMaximumHeight(220)
         self.editor.setProperty("title_guidance_labels_wrapped", True)
 
+    def _insert_title_list_summary(self) -> None:
+        layout = self.editor.list_tab.layout()
+        if layout is not None:
+            layout.insertWidget(2, self.title_list_summary_label)
+        self.editor.setProperty("title_list_summary_counters", True)
+
     def _insert_delete_target_summary(self) -> None:
         self.title_delete_target_summary.setProperty("title_delete_target_summary_card", True)
         for group in self.editor.findChildren(QGroupBox):
@@ -145,20 +163,36 @@ class TitleManagementTab(QWidget):
 
     def _install_title_summary_refresh(self) -> None:
         original_update_selected_title_label = self.editor._update_selected_title_label
+        original_refresh_titles = self.editor._refresh_titles
 
         def update_selected_title_label_with_split_summary(title: Any | None = None) -> None:
             original_update_selected_title_label(title)
             self._refresh_title_summary_cards()
+            self._update_title_list_summary()
+
+        def refresh_titles_with_list_summary(selected_title_id: int | None = None) -> None:
+            original_refresh_titles(selected_title_id)
+            self._update_title_list_summary()
 
         self.editor._update_selected_title_label = update_selected_title_label_with_split_summary
+        self.editor._refresh_titles = refresh_titles_with_list_summary
         self.editor.titles_table.itemSelectionChanged.connect(
             lambda: self._refresh_title_summary_cards()
+        )
+        self.editor.titles_table.itemSelectionChanged.connect(
+            lambda: self._update_title_list_summary()
         )
         self.editor.title_selector_combo.currentIndexChanged.connect(
             lambda _index: self._refresh_title_summary_cards()
         )
+        self.editor.title_selector_combo.currentIndexChanged.connect(
+            lambda _index: self._update_title_list_summary()
+        )
         self.editor.delete_title_selector_combo.currentIndexChanged.connect(
             lambda _index: self._refresh_title_summary_cards()
+        )
+        self.editor.delete_title_selector_combo.currentIndexChanged.connect(
+            lambda _index: self._update_title_list_summary()
         )
         self.editor.setProperty("title_summary_split", True)
 
@@ -198,6 +232,7 @@ class TitleManagementTab(QWidget):
             self.editor._set_message(f"タイトルを{label}しました")
             self.editor._refresh_titles(None if method_name == "hard_delete_title" else selected.id)
             self._refresh_title_summary_cards()
+            self._update_title_list_summary()
 
         self.editor._mutate_title = mutate_title_with_target_copy
         self.editor.setProperty("title_delete_danger_copy", True)
@@ -227,6 +262,19 @@ class TitleManagementTab(QWidget):
         self.editor.selected_title_context_label.setText(self._title_summary_text(title))
         self.title_delete_target_summary.setText(
             self._title_summary_text(title, heading="削除対象タイトル")
+        )
+
+    def _update_title_list_summary(self) -> None:
+        total = len(self.editor._titles)
+        deleted = sum(1 for row in self.editor._titles if row.deleted_at)
+        active = total - deleted
+        selected_count = 1 if self.editor._selected_title is not None else 0
+        linked_title_count = sum(
+            1 for row in self.editor._titles if self.editor._linked_names_text(row.id)
+        )
+        self.title_list_summary_label.setText(
+            f"一覧 {total}件 / 選択中 {selected_count}件 / "
+            f"有効 {active}件 / 削除済み {deleted}件 / 関連名あり {linked_title_count}件"
         )
 
     def _title_summary_text(self, title: Any | None, *, heading: str = "選択中タイトル") -> str:
@@ -275,6 +323,7 @@ class TitleManagementTab(QWidget):
         apply_workflow_accent(self.editor.title_panel_label, "list")
         apply_workflow_accent(self.editor.title_list_hint_label, "list")
         apply_workflow_accent(self.editor.title_refresh_button, "list")
+        apply_workflow_accent(self.title_list_summary_label, "list")
         apply_workflow_accent(self.editor.title_create_button, "add")
         apply_workflow_accent(self.editor.title_update_button, "edit")
         apply_workflow_accent(self.editor.title_delete_button, "delete")
