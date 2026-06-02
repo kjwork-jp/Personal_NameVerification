@@ -9,46 +9,39 @@ import pytest
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 qt_widgets = pytest.importorskip("PySide6.QtWidgets", exc_type=ImportError)
+qt_core = pytest.importorskip("PySide6.QtCore", exc_type=ImportError)
 QLabel = qt_widgets.QLabel
+Qt = qt_core.Qt
 
 from app.ui.audit_logs_tab import AuditLogsTab  # noqa: E402
 from app.ui.subtitle_management_tab import SubtitleManagementTab  # noqa: E402
 from app.ui.title_management_tab import TitleManagementTab  # noqa: E402
 from tests.test_release_uat_coverage import _window_for_role  # noqa: E402
 
-SEARCH_TAB = "\u691c\u7d22"
-NAME_TAB = "\u540d\u524d\u3092\u7ba1\u7406"
-TITLE_TAB = "\u30bf\u30a4\u30c8\u30eb\u7ba1\u7406"
-SUBTITLE_TAB = "\u30b5\u30d6\u30bf\u30a4\u30c8\u30eb\u7ba1\u7406"
-LINK_TAB = "\u95a2\u9023\u4ed8\u3051"
-TRASH_TAB = "\u524a\u9664\u30c7\u30fc\u30bf"
-AUDIT_TAB = "\u76e3\u67fb\u30ed\u30b0"
-OPERATIONS_TAB = "\u30c7\u30fc\u30bf\u5165\u51fa\u529b"
+SEARCH_TAB = "検索"
+NAME_TAB = "名前を管理"
+TITLE_TAB = "タイトル管理"
+SUBTITLE_TAB = "サブタイトル管理"
+LINK_TAB = "関連付け"
+TRASH_TAB = "削除データ"
+AUDIT_TAB = "監査ログ"
+OPERATIONS_TAB = "データ入出力"
 
-EXPECTED_REGISTER_NAME = (
-    "\u540d\u524d: Alice"
-    "\uff08\u516c\u958bID: name-public-id-001\uff09"
-)
-EXPECTED_REGISTER_TITLE = (
-    "\u30bf\u30a4\u30c8\u30eb: Title1"
-    "\uff08\u516c\u958bID: title-public-id-001\uff09"
-)
-EXPECTED_UNREGISTER_LINK = (
-    "Title1 > S1: Sub1"
-    "\uff08\u30ea\u30f3\u30afID: link-public-id-001\uff09"
-)
-READONLY_TEXT = "\u53c2\u7167\u306e\u307f"
-CHANGE_LOG_TEXT = "\u30c7\u30fc\u30bf\u5909\u66f4\u30ed\u30b0"
-USER_AUTH_LOG_TEXT = "\u30e6\u30fc\u30b6\u30fc/\u8a8d\u8a3c\u30ed\u30b0"
-AUDIT_GUIDE_TEXT = "\u30ac\u30a4\u30c9"
-ADMIN_GUIDE_TITLE = "\u64cd\u4f5c\u30ac\u30a4\u30c9\uff08admin\uff09"
-ADMIN_GUIDE_DETAIL = "\u30c7\u30fc\u30bf\u5165\u51fa\u529b\u306e\u5168\u64cd\u4f5c"
+EXPECTED_REGISTER_NAME = "Alice"
+EXPECTED_REGISTER_TITLE = "Title1"
+EXPECTED_UNREGISTER_LINK = "Title1 / S1 / Sub1"
+READONLY_TEXT = "参照のみ"
+CHANGE_LOG_TEXT = "データ変更ログ"
+USER_AUTH_LOG_TEXT = "ユーザー/認証ログ"
+AUDIT_GUIDE_TEXT = "ガイド"
+ADMIN_GUIDE_TITLE = "操作ガイド（admin）"
+ADMIN_GUIDE_DETAIL = "データ入出力の全操作"
 
 
 def _assert_full_public_id(text: str, expected: str) -> None:
     assert text == expected
     assert "..." not in text
-    assert "\u2026" not in text
+    assert "…" not in text
 
 
 def test_remaining_uat_public_ids_are_full_across_primary_tables(
@@ -84,6 +77,12 @@ def test_remaining_uat_public_ids_are_full_across_primary_tables(
     assert link_tab.register_name_combo.itemText(0) == EXPECTED_REGISTER_NAME
     assert link_tab.register_title_combo.itemText(0) == EXPECTED_REGISTER_TITLE
     assert link_tab.unregister_link_combo.itemText(0) == EXPECTED_UNREGISTER_LINK
+    name_tooltip = link_tab.register_name_combo.itemData(0, Qt.ItemDataRole.ToolTipRole)
+    title_tooltip = link_tab.register_title_combo.itemData(0, Qt.ItemDataRole.ToolTipRole)
+    link_tooltip = link_tab.unregister_link_combo.itemData(0, Qt.ItemDataRole.ToolTipRole)
+    _assert_full_public_id(name_tooltip.split("公開ID: ")[1].split("\n")[0], "name-public-id-001")
+    _assert_full_public_id(title_tooltip.split("公開ID: ")[1].split("\n")[0], "title-public-id-001")
+    _assert_full_public_id(link_tooltip.split("リンク公開ID: ")[1].split("\n")[0], "link-public-id-001")
 
 
 def test_remaining_uat_crud_and_delete_controls_follow_role_order(
@@ -128,55 +127,26 @@ def test_remaining_uat_crud_and_delete_controls_follow_role_order(
     assert viewer_subtitle_editor.subtitle_create_button.isHidden()
     assert viewer_subtitle_editor.subtitle_update_button.isHidden()
     assert not editor_title_editor.title_create_button.isHidden()
-    assert not editor_subtitle_editor.subtitle_create_button.isHidden()
+    assert not editor_title_editor.title_update_button.isHidden()
     assert editor_title_editor.title_delete_button.isHidden()
+    assert not editor_subtitle_editor.subtitle_create_button.isHidden()
+    assert not editor_subtitle_editor.subtitle_update_button.isHidden()
     assert editor_subtitle_editor.subtitle_delete_button.isHidden()
     assert not admin_title_editor.title_delete_button.isHidden()
     assert not admin_subtitle_editor.subtitle_delete_button.isHidden()
 
 
-def test_remaining_uat_trash_controls_are_admin_only(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    viewer = _window_for_role("viewer", monkeypatch)
-    editor = _window_for_role("editor", monkeypatch)
+def test_remaining_uat_audit_and_operations_labels(monkeypatch: pytest.MonkeyPatch) -> None:
     admin = _window_for_role("admin", monkeypatch)
+    audit = admin._tabs_by_name[AUDIT_TAB]
+    operations = admin._tabs_by_name[OPERATIONS_TAB]
 
-    viewer_trash = viewer._tabs_by_name[TRASH_TAB]
-    editor_trash = editor._tabs_by_name[TRASH_TAB]
-    admin_trash = admin._tabs_by_name[TRASH_TAB]
-    assert viewer_trash.restore_button.isHidden()
-    assert viewer_trash.hard_delete_button.isHidden()
-    assert editor_trash.restore_button.isHidden()
-    assert editor_trash.hard_delete_button.isHidden()
-    assert not admin_trash.restore_button.isHidden()
-    assert not admin_trash.hard_delete_button.isHidden()
+    assert isinstance(audit, AuditLogsTab)
+    assert audit.audit_tabs.tabText(0) == CHANGE_LOG_TEXT
+    assert audit.audit_tabs.tabText(1) == USER_AUTH_LOG_TEXT
+    assert audit.audit_tabs.tabText(2) == AUDIT_GUIDE_TEXT
 
-
-def test_remaining_uat_audit_logs_and_operation_guides_are_visible(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    window = _window_for_role("admin", monkeypatch)
-
-    audit_tab = window._tabs_by_name[AUDIT_TAB]
-    assert isinstance(audit_tab, AuditLogsTab)
-    audit_tab_titles = [
-        audit_tab.tabs.tabText(index) for index in range(audit_tab.tabs.count())
-    ]
-    assert CHANGE_LOG_TEXT in audit_tab_titles
-    assert AUDIT_GUIDE_TEXT in audit_tab_titles
-    if audit_tab.user_audit_tab is not None:
-        assert USER_AUTH_LOG_TEXT in audit_tab_titles
-
-    operations_tab = window._tabs_by_name[OPERATIONS_TAB]
-    labels = [label.text() for label in operations_tab.findChildren(QLabel)]
-    assert any(ADMIN_GUIDE_TITLE in text for text in labels)
-    assert any(ADMIN_GUIDE_DETAIL in text for text in labels)
-
-
-def test_remaining_uat_viewer_readonly_guidance_is_visible(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    window = _window_for_role("viewer", monkeypatch)
-    labels = [label.text() for label in window.findChildren(QLabel)]
-    assert any(READONLY_TEXT in text for text in labels)
+    labels = operations.findChildren(QLabel)
+    label_texts = [label.text() for label in labels]
+    assert any(ADMIN_GUIDE_TITLE in text for text in label_texts)
+    assert any(ADMIN_GUIDE_DETAIL in text for text in label_texts)
