@@ -47,6 +47,7 @@ class SubtitleManagementTab(QWidget):
         self.subtitle_summary_remove = self._build_subtitle_summary_label()
         self.subtitle_list_summary_label = self._build_subtitle_list_summary_label()
         self._subtitle_list_rows: list[tuple[str, ...]] = []
+        self._visible_subtitle_list_rows: list[tuple[str, ...]] = []
         self._hide_title_creation_controls()
         self._hide_internal_columns()
         self._rename_labels()
@@ -248,11 +249,13 @@ class SubtitleManagementTab(QWidget):
             except Exception as exc:  # noqa: BLE001
                 self.editor._set_message(f"サブタイトル一覧取得に失敗しました: {exc}", is_error=True)
                 return
+            parent_key = title.public_id or f"title:{title.id}"
             for subtitle in subtitles:
                 rows.append(
                     (
                         short_public_id(subtitle.public_id),
                         public_id_detail(subtitle.public_id),
+                        parent_key,
                         title.title_name,
                         subtitle.subtitle_code,
                         subtitle.subtitle_name,
@@ -270,15 +273,16 @@ class SubtitleManagementTab(QWidget):
         rows = self._subtitle_list_rows
         if query:
             rows = [row for row in rows if query in " ".join(row).casefold()]
+        self._visible_subtitle_list_rows = rows
         self._populate_subtitle_list_table(rows)
         self.subtitle_list_table.setProperty("filtered_cross_parent_subtitle_rows", bool(query))
-        self._update_subtitle_list_summary(rows)
+        self._update_subtitle_list_summary()
 
     def _populate_subtitle_list_table(self, rows: list[tuple[str, ...]]) -> None:
         self.subtitle_list_table.setRowCount(len(rows))
         for row_index, row in enumerate(rows):
-            display_values = (row[0], *row[2:])
-            tooltip_values = (f"公開ID: {row[1]}", *row[2:])
+            display_values = (row[0], *row[3:])
+            tooltip_values = (f"公開ID: {row[1]}", *row[3:])
             for column_index, value in enumerate(display_values):
                 item = QTableWidgetItem(value)
                 item.setToolTip(tooltip_values[column_index])
@@ -287,29 +291,19 @@ class SubtitleManagementTab(QWidget):
                 self.subtitle_list_table.setItem(row_index, column_index, item)
         self.subtitle_list_table.resizeColumnsToContents()
 
-    def _update_subtitle_list_summary(self, rows: list[tuple[str, ...]] | None = None) -> None:
-        visible_rows = self._current_visible_subtitle_rows() if rows is None else rows
+    def _update_subtitle_list_summary(self) -> None:
+        visible_rows = self._visible_subtitle_list_rows
         total = len(self._subtitle_list_rows)
         visible = len(visible_rows)
-        selected_count = len(self.subtitle_list_table.selectionModel().selectedRows()) if self.subtitle_list_table.selectionModel() else 0
-        active = sum(1 for row in visible_rows if row[5] == "有効")
-        deleted = sum(1 for row in visible_rows if row[5] == "削除済み")
+        selection_model = self.subtitle_list_table.selectionModel()
+        selected_count = len(selection_model.selectedRows()) if selection_model is not None else 0
+        active = sum(1 for row in visible_rows if row[6] == "有効")
+        deleted = sum(1 for row in visible_rows if row[6] == "削除済み")
         parent_titles = len({row[2] for row in visible_rows})
         self.subtitle_list_summary_label.setText(
             f"一覧 {total}件 / 表示中 {visible}件 / 選択中 {selected_count}件 / "
             f"有効 {active}件 / 削除済み {deleted}件 / 親タイトル {parent_titles}件"
         )
-
-    def _current_visible_subtitle_rows(self) -> list[tuple[str, ...]]:
-        rows: list[tuple[str, ...]] = []
-        for table_row in range(self.subtitle_list_table.rowCount()):
-            values = [
-                self.subtitle_list_table.item(table_row, column).text()
-                for column in range(self.subtitle_list_table.columnCount())
-            ]
-            if len(values) == 8:
-                rows.append((values[0], values[0], *values[1:]))
-        return rows
 
     def _connect_subtitle_state_refresh(self) -> None:
         self.editor.add_subtitle_title_combo.currentIndexChanged.connect(
