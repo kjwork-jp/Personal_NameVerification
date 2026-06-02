@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Callable
 
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QComboBox,
     QFormLayout,
@@ -17,7 +18,7 @@ from PySide6.QtWidgets import (
 
 from app.ui.dialogs import confirm_destructive_action
 from app.ui.permissions import can_link, can_unlink
-from app.ui.public_id_display import short_public_id
+from app.ui.public_id_display import public_id_detail
 from app.ui.role_context import RoleContext
 from app.ui.ui_style import PageHeader, compact_layout
 
@@ -49,8 +50,8 @@ class LinkManagementTab(QWidget):
         self.unregister_link_combo = QComboBox()
 
         self.refresh_button = QPushButton("再読込")
-        self.link_button = QPushButton("登録")
-        self.unlink_button = QPushButton("解除")
+        self.link_button = QPushButton("関連付けを登録")
+        self.unlink_button = QPushButton("関連付けを解除")
         self.refresh_button.clicked.connect(self._refresh_all)
         self.link_button.clicked.connect(self._create_link)
         self.unlink_button.clicked.connect(self._unlink_link)
@@ -72,9 +73,11 @@ class LinkManagementTab(QWidget):
         register_page = QWidget()
         register_layout = QVBoxLayout(register_page)
         compact_layout(register_layout, margins=3, spacing=4)
-        register_layout.addWidget(
-            QLabel("未関連の組み合わせだけを登録します。関連種類は内部で primary 固定です。")
+        register_hint = QLabel(
+            "表示名で対象を選びます。公開ID・内部IDは各候補のツールチップで確認できます。"
         )
+        register_hint.setWordWrap(True)
+        register_layout.addWidget(register_hint)
         register_layout.addLayout(register_form)
         register_layout.addLayout(register_actions)
         register_layout.addStretch(1)
@@ -92,7 +95,11 @@ class LinkManagementTab(QWidget):
         unregister_page = QWidget()
         unregister_layout = QVBoxLayout(unregister_page)
         compact_layout(unregister_layout, margins=3, spacing=4)
-        unregister_layout.addWidget(QLabel("既に関連付いているデータだけを解除します。"))
+        unregister_hint = QLabel(
+            "既に関連付いている組み合わせだけを表示します。リンク公開IDはツールチップで確認できます。"
+        )
+        unregister_hint.setWordWrap(True)
+        unregister_layout.addWidget(unregister_hint)
         unregister_layout.addLayout(unregister_form)
         unregister_layout.addLayout(unregister_actions)
         unregister_layout.addStretch(1)
@@ -112,6 +119,7 @@ class LinkManagementTab(QWidget):
         layout.addLayout(top_actions)
         layout.addWidget(self.message_label)
         layout.addWidget(self.tabs, 1)
+        self.setProperty("link_label_normalized", True)
 
         self._apply_role_guards()
         self._refresh_all()
@@ -158,9 +166,9 @@ class LinkManagementTab(QWidget):
             include_deleted=False,
             role=self._role_context.role,
         )
-        self._populate_combo(self.register_name_combo, self._names, _name_label)
-        self._populate_combo(self.unregister_name_combo, self._names, _name_label)
-        self._populate_combo(self.register_title_combo, self._titles, _title_label)
+        self._populate_combo(self.register_name_combo, self._names, _name_label, _name_tooltip)
+        self._populate_combo(self.unregister_name_combo, self._names, _name_label, _name_tooltip)
+        self._populate_combo(self.register_title_combo, self._titles, _title_label, _title_tooltip)
         self._refresh_registration_subtitles()
         self._refresh_unlink_candidates()
         self._apply_role_guards()
@@ -188,7 +196,12 @@ class LinkManagementTab(QWidget):
             )
             linked_subtitle_ids = {int(row.subtitle_id) for row in linked_rows}
         self._subtitles = [row for row in subtitles if int(row.id) not in linked_subtitle_ids]
-        self._populate_combo(self.register_subtitle_combo, self._subtitles, _subtitle_label)
+        self._populate_combo(
+            self.register_subtitle_combo,
+            self._subtitles,
+            _subtitle_label,
+            _subtitle_tooltip,
+        )
 
     def _refresh_unlink_candidates(self) -> None:
         name_id = self._selected_data(self.unregister_name_combo)
@@ -202,7 +215,13 @@ class LinkManagementTab(QWidget):
             include_deleted=False,
             role=self._role_context.role,
         )
-        self._populate_combo(self.unregister_link_combo, self._links, _link_label, data_attr="link_id")
+        self._populate_combo(
+            self.unregister_link_combo,
+            self._links,
+            _link_label,
+            _link_tooltip,
+            data_attr="link_id",
+        )
 
     def _create_link(self) -> None:
         if not can_link(self._role_context.role):
@@ -250,7 +269,8 @@ class LinkManagementTab(QWidget):
         self,
         combo: QComboBox,
         rows: list[Any],
-        label_func: Any,
+        label_func: Callable[[Any], str],
+        tooltip_func: Callable[[Any], str] | None = None,
         *,
         data_attr: str = "id",
     ) -> None:
@@ -258,6 +278,8 @@ class LinkManagementTab(QWidget):
         combo.clear()
         for row in rows:
             combo.addItem(label_func(row), int(getattr(row, data_attr)))
+            if tooltip_func is not None:
+                combo.setItemData(combo.count() - 1, tooltip_func(row), Qt.ItemDataRole.ToolTipRole)
         combo.blockSignals(False)
 
     def _selected_data(self, combo: QComboBox) -> int | None:
@@ -273,23 +295,64 @@ class LinkManagementTab(QWidget):
 
 
 def _name_label(row: Any) -> str:
-    public_id = short_public_id(getattr(row, "public_id", None))
-    return f"名前: {row.raw_name}（公開ID: {public_id}）"
+    return str(row.raw_name)
 
 
 def _title_label(row: Any) -> str:
-    public_id = short_public_id(getattr(row, "public_id", None))
-    return f"タイトル: {row.title_name}（公開ID: {public_id}）"
+    return str(row.title_name)
 
 
 def _subtitle_label(row: Any) -> str:
-    public_id = short_public_id(getattr(row, "public_id", None))
-    return f"{row.subtitle_code}: {row.subtitle_name}（公開ID: {public_id}）"
+    return f"{row.subtitle_code} / {row.subtitle_name}"
 
 
 def _link_label(row: Any) -> str:
-    public_id = short_public_id(getattr(row, "link_public_id", None))
-    return f"{row.title_name} > {row.subtitle_code}: {row.subtitle_name}（リンクID: {public_id}）"
+    return f"{row.title_name} / {row.subtitle_code} / {row.subtitle_name}"
+
+
+def _name_tooltip(row: Any) -> str:
+    return "\n".join(
+        [
+            f"名前: {row.raw_name}",
+            f"公開ID: {public_id_detail(getattr(row, 'public_id', None))}",
+            f"内部ID: {row.id}",
+        ]
+    )
+
+
+def _title_tooltip(row: Any) -> str:
+    return "\n".join(
+        [
+            f"タイトル: {row.title_name}",
+            f"公開ID: {public_id_detail(getattr(row, 'public_id', None))}",
+            f"内部ID: {row.id}",
+        ]
+    )
+
+
+def _subtitle_tooltip(row: Any) -> str:
+    return "\n".join(
+        [
+            f"サブタイトル: {row.subtitle_code} / {row.subtitle_name}",
+            f"公開ID: {public_id_detail(getattr(row, 'public_id', None))}",
+            f"内部ID: {row.id}",
+            f"親タイトルID: {row.title_id}",
+        ]
+    )
+
+
+def _link_tooltip(row: Any) -> str:
+    return "\n".join(
+        [
+            f"タイトル: {row.title_name}",
+            f"サブタイトル: {row.subtitle_code} / {row.subtitle_name}",
+            f"リンク公開ID: {public_id_detail(getattr(row, 'link_public_id', None))}",
+            f"名前公開ID: {public_id_detail(getattr(row, 'name_public_id', None))}",
+            f"タイトル公開ID: {public_id_detail(getattr(row, 'title_public_id', None))}",
+            f"サブタイトル公開ID: {public_id_detail(getattr(row, 'subtitle_public_id', None))}",
+            f"内部リンクID: {row.link_id}",
+        ]
+    )
 
 
 def _call_optional_role(function: Any, *args: Any, **kwargs: Any) -> Any:
