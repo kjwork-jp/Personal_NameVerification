@@ -82,7 +82,7 @@ def test_name_table_uses_short_public_id_with_full_tooltip() -> None:
         role_context=RoleContext(role="admin", operator_id="op-1"),
     )
 
-    public_id_item = tab.table.item(0, 1)
+    public_id_item = tab.names_table.item(0, 1)
     assert public_id_item is not None
     assert public_id_item.text() == LONG_PUBLIC_ID
     assert public_id_item.toolTip() == LONG_PUBLIC_ID
