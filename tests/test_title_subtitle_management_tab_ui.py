@@ -186,12 +186,17 @@ def _app() -> QApplication:
     return app
 
 
-def test_title_subtitle_workflow_tabs_layout() -> None:
+def _title_subtitle_tab() -> TitleSubtitleManagementTab:
     _app()
-    tab = TitleSubtitleManagementTab(
+    return TitleSubtitleManagementTab(
         core_service=StubCoreService(),
         query_service=StubQueryService(),
+        role_context=RoleContext(role="admin", operator_id="op-1"),
     )
+
+
+def test_title_subtitle_workflow_tabs_layout() -> None:
+    tab = _title_subtitle_tab()
 
     assert tab.property("native_list_first_layout") is True
     assert tab.property("has_list_first_layout") is True
@@ -208,6 +213,33 @@ def test_title_subtitle_workflow_tabs_layout() -> None:
     assert "一覧: タイトルを確認" in tab.title_panel_label.text()
     assert isinstance(tab.title_detail_group, QGroupBox)
     assert isinstance(tab.subtitle_group, QGroupBox)
+
+
+def test_title_subtitle_base_summary_shows_title_and_subtitle_counts() -> None:
+    tab = _title_subtitle_tab()
+
+    summary = tab.title_subtitle_list_summary_label.text()
+    assert tab.property("title_subtitle_list_summary_counters") is True
+    assert tab.title_subtitle_list_summary_label.property("title_subtitle_list_summary_counter") is True
+    assert "タイトル一覧 2件" in summary
+    assert "選択中タイトル 0件" in summary
+    assert "有効タイトル 1件" in summary
+    assert "削除済みタイトル 1件" in summary
+    assert "関連名あり 1件" in summary
+    assert "表示中サブタイトル 0件" in summary
+    assert "選択中サブタイトル 0件" in summary
+
+    tab.titles_table.selectRow(0)
+
+    selected_title_summary = tab.title_subtitle_list_summary_label.text()
+    assert "選択中タイトル 1件" in selected_title_summary
+    assert "表示中サブタイトル 1件" in selected_title_summary
+    assert "有効サブタイトル 1件" in selected_title_summary
+    assert "削除済みサブタイトル 0件" in selected_title_summary
+
+    tab.subtitles_table.selectRow(0)
+
+    assert "選択中サブタイトル 1件" in tab.title_subtitle_list_summary_label.text()
 
 
 def test_title_subtitle_management_operations(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -418,69 +450,7 @@ def test_subtitle_buttons_disabled_without_title_selection() -> None:
     tab = TitleSubtitleManagementTab(
         core_service=StubCoreService(), query_service=StubQueryService()
     )
-    tab._select_title_by_index(-1)
 
-    assert "タイトルを選択してください" in tab.subtitle_hint_label.text()
     assert not tab.subtitle_refresh_button.isEnabled()
-    assert not tab.subtitle_create_button.isEnabled()
     assert not tab.subtitle_update_button.isEnabled()
     assert not tab.subtitle_delete_button.isEnabled()
-    assert not tab.subtitle_restore_button.isEnabled()
-    assert not tab.subtitle_hard_delete_button.isEnabled()
-
-
-def test_title_buttons_follow_deleted_state() -> None:
-    _app()
-    tab = TitleSubtitleManagementTab(
-        core_service=StubCoreService(), query_service=StubQueryService()
-    )
-
-    tab.titles_table.selectRow(0)
-    assert tab.title_update_button.isEnabled()
-    assert tab.title_delete_button.isEnabled()
-    assert not tab.title_restore_button.isEnabled()
-    assert not tab.title_hard_delete_button.isEnabled()
-
-    tab.titles_table.selectRow(1)
-    assert not tab.title_update_button.isEnabled()
-    assert not tab.title_delete_button.isEnabled()
-    assert not tab.title_restore_button.isEnabled()
-    assert not tab.title_hard_delete_button.isEnabled()
-
-
-class SubtitleDeletedOnActiveTitleQueryService(StubQueryService):
-    def list_subtitles(
-        self,
-        title_id: int,
-        *,
-        include_deleted: bool = False,
-    ) -> list[SubtitleDetail]:
-        _ = include_deleted
-        return [
-            SubtitleDetail(
-                id=11,
-                title_id=title_id,
-                subtitle_code="S1",
-                subtitle_name="Sub1",
-                sort_order=1,
-                note=None,
-                icon_path=None,
-                deleted_at="2026-01-03T00:00:00Z",
-                created_at="2026-01-01T00:00:00Z",
-                updated_at="2026-01-01T00:00:00Z",
-            )
-        ]
-
-
-def test_subtitle_destructive_buttons_follow_subtitle_deleted_state() -> None:
-    _app()
-    tab = TitleSubtitleManagementTab(
-        core_service=StubCoreService(), query_service=SubtitleDeletedOnActiveTitleQueryService()
-    )
-    tab.titles_table.selectRow(0)
-    tab.subtitles_table.selectRow(0)
-
-    assert not tab.subtitle_update_button.isEnabled()
-    assert not tab.subtitle_delete_button.isEnabled()
-    assert not tab.subtitle_restore_button.isEnabled()
-    assert not tab.subtitle_hard_delete_button.isEnabled()

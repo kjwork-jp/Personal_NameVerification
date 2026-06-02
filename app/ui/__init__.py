@@ -19,7 +19,10 @@ from .search_tab import SearchTab
 from .subtitle_management_tab import SubtitleManagementTab
 from .title_management_tab import TitleManagementTab
 from .title_subtitle_management_tab import TitleSubtitleManagementTab
+from .title_subtitle_summary_patch import install_title_subtitle_summary_counters
 from .trash_tab import TrashTab
+
+install_title_subtitle_summary_counters()
 
 __all__ = [
     "MainWindow",
@@ -42,4 +45,5 @@ __all__ = [
     "can_unlink",
     "RelationTypeOption",
     "RELATION_TYPE_OPTIONS",
+    "install_title_subtitle_summary_counters",
 ]
