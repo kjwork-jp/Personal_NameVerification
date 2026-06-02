@@ -80,9 +80,18 @@ def test_remaining_uat_public_ids_are_full_across_primary_tables(
     name_tooltip = link_tab.register_name_combo.itemData(0, Qt.ItemDataRole.ToolTipRole)
     title_tooltip = link_tab.register_title_combo.itemData(0, Qt.ItemDataRole.ToolTipRole)
     link_tooltip = link_tab.unregister_link_combo.itemData(0, Qt.ItemDataRole.ToolTipRole)
-    _assert_full_public_id(name_tooltip.split("公開ID: ")[1].split("\n")[0], "name-public-id-001")
-    _assert_full_public_id(title_tooltip.split("公開ID: ")[1].split("\n")[0], "title-public-id-001")
-    _assert_full_public_id(link_tooltip.split("リンク公開ID: ")[1].split("\n")[0], "link-public-id-001")
+    _assert_full_public_id(
+        name_tooltip.split("公開ID: ")[1].split("\n")[0],
+        "name-public-id-001",
+    )
+    _assert_full_public_id(
+        title_tooltip.split("公開ID: ")[1].split("\n")[0],
+        "title-public-id-001",
+    )
+    _assert_full_public_id(
+        link_tooltip.split("リンク公開ID: ")[1].split("\n")[0],
+        "link-public-id-001",
+    )
 
 
 def test_remaining_uat_crud_and_delete_controls_follow_role_order(
