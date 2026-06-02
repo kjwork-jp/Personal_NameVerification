@@ -147,6 +147,10 @@ class NameManagementTab(QWidget):
             "新規追加は選択状態を持ち込みません。",
             "guide",
         )
+        self.list_summary_label = self._make_accent_label("", "list")
+        self.list_summary_label.setObjectName("nameListSummaryLabel")
+        self.list_summary_label.setProperty("list_summary_counter", True)
+        self.list_summary_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
 
         self.names_table = QTableWidget(0, 9)
         self.names_table.setHorizontalHeaderLabels(
@@ -207,6 +211,7 @@ class NameManagementTab(QWidget):
         self.setProperty("has_list_first_hint", True)
         self.setProperty("native_list_first_layout", True)
         self.setProperty("workflow_tabs_layout", True)
+        self.setProperty("list_summary_counters", True)
 
         self._apply_role_guards()
         self._refresh_list()
@@ -220,6 +225,7 @@ class NameManagementTab(QWidget):
             "list",
         )
         layout.addWidget(self.list_hint_label)
+        layout.addWidget(self.list_summary_label)
         layout.addWidget(self.filter_input)
         layout.addWidget(self.names_table, 1)
         layout.addWidget(self.refresh_button)
@@ -440,12 +446,30 @@ class NameManagementTab(QWidget):
         self.raw_name_input.clear()
         self.note_input.clear()
         self._apply_role_guards()
+        self._update_list_summary()
+
+    def _update_list_summary(self) -> None:
+        total = len(self._rows)
+        deleted = sum(1 for row in self._rows if row.deleted_at)
+        active = total - deleted
+        selected_count = 1 if self._selected is not None else 0
+        title_related_total = sum(row.title_related_count for row in self._rows)
+        subtitle_related_total = sum(row.subtitle_related_count for row in self._rows)
+        linked_total = sum(row.linked_count for row in self._rows)
+        self.list_summary_label.setText(
+            f"一覧 {total}件 / 選択中 {selected_count}件 / "
+            f"有効 {active}件 / 削除済み {deleted}件 / "
+            f"タイトル関連 {title_related_total}件 / "
+            f"サブタイトル関連 {subtitle_related_total}件 / "
+            f"関連合計 {linked_total}件"
+        )
 
     def _on_delete_combo_changed(self, index: int) -> None:
         name_id = self.delete_name_selector.itemData(index)
         if name_id is None:
             self._selected = None
             self._apply_role_guards()
+            self._update_list_summary()
             return
         self._select_name_by_id(int(name_id))
 
@@ -459,12 +483,14 @@ class NameManagementTab(QWidget):
                 return
         self._selected = None
         self._apply_role_guards()
+        self._update_list_summary()
 
     def _on_row_selected(self) -> None:
         idx = self.names_table.currentRow()
         if idx < 0 or idx >= len(self._rows):
             self._selected = None
             self._apply_role_guards()
+            self._update_list_summary()
             return
         self._select_row(self._rows[idx])
 
@@ -482,6 +508,7 @@ class NameManagementTab(QWidget):
             return
         self.note_input.setText(detail.note or "")
         self._apply_role_guards()
+        self._update_list_summary()
 
     def _set_delete_combo_to_id(self, name_id: int) -> None:
         for index in range(self.delete_name_selector.count()):
