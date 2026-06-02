@@ -40,10 +40,10 @@ from app.ui.rbac_ui_guards import (
     apply_tab_action_visibility_guards,
 )
 from app.ui.restore_current_db_guard import apply_restore_current_db_guard
+from app.ui.rich_search_tab import SearchTab
 from app.ui.role_context import RoleContext
 from app.ui.role_visual_identity import apply_role_status_style, make_role_banner
 from app.ui.sanitized_export_ui import apply_sanitized_export_ui
-from app.ui.search_tab import SearchTab
 from app.ui.sql_dump_protection_warning import apply_sql_dump_protection_warning
 from app.ui.subtitle_management_tab import SubtitleManagementTab
 from app.ui.tab_guides import apply_tab_guide
