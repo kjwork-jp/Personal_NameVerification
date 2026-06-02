@@ -45,7 +45,9 @@ class SubtitleManagementTab(QWidget):
         self.parent_summary_remove = self._build_parent_summary_label()
         self.subtitle_summary_edit = self._build_subtitle_summary_label()
         self.subtitle_summary_remove = self._build_subtitle_summary_label()
+        self.subtitle_list_summary_label = self._build_subtitle_list_summary_label()
         self._subtitle_list_rows: list[tuple[str, ...]] = []
+        self._visible_subtitle_list_rows: list[tuple[str, ...]] = []
         self._hide_title_creation_controls()
         self._hide_internal_columns()
         self._rename_labels()
@@ -68,6 +70,7 @@ class SubtitleManagementTab(QWidget):
         layout.addWidget(self.editor, 1)
         self.setProperty("workflow_accented_layout", True)
         self.setProperty("focused_subtitle_only_layout", True)
+        self.setProperty("subtitle_list_summary_counters", True)
 
     def _build_parent_summary_label(self) -> QLabel:
         label = QLabel(self._parent_summary_text(None))
@@ -81,6 +84,13 @@ class SubtitleManagementTab(QWidget):
         label.setWordWrap(True)
         label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
         label.setProperty("selected_subtitle_summary_card", True)
+        return label
+
+    def _build_subtitle_list_summary_label(self) -> QLabel:
+        label = QLabel("一覧 0件 / 表示中 0件 / 選択中 0件 / 有効 0件 / 削除済み 0件 / 親タイトル 0件")
+        label.setWordWrap(True)
+        label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+        label.setProperty("subtitle_list_summary_counter", True)
         return label
 
     def _insert_parent_summary_cards(self) -> None:
@@ -210,9 +220,11 @@ class SubtitleManagementTab(QWidget):
         )
         apply_readable_table(self.subtitle_list_table)
         self.subtitle_list_table.setProperty("cross_parent_subtitle_list", True)
+        self.subtitle_list_table.itemSelectionChanged.connect(lambda: self._update_subtitle_list_summary())
         self.subtitle_list_refresh_button = QPushButton("サブタイトル一覧を再読込")
         self.subtitle_list_refresh_button.clicked.connect(self._refresh_subtitle_list_from_source)
         layout.addWidget(label)
+        layout.addWidget(self.subtitle_list_summary_label)
         layout.addWidget(self.subtitle_list_search_input)
         layout.addWidget(self.subtitle_list_table, 1)
         layout.addWidget(self.subtitle_list_refresh_button)
@@ -237,11 +249,13 @@ class SubtitleManagementTab(QWidget):
             except Exception as exc:  # noqa: BLE001
                 self.editor._set_message(f"サブタイトル一覧取得に失敗しました: {exc}", is_error=True)
                 return
+            parent_key = title.public_id or f"title:{title.id}"
             for subtitle in subtitles:
                 rows.append(
                     (
                         short_public_id(subtitle.public_id),
                         public_id_detail(subtitle.public_id),
+                        parent_key,
                         title.title_name,
                         subtitle.subtitle_code,
                         subtitle.subtitle_name,
@@ -259,14 +273,16 @@ class SubtitleManagementTab(QWidget):
         rows = self._subtitle_list_rows
         if query:
             rows = [row for row in rows if query in " ".join(row).casefold()]
+        self._visible_subtitle_list_rows = rows
         self._populate_subtitle_list_table(rows)
         self.subtitle_list_table.setProperty("filtered_cross_parent_subtitle_rows", bool(query))
+        self._update_subtitle_list_summary()
 
     def _populate_subtitle_list_table(self, rows: list[tuple[str, ...]]) -> None:
         self.subtitle_list_table.setRowCount(len(rows))
         for row_index, row in enumerate(rows):
-            display_values = (row[0], *row[2:])
-            tooltip_values = (f"公開ID: {row[1]}", *row[2:])
+            display_values = (row[0], *row[3:])
+            tooltip_values = (f"公開ID: {row[1]}", *row[3:])
             for column_index, value in enumerate(display_values):
                 item = QTableWidgetItem(value)
                 item.setToolTip(tooltip_values[column_index])
@@ -274,6 +290,20 @@ class SubtitleManagementTab(QWidget):
                     item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
                 self.subtitle_list_table.setItem(row_index, column_index, item)
         self.subtitle_list_table.resizeColumnsToContents()
+
+    def _update_subtitle_list_summary(self) -> None:
+        visible_rows = self._visible_subtitle_list_rows
+        total = len(self._subtitle_list_rows)
+        visible = len(visible_rows)
+        selection_model = self.subtitle_list_table.selectionModel()
+        selected_count = len(selection_model.selectedRows()) if selection_model is not None else 0
+        active = sum(1 for row in visible_rows if row[6] == "有効")
+        deleted = sum(1 for row in visible_rows if row[6] == "削除済み")
+        parent_titles = len({row[2] for row in visible_rows})
+        self.subtitle_list_summary_label.setText(
+            f"一覧 {total}件 / 表示中 {visible}件 / 選択中 {selected_count}件 / "
+            f"有効 {active}件 / 削除済み {deleted}件 / 親タイトル {parent_titles}件"
+        )
 
     def _connect_subtitle_state_refresh(self) -> None:
         self.editor.add_subtitle_title_combo.currentIndexChanged.connect(
@@ -433,6 +463,7 @@ class SubtitleManagementTab(QWidget):
         apply_workflow_accent(self.editor.subtitle_panel_label, "edit")
         apply_workflow_accent(self.editor.subtitle_hint_label, "edit")
         apply_workflow_accent(self.subtitle_list_refresh_button, "list")
+        apply_workflow_accent(self.subtitle_list_summary_label, "list")
         for label in (
             self.parent_summary_add,
             self.parent_summary_edit,
