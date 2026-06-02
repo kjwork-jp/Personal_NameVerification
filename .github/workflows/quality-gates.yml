@@ -90,6 +90,7 @@ jobs:
         shell: pwsh
         continue-on-error: true
         run: |
+          New-Item -ItemType Directory -Force -Path tmp | Out-Null
           pytest -q --basetemp tmp/pytest-actions-${{ github.run_id }} *> pytest-output.txt
           $pytestExitCode = $LASTEXITCODE
           Get-Content pytest-output.txt
