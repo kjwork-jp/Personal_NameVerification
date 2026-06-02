@@ -179,7 +179,9 @@ class TitleManagementTab(QWidget):
         self.editor.titles_table.itemSelectionChanged.connect(
             lambda: self._refresh_title_summary_cards()
         )
-        self.editor.titles_table.itemSelectionChanged.connect(lambda: self._update_title_list_summary())
+        self.editor.titles_table.itemSelectionChanged.connect(
+            lambda: self._update_title_list_summary()
+        )
         self.editor.title_selector_combo.currentIndexChanged.connect(
             lambda _index: self._refresh_title_summary_cards()
         )
