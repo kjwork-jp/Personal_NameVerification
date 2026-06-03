@@ -52,8 +52,9 @@ def test_title_management_uses_workflow_color_accents() -> None:
     assert editor.title_hard_delete_button.property("workflowAccent") == "delete"
     assert editor.title_detail_group.property("workflowAccent") == "edit"
     groups = _groups_by_title(tab)
-    assert groups["タイトル削除"].property("workflowAccent") == "delete"
-    assert groups["タイトル削除"].property("danger_operation_group") is True
+    title_delete_group = groups["タイトル削除: 選択カード確認後に実行"]
+    assert title_delete_group.property("workflowAccent") == "delete"
+    assert title_delete_group.property("danger_operation_group") is True
 
 
 def test_title_management_hides_subtitle_only_workflows() -> None:

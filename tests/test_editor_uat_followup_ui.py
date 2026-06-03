@@ -31,9 +31,7 @@ class StubCoreService:
         operator_id: str,
         role: str = "admin",
     ) -> int:
-        self.calls.append(
-            f"create_subtitle:{payload.title_id}:{payload.subtitle_code}"
-        )
+        self.calls.append(f"create_subtitle:{payload.title_id}:{payload.subtitle_code}")
         self.calls.append(f"operator:{operator_id}:{role}")
         return 1
 
@@ -210,13 +208,13 @@ def test_subtitle_editor_can_create_and_update_as_editor() -> None:
     assert "operator:op-1:editor" in core.calls
 
 
+def _always_confirm(*_args: object, **_kwargs: object) -> bool:
+    return True
+
+
 def test_editor_can_unlink_existing_relation(monkeypatch: pytest.MonkeyPatch) -> None:
     _app()
-    monkeypatch.setattr(
-        link_tab_module,
-        "confirm_destructive_action",
-        lambda *args, **kwargs: True,
-    )
+    monkeypatch.setattr(link_tab_module, "confirm_destructive_action", _always_confirm)
     core = StubCoreService()
     tab = LinkManagementTab(core, StubQueryService(), _role())
 
@@ -233,4 +231,4 @@ def test_title_management_guidance_labels_are_wrapped() -> None:
 
     assert tab.editor.property("title_guidance_labels_wrapped") is True
     assert tab.editor.workflow_hint_label.wordWrap()
-    assert len(tab.editor.workflow_hint_label.text()) < 45
+    assert "選択カード" in tab.editor.workflow_hint_label.text()
