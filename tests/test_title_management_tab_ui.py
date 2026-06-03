@@ -127,7 +127,10 @@ def test_title_management_split_summary_and_danger_copy_properties() -> None:
     assert tab.editor.property("title_summary_split") is True
     assert tab.editor.property("title_edit_target_summary_card") is True
     assert tab.editor.selected_title_context_label.property("selected_title_summary_card") is True
-    assert tab.editor.selected_title_context_label.property("title_edit_target_summary_card") is True
+    assert (
+        tab.editor.selected_title_context_label.property("title_edit_target_summary_card")
+        is True
+    )
     assert "編集対象タイトル" in edit_summary
     assert "タイトル名  Title1" in edit_summary
     assert "内部ID      1" in edit_summary
