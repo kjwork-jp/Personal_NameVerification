@@ -25,7 +25,13 @@ from app.domain.errors import (
 )
 from app.ui.navigation_guide import OperationGuide, SectionPanel
 from app.ui.role_context import RoleContext
-from app.ui.ui_style import PageHeader, compact_layout, set_status_message
+from app.ui.ui_style import (
+    PageHeader,
+    apply_readable_table,
+    compact_layout,
+    make_workflow_accent_label,
+    set_status_message,
+)
 
 
 class UserManagementTab(QWidget):
@@ -42,6 +48,16 @@ class UserManagementTab(QWidget):
             "ユーザー一覧を読み込んでください。",
             level="info",
         )
+        self.user_count_summary_label = make_workflow_accent_label(
+            "ユーザー件数: 未読込",
+            "info",
+        )
+        self.user_count_summary_label.setProperty("user_count_summary", True)
+        self.selected_user_summary_label = make_workflow_accent_label(
+            "選択中: 未選択。ユーザー一覧で行を選ぶと操作対象へ反映されます。",
+            "info",
+        )
+        self.selected_user_summary_label.setProperty("selected_user_summary", True)
 
         self.create_operator_input = QLineEdit()
         self.create_operator_input.setPlaceholderText("例: viewer")
@@ -74,7 +90,7 @@ class UserManagementTab(QWidget):
                 "状態",
                 "最終ログイン",
                 "失敗回数",
-                "public_id",
+                "公開ID",
                 "Windows SID",
             ]
         )
@@ -83,7 +99,7 @@ class UserManagementTab(QWidget):
         self.table.setColumnWidth(4, 180)
         self.table.setColumnWidth(8, 230)
         self.table.setColumnWidth(9, 240)
-        self.table.setAlternatingRowColors(True)
+        apply_readable_table(self.table)
         self.table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
 
@@ -91,13 +107,16 @@ class UserManagementTab(QWidget):
         self.target_operator_input.setPlaceholderText(
             "一覧で行選択すると自動入力。手入力も可"
         )
+        self.target_operator_input.setToolTip(
+            "権限変更・無効化・有効化の対象になる操作者IDです。"
+        )
         self.target_role_combo = QComboBox()
         self.target_role_combo.addItem("管理者", "admin")
         self.target_role_combo.addItem("編集者", "editor")
         self.target_role_combo.addItem("閲覧者", "viewer")
-        self.change_role_button = QPushButton("権限変更")
-        self.disable_button = QPushButton("無効化")
-        self.enable_button = QPushButton("有効化")
+        self.change_role_button = QPushButton("選択ユーザーの権限を変更")
+        self.disable_button = QPushButton("選択ユーザーを無効化")
+        self.enable_button = QPushButton("選択ユーザーを有効化")
         self.refresh_button = QPushButton("再読込")
         self.change_role_button.clicked.connect(self._change_role)
         self.disable_button.clicked.connect(self._disable_user)
@@ -125,6 +144,8 @@ class UserManagementTab(QWidget):
             0,
         )
         layout.addWidget(self.status_label, 0)
+        layout.addWidget(self.user_count_summary_label, 0)
+        layout.addWidget(self.selected_user_summary_label, 0)
         layout.addWidget(self.sub_tabs, 1)
 
         self._apply_permissions()
@@ -200,6 +221,7 @@ class UserManagementTab(QWidget):
                 "既存ユーザーを変更します。local/windowsのどちらも同じアプリ内ロールへ変更できます。"
             )
         )
+        layout.addWidget(self.selected_user_summary_label)
         layout.addLayout(action_row)
         layout.addStretch(1)
         return SectionPanel("選択ユーザーへの操作", panel)
@@ -211,11 +233,17 @@ class UserManagementTab(QWidget):
                 "ユーザー管理はadmin専用です。",
                 level="warning",
             )
+            self.user_count_summary_label.setText("ユーザー件数: adminのみ表示できます。")
+            self.selected_user_summary_label.setText("選択中: 権限不足のため操作できません。")
             return
         users = self._user_service.list_users(include_disabled=True)
         self.table.setRowCount(0)
         for user in users:
             self._append_user_row(user)
+        self.user_count_summary_label.setText(_users_summary(users))
+        self.selected_user_summary_label.setText(
+            "選択中: 未選択。ユーザー一覧で行を選ぶと操作対象へ反映されます。"
+        )
         set_status_message(
             self.status_label,
             f"ユーザー一覧を再読込しました。件数: {len(users)}",
@@ -226,11 +254,13 @@ class UserManagementTab(QWidget):
         row = self.table.rowCount()
         self.table.insertRow(row)
         status = "無効" if user.disabled_at is not None else "有効"
+        role = _role_label(user.role)
+        provider = _auth_provider_label(user.auth_provider)
         values = [
             user.operator_id,
             user.display_name or "",
-            user.role,
-            user.auth_provider,
+            role,
+            provider,
             user.windows_account_name or "",
             status,
             user.last_login_at or "",
@@ -248,9 +278,24 @@ class UserManagementTab(QWidget):
         if not selected:
             return
         row = selected[0].row()
-        item = self.table.item(row, 0)
-        if item is not None:
-            self.target_operator_input.setText(item.text())
+        operator_item = self.table.item(row, 0)
+        role_item = self.table.item(row, 2)
+        status_item = self.table.item(row, 5)
+        auth_item = self.table.item(row, 3)
+        display_name_item = self.table.item(row, 1)
+        public_id_item = self.table.item(row, 8)
+        if operator_item is None:
+            return
+        self.target_operator_input.setText(operator_item.text())
+        self.selected_user_summary_label.setText(
+            "選択中: "
+            f"操作者ID={operator_item.text()} / "
+            f"表示名={_item_text(display_name_item) or '-'} / "
+            f"権限={_item_text(role_item) or '-'} / "
+            f"認証方式={_item_text(auth_item) or '-'} / "
+            f"状態={_item_text(status_item) or '-'} / "
+            f"公開ID={_item_text(public_id_item) or '-'}"
+        )
 
     def _create_user(self) -> None:
         role = self.role_combo.currentData()
@@ -343,6 +388,40 @@ def _field_with_label(label_text: str, field: QWidget) -> QWidget:
     layout.addWidget(label)
     layout.addWidget(field)
     return container
+
+
+def _item_text(item: QTableWidgetItem | None) -> str:
+    return "" if item is None else item.text()
+
+
+def _role_label(role: str) -> str:
+    return {
+        "admin": "管理者",
+        "editor": "編集者",
+        "viewer": "閲覧者",
+    }.get(role, role)
+
+
+def _auth_provider_label(auth_provider: str) -> str:
+    return {
+        "local": "ローカル",
+        "windows": "Windows",
+    }.get(auth_provider, auth_provider)
+
+
+def _users_summary(users: list[UserRecord]) -> str:
+    enabled_count = sum(user.disabled_at is None for user in users)
+    disabled_count = len(users) - enabled_count
+    admin_count = sum(user.role == "admin" for user in users)
+    editor_count = sum(user.role == "editor" for user in users)
+    viewer_count = sum(user.role == "viewer" for user in users)
+    local_count = sum(user.auth_provider == "local" for user in users)
+    windows_count = sum(user.auth_provider == "windows" for user in users)
+    return (
+        f"ユーザー件数: 全{len(users)}件 / 有効{enabled_count}件 / 無効{disabled_count}件 / "
+        f"管理者{admin_count}・編集者{editor_count}・閲覧者{viewer_count} / "
+        f"ローカル{local_count}・Windows{windows_count}"
+    )
 
 
 def _service_role(value: object) -> ServiceRole:
