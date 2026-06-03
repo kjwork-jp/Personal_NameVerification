@@ -221,7 +221,6 @@ class UserManagementTab(QWidget):
                 "既存ユーザーを変更します。local/windowsのどちらも同じアプリ内ロールへ変更できます。"
             )
         )
-        layout.addWidget(self.selected_user_summary_label)
         layout.addLayout(action_row)
         layout.addStretch(1)
         return SectionPanel("選択ユーザーへの操作", panel)
