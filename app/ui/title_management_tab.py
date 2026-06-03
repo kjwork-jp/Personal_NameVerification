@@ -300,7 +300,14 @@ class TitleManagementTab(QWidget):
 
     def _title_summary_text(self, title: Any | None, *, heading: str = "選択中タイトル") -> str:
         if title is None:
-            return f"{heading}\nタイトル名  未選択\n内部ID      -\n公開ID      -\n状態        -\n関連名      -"
+            return (
+                f"{heading}\n"
+                "タイトル名  未選択\n"
+                "内部ID      -\n"
+                "公開ID      -\n"
+                "状態        -\n"
+                "関連名      -"
+            )
         state = "削除済み" if title.deleted_at else "有効"
         public_id = title.public_id or "未採番"
         linked_names = self.editor._linked_names_text(title.id) or "なし"
