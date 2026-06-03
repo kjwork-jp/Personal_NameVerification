@@ -60,6 +60,7 @@ class TitleManagementTab(QWidget):
         self.setProperty("workflow_accented_layout", True)
         self.setProperty("focused_title_only_layout", True)
         self.setProperty("title_list_summary_counters", True)
+        self.setProperty("title_selection_redesigned", True)
 
     def _build_title_list_summary_label(self) -> QLabel:
         label = QLabel("一覧 0件 / 選択中 0件 / 有効 0件 / 削除済み 0件 / 関連名あり 0件")
@@ -126,19 +127,35 @@ class TitleManagementTab(QWidget):
 
     def _add_guidance_tooltips(self) -> None:
         self.editor.title_link_names_list.setToolTip("タイトルに関連付ける名前を選択します。")
+        self.editor.title_selector_combo.setToolTip(
+            "編集対象のタイトルを選びます。一覧の行選択とも同期します。"
+        )
+        self.editor.delete_title_selector_combo.setToolTip(
+            "削除・復元・完全削除の対象タイトルを選びます。選択カードを確認してください。"
+        )
+        self.editor.titles_table.setToolTip(
+            "行を選ぶと編集対象・削除対象の選択カードへ反映されます。"
+        )
 
     def _wrap_guidance_labels(self) -> None:
         for label in self.editor.findChildren(QLabel):
             label.setWordWrap(True)
             label.setMinimumHeight(0)
-        self.editor.workflow_hint_label.setText("一覧・新規追加・編集・削除を分けています。")
-        self.editor.selected_title_context_label.setText(self._title_summary_text(None))
+        self.editor.workflow_hint_label.setText(
+            "一覧・新規追加・編集・削除を分離しています。編集/削除は選択カードで対象を確認してから実行します。"
+        )
+        self.editor.selected_title_context_label.setText(
+            self._title_summary_text(None, heading="編集対象タイトル")
+        )
         self.editor.selected_title_context_label.setTextInteractionFlags(
             Qt.TextInteractionFlag.TextSelectableByMouse
         )
         self.editor.selected_title_context_label.setProperty("selected_title_summary_card", True)
-        self.editor.title_detail_group.setMaximumHeight(220)
+        self.editor.selected_title_context_label.setProperty("title_edit_target_summary_card", True)
+        self.editor.title_detail_group.setTitle("タイトル編集: 選択カード確認後に更新")
+        self.editor.title_detail_group.setMaximumHeight(240)
         self.editor.setProperty("title_guidance_labels_wrapped", True)
+        self.editor.setProperty("title_edit_target_summary_card", True)
 
     def _insert_title_list_summary(self) -> None:
         layout = self.editor.list_tab.layout()
@@ -150,6 +167,7 @@ class TitleManagementTab(QWidget):
         self.title_delete_target_summary.setProperty("title_delete_target_summary_card", True)
         for group in self.editor.findChildren(QGroupBox):
             if group.title() == "タイトル削除":
+                group.setTitle("タイトル削除: 選択カード確認後に実行")
                 group_layout = group.layout()
                 if group_layout is not None:
                     group_layout.insertWidget(0, self.title_delete_target_summary)
@@ -197,9 +215,10 @@ class TitleManagementTab(QWidget):
         self.editor.setProperty("title_summary_split", True)
 
     def _install_title_delete_danger_copy(self) -> None:
+        self.editor.title_update_button.setText("選択中タイトルを更新")
         self.editor.title_delete_button.setText("選択中タイトルをゴミ箱に入れる")
-        self.editor.title_restore_button.setText("削除済みタイトルを復元")
-        self.editor.title_hard_delete_button.setText("削除済みタイトルを完全削除")
+        self.editor.title_restore_button.setText("選択中の削除済みタイトルを復元")
+        self.editor.title_hard_delete_button.setText("選択中の削除済みタイトルを完全削除")
 
         def mutate_title_with_target_copy(
             label: str,
@@ -259,7 +278,9 @@ class TitleManagementTab(QWidget):
 
     def _refresh_title_summary_cards(self) -> None:
         title = self._selected_title_detail()
-        self.editor.selected_title_context_label.setText(self._title_summary_text(title))
+        self.editor.selected_title_context_label.setText(
+            self._title_summary_text(title, heading="編集対象タイトル")
+        )
         self.title_delete_target_summary.setText(
             self._title_summary_text(title, heading="削除対象タイトル")
         )
@@ -279,13 +300,14 @@ class TitleManagementTab(QWidget):
 
     def _title_summary_text(self, title: Any | None, *, heading: str = "選択中タイトル") -> str:
         if title is None:
-            return f"{heading}\nタイトル名  未選択\n公開ID      -\n状態        -\n関連名      -"
+            return f"{heading}\nタイトル名  未選択\n内部ID      -\n公開ID      -\n状態        -\n関連名      -"
         state = "削除済み" if title.deleted_at else "有効"
         public_id = title.public_id or "未採番"
         linked_names = self.editor._linked_names_text(title.id) or "なし"
         return (
             f"{heading}\n"
             f"タイトル名  {title.title_name}\n"
+            f"内部ID      {title.id}\n"
             f"公開ID      {public_id}\n"
             f"状態        {state}\n"
             f"関連名      {linked_names}"
@@ -303,6 +325,7 @@ class TitleManagementTab(QWidget):
     ) -> str:
         title_name = title.title_name if title is not None else f"ID={selected_id}"
         public_id = (title.public_id or "未採番") if title is not None else "-"
+        linked_names = self.editor._linked_names_text(selected_id) or "なし"
         state = "削除済み" if title is not None and title.deleted_at else "有効"
         risk = "この操作は元に戻せません。" if method_name == "hard_delete_title" else ""
         if method_name == "delete_title":
@@ -311,8 +334,10 @@ class TitleManagementTab(QWidget):
             risk = "復元後は通常の編集対象に戻ります。"
         return (
             f"対象タイトル: {title_name}\n"
+            f"内部ID: {selected_id}\n"
             f"公開ID: {public_id}\n"
             f"状態: {state}\n"
+            f"関連名: {linked_names}\n"
             f"操作: {label}\n"
             f"注意: {risk}\n\n"
             "実行してよろしいですか？"
@@ -333,7 +358,7 @@ class TitleManagementTab(QWidget):
         apply_workflow_accent(self.editor.selected_title_context_label, "edit")
         apply_workflow_accent(self.title_delete_target_summary, "delete")
         for group in self.editor.findChildren(QGroupBox):
-            if group.title() == "タイトル削除":
+            if group.title() == "タイトル削除: 選択カード確認後に実行":
                 apply_workflow_accent(group, "delete")
                 group.setProperty("danger_operation_group", True)
         self.editor.setProperty("workflow_accented_layout", True)
