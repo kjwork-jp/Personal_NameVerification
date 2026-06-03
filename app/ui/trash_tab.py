@@ -169,18 +169,24 @@ class TrashTab(QWidget):
         self.list_table.setColumnHidden(0, True)
         apply_readable_table(self.list_table)
         self.list_table.itemSelectionChanged.connect(self._on_selected)
+        self.selected_summary_label = make_workflow_accent_label(
+            "選択中: 未選択。復元/完全削除の前に一覧から対象を選択してください。",
+            "info",
+        )
+        self.selected_summary_label.setProperty("selected_target_summary", True)
         self.detail_label = QLabel("詳細: 未選択")
+        self.detail_label.setWordWrap(True)
 
         self.reload_button = QPushButton("再読込")
-        self.restore_button = QPushButton("復元")
-        self.hard_delete_button = QPushButton("完全削除")
+        self.restore_button = QPushButton("選択データを復元")
+        self.hard_delete_button = QPushButton("選択データを完全削除")
         self.reload_button.clicked.connect(self._reload)
         self.restore_button.clicked.connect(self._restore_selected)
         self.hard_delete_button.clicked.connect(self._hard_delete_selected)
 
         self.danger_hint_label = make_workflow_accent_label(
             "注意: 完全削除は元に戻せません。"
-            "復元/完全削除の前に対象データと操作者IDを確認してください。",
+            "実行前に『選択中』の分類・表示名・公開ID・削除日時・操作者IDを確認してください。",
             "delete",
         )
         self.danger_hint_label.setProperty("danger_operation_hint", True)
@@ -189,7 +195,7 @@ class TrashTab(QWidget):
 
         form = QFormLayout()
         compact_layout(form, margins=2, spacing=3)
-        form.addRow("対象", self.entity_selector)
+        form.addRow("表示対象", self.entity_selector)
         form.addRow("操作者ID", self.operator_input)
 
         actions = QHBoxLayout()
@@ -203,6 +209,7 @@ class TrashTab(QWidget):
         root.addWidget(PageHeader("削除データ", "復元と完全削除をここに集約します。"))
         root.addLayout(form)
         root.addWidget(self.danger_hint_label)
+        root.addWidget(self.selected_summary_label)
         root.addLayout(actions)
         root.addWidget(self.message_label)
         root.addWidget(self.list_table, 1)
@@ -241,6 +248,9 @@ class TrashTab(QWidget):
     def _reload(self) -> None:
         key = self._entity_key()
         self._selected = None
+        self.selected_summary_label.setText(
+            "選択中: 未選択。復元/完全削除の前に一覧から対象を選択してください。"
+        )
         self.detail_label.setText("詳細: 未選択")
         try:
             rows: list[_TrashRow] = []
@@ -307,12 +317,17 @@ class TrashTab(QWidget):
         row_index = self.list_table.currentRow()
         if row_index < 0 or row_index >= len(self._trash_rows):
             self._selected = None
+            self.selected_summary_label.setText(
+                "選択中: 未選択。復元/完全削除の前に一覧から対象を選択してください。"
+            )
             self.detail_label.setText("詳細: 未選択")
             return
         self._selected = self._trash_rows[row_index]
+        summary = _selected_summary(self._selected)
+        self.selected_summary_label.setText(f"選択中: {summary}")
         self.detail_label.setText(
-            f"詳細: {self._selected.entity_label} / "
-            f"ID={self._selected.entity_id} / {self._selected.detail}"
+            f"詳細: {summary} / 削除日時={self._selected.deleted_at or '不明'} / "
+            f"{self._selected.detail}"
         )
 
     def _restore_selected(self) -> None:
@@ -326,7 +341,10 @@ class TrashTab(QWidget):
         if not confirm_destructive_action(
             self,
             "復元の確認",
-            f"{selected.entity_label} ID={selected.entity_id} を復元します。よろしいですか？",
+            "次の削除済みデータを復元します。\n"
+            f"{_selected_summary(selected)}\n"
+            f"削除日時: {selected.deleted_at or '不明'}\n"
+            f"操作者ID: {operator_id}",
         ):
             self._set_message("復元をキャンセルしました")
             return
@@ -341,7 +359,7 @@ class TrashTab(QWidget):
             operator_id,
             role=self._role_context.role,
         )
-        self._set_message("復元しました")
+        self._set_message(f"復元しました: {_selected_summary(selected)}")
         self._reload()
 
     def _hard_delete_selected(self) -> None:
@@ -355,7 +373,10 @@ class TrashTab(QWidget):
         if not confirm_destructive_action(
             self,
             "完全削除の確認",
-            f"{selected.entity_label} ID={selected.entity_id} を完全削除します。",
+            "次の削除済みデータを完全削除します。元に戻せません。\n"
+            f"{_selected_summary(selected)}\n"
+            f"削除日時: {selected.deleted_at or '不明'}\n"
+            f"操作者ID: {operator_id}",
         ):
             self._set_message("完全削除をキャンセルしました")
             return
@@ -370,7 +391,7 @@ class TrashTab(QWidget):
             operator_id,
             role=self._role_context.role,
         )
-        self._set_message("完全削除しました")
+        self._set_message(f"完全削除しました: {_selected_summary(selected)}")
         self._reload()
 
     def _require_operator_id(self) -> str | None:
@@ -395,6 +416,13 @@ class TrashTab(QWidget):
         color = "#b00020" if is_error else "#1b5e20"
         self.message_label.setStyleSheet(f"color: {color};")
         self.message_label.setText(message)
+
+
+def _selected_summary(row: _TrashRow) -> str:
+    return (
+        f"{row.entity_label} / 表示名={row.display_name or '-'} / "
+        f"内部ID={row.entity_id} / 公開ID={short_public_id(row.public_id)}"
+    )
 
 
 def _row_from_name(row: NameDetail) -> _TrashRow:

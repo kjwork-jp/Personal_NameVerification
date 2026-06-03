@@ -26,6 +26,7 @@ _STATUS_COLORS = {
 }
 
 _WORKFLOW_ACCENTS = {
+    "info": ("#7ee787", "#26382f", "#3d7a55", "#16a34a"),
     "list": ("#bfdbfe", "#1e3a5f", "#60a5fa", "#2563eb"),
     "add": ("#bbf7d0", "#173b28", "#4ade80", "#16a34a"),
     "edit": ("#ddd6fe", "#2e245c", "#a78bfa", "#7c3aed"),
