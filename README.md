@@ -178,6 +178,23 @@ python .\scripts\generate_sample_data.py --format sqlite --output tmp\sample.db 
 
 デモDBには `demo-viewer` / `demo-editor` / `demo-admin` を含みます。デモ用パスワードはローカル検証専用の固定値です。
 
+## Duplicate candidate detection
+
+既存DB内の名前・タイトル・サブタイトルについて、重複候補だけを標準出力へ出す補助スクリプトです。
+検出専用のため、DB更新、DB制約追加、重複データの削除は行いません。
+
+```powershell
+python .\scripts\detect_duplicate_entities.py .\nameverification.db
+```
+
+既定では active 行のみを対象にし、表示名の完全一致キーと正規化キーの両方で候補を出します。
+`NAMEVERIFICATION_DB_PATH` を設定している場合は、DB path 引数を省略できます。
+
+```powershell
+python .\scripts\detect_duplicate_entities.py --entity names --key display
+python .\scripts\detect_duplicate_entities.py --include-deleted --key normalized
+```
+
 ## Windows release workflow
 
 ```powershell
