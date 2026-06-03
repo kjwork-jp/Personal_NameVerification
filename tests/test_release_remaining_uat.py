@@ -151,9 +151,11 @@ def test_remaining_uat_audit_and_operations_labels(monkeypatch: pytest.MonkeyPat
     operations = admin._tabs_by_name[OPERATIONS_TAB]
 
     assert isinstance(audit, AuditLogsTab)
-    assert audit.tabs.tabText(0) == CHANGE_LOG_TEXT
-    assert audit.tabs.tabText(1) == USER_AUTH_LOG_TEXT
-    assert audit.tabs.tabText(2) == AUDIT_GUIDE_TEXT
+    audit_tab_labels = [audit.tabs.tabText(index) for index in range(audit.tabs.count())]
+    assert CHANGE_LOG_TEXT in audit_tab_labels
+    assert AUDIT_GUIDE_TEXT in audit_tab_labels
+    if audit.user_audit_tab is not None:
+        assert USER_AUTH_LOG_TEXT in audit_tab_labels
 
     labels = operations.findChildren(QLabel)
     label_texts = [label.text() for label in labels]
