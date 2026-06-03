@@ -56,6 +56,17 @@ def test_workflow_accent_buttons_and_tables_share_properties() -> None:
     assert table.horizontalHeader().stretchLastSection()
 
 
+def test_workflow_accent_button_can_switch_semantic_role() -> None:
+    _app()
+    button = QPushButton("Apply")
+
+    apply_workflow_accent(button, "guide")
+    apply_workflow_accent(button, "edit")
+
+    assert button.property("workflowAccent") == "edit"
+    assert "QPushButton" in button.styleSheet()
+
+
 def test_status_message_uses_fallback_info_style_for_unknown_level() -> None:
     _app()
     label = QLabel()
