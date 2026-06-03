@@ -3,56 +3,53 @@
 作成日: 2026-06-03
 対象repo: `kjwork-jp/Personal_NameVerification`
 
-このファイルは、新規チャットへ作業を引き継ぐための最終入口です。
+このファイルは、新規チャットへ作業状態を引き継ぐための最終入口です。
 
-## 参照する詳細文書
+## 現在状態
 
-- 詳細正本: `docs/chat/summaries/20260603_personal_nameverification_handoff_detail.md`
+PR #152 から PR #156 までの対応により、詳細正本に記載されていた必須UI改善残工程は完了済みです。
+
+- 最新完了サマリ: `docs/chat/summaries/20260603_personal_nameverification_completion_summary.md`
+- 詳細履歴: `docs/chat/summaries/20260603_personal_nameverification_handoff_detail.md`
 - 旧入口: `docs/chat/summaries/CURRENT_HANDOFF.md`
 - 初回プロンプト履歴: `docs/chat/summaries/20260603_personal_nameverification_handoff_prompt.md`
 
-## 最初に必ず確認する作業
+## 完了済みPR
 
-PR #152 `feat: normalize link management labels` から再開してください。
+| PR | 内容 | merge commit |
+|---:|---|---|
+| #152 | LinkManagementTabの表示名/ID表記正規化 | `253162bc170e296d8a35d97d7e64a4dce4ff8ffa` |
+| #153 | 削除データUIとユーザー管理UIの対象明示 | `74c2e10762e6dcd551f51572184d3f504f4de674` |
+| #154 | タイトル管理UIの選択対象カード明確化 | `08fabeddee0d1350c9641b9478a3abb54e79b705` |
+| #155 | サブタイトル/監査/操作ログ/ヘルプの回帰テスト追加 | `1e2bcca8b1640009a3844769ef293e9ac60325f9` |
+| #156 | 共通UI helperの回帰テスト追加 | `4194b1876a35a64574319f0174fb63a4b02fb62b` |
 
-記録上の状態:
+## 完了済み必須残工程
 
-- branch: `feature/link-label-normalization`
-- head SHA: `738bf29d7bed0f3fb2e4d6c33965151fcd1aecd4`
-- 最新CI: Quality Gates run #196 success
-- 直近確認: open / 未merge / CI success / mergeable=false
+| 残工程 | 状態 |
+|---|---|
+| `DELETE-FLOW-CLARITY` | 完了 |
+| `USER-MGMT-VISUAL-POLISH` | 完了 |
+| `TITLE-MGMT-SELECTION-REDESIGN` | 完了 |
+| `SUBTITLE-MGMT-SELECTION-REDESIGN` | 完了 |
+| `AUDIT-DATAIO-HELP-POLISH` | 完了 |
+| `SHARED-RICH-UI-COMPONENTS` | 完了 |
 
-新チャットでは、この記録を鵜呑みにせず、必ずGitHub上の最新PR/CI状態を再取得してください。
+## 現在の残工程
 
-## PR #152 の判断手順
+必須残工程はありません。
 
-1. PR #152を再取得する。
-2. head SHAが変わっていないか確認する。
-3. 最新CIがsuccessか確認する。
-4. 未解決review指摘がないか確認する。
-5. `mergeable=true` ならsquash mergeする。
-6. `mergeable=false` / `unknown` / `null` なら、base/head差分、conflict有無、最新CIを再確認する。
-7. 必要ならbase追従・競合解消・再CIを行う。
-8. merge後、詳細正本の残工程に従って次タスクへ進む。
+| 種別 | 残工程 | 人間操作 | 状態 |
+|---|---|---|---|
+| 任意 | 手元UAT確認 | 任意 | 必須ではない |
+| 任意 | 配布物確認 | 任意 | 必須ではない |
 
 ## 運用方針
 
 - GitHub repoを一次情報として扱う。
 - Google Driveは基本参照しない。
-- AIがGitHub上で実装、テスト追加、PR作成、CI確認、失敗修正、review対応、mergeまで進める。
-- 人間の手元UAT/EXE/portable確認は残工程に入れない。必要時だけ任意確認として扱う。
-- 軽いタスクはまとめて進める。
+- open PRがある場合は、CI、review thread、mergeableを再確認してから扱う。
 - CI未通過PRはmergeしない。
 - merge方式は原則squash merge。
+- 人間の手元確認は、必要時だけ任意確認として扱う。
 - 毎回「完了済みを除いた残工程一覧」を必ず併記する。
-
-## PR #152 merge後の推奨順
-
-| 優先度 | 残工程 | 難易度 | 内容 |
-|---:|---|---:|---|
-| P2 | `DELETE-FLOW-CLARITY` | 4 | 削除/復元/完全削除の対象明示・危険操作UI改善 |
-| P2 | `USER-MGMT-VISUAL-POLISH` | 4 | ユーザー管理UIの視認性改善 |
-| P2 | `TITLE-MGMT-SELECTION-REDESIGN` | 7 | タイトル編集/削除対象を一覧＋検索へ変更 |
-| P2 | `SUBTITLE-MGMT-SELECTION-REDESIGN` | 6 | サブタイトル編集/削除対象も一覧＋検索へ変更 |
-| P2 | `SHARED-RICH-UI-COMPONENTS` | 6 | 共通カード/summary/toolbar/empty state化 |
-| P3 | `AUDIT-DATAIO-HELP-POLISH` | 4 | 監査ログ・データ入出力・ヘルプのUI改善 |
