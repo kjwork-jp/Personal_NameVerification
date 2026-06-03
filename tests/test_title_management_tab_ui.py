@@ -123,23 +123,30 @@ def test_title_management_split_summary_and_danger_copy_properties() -> None:
     tab.editor.titles_table.selectRow(0)
 
     edit_summary = tab.editor.selected_title_context_label.text()
+    assert tab.property("title_selection_redesigned") is True
     assert tab.editor.property("title_summary_split") is True
+    assert tab.editor.property("title_edit_target_summary_card") is True
     assert tab.editor.selected_title_context_label.property("selected_title_summary_card") is True
-    assert "選択中タイトル" in edit_summary
+    assert tab.editor.selected_title_context_label.property("title_edit_target_summary_card") is True
+    assert "編集対象タイトル" in edit_summary
     assert "タイトル名  Title1" in edit_summary
+    assert "内部ID      1" in edit_summary
     assert "状態        有効" in edit_summary
     assert "関連名      Alice" in edit_summary
+    assert tab.editor.title_detail_group.title() == "タイトル編集: 選択カード確認後に更新"
+    assert tab.editor.title_update_button.text() == "選択中タイトルを更新"
 
     tab.editor.workflow_tabs.setCurrentWidget(tab.editor.delete_tab)
     target_summary = tab.title_delete_target_summary.text()
     assert tab.title_delete_target_summary.property("title_delete_target_summary_card") is True
     assert "削除対象タイトル" in target_summary
     assert "タイトル名  Title1" in target_summary
+    assert "内部ID      1" in target_summary
     assert "関連名      Alice" in target_summary
     assert tab.editor.property("title_delete_danger_copy") is True
     assert tab.editor.title_delete_button.text() == "選択中タイトルをゴミ箱に入れる"
-    assert tab.editor.title_restore_button.text() == "削除済みタイトルを復元"
-    assert tab.editor.title_hard_delete_button.text() == "削除済みタイトルを完全削除"
+    assert tab.editor.title_restore_button.text() == "選択中の削除済みタイトルを復元"
+    assert tab.editor.title_hard_delete_button.text() == "選択中の削除済みタイトルを完全削除"
 
 
 def test_title_list_summary_shows_totals_and_selection_count() -> None:
@@ -158,3 +165,42 @@ def test_title_list_summary_shows_totals_and_selection_count() -> None:
     tab.editor.titles_table.selectRow(0)
 
     assert "選択中 1件" in tab.title_list_summary_label.text()
+
+
+def test_title_selection_cards_follow_combo_and_table_selection() -> None:
+    tab = _title_tab()
+
+    tab.editor.workflow_tabs.setCurrentWidget(tab.editor.edit_tab)
+    tab.editor.title_selector_combo.setCurrentIndex(1)
+
+    assert tab.editor.title_name_input.text() == "Title1"
+    assert "編集対象タイトル" in tab.editor.selected_title_context_label.text()
+    assert "内部ID      1" in tab.editor.selected_title_context_label.text()
+    assert "削除対象タイトル" in tab.title_delete_target_summary.text()
+    assert "内部ID      1" in tab.title_delete_target_summary.text()
+
+    tab.editor.delete_title_selector_combo.setCurrentIndex(2)
+
+    assert "削除対象タイトル" in tab.title_delete_target_summary.text()
+    assert "タイトル名  Title2" in tab.title_delete_target_summary.text()
+    assert "内部ID      2" in tab.title_delete_target_summary.text()
+    assert "状態        削除済み" in tab.title_delete_target_summary.text()
+
+
+def test_title_destructive_confirmation_includes_target_details() -> None:
+    tab = _title_tab()
+    tab.editor.workflow_tabs.setCurrentWidget(tab.editor.delete_tab)
+    tab.editor.titles_table.selectRow(0)
+
+    message = tab._title_destructive_confirmation_text(
+        "ゴミ箱に入れる",
+        tab._selected_title_detail(),
+        1,
+        "delete_title",
+    )
+
+    assert "対象タイトル: Title1" in message
+    assert "内部ID: 1" in message
+    assert "状態: 有効" in message
+    assert "関連名: Alice" in message
+    assert "通常の編集対象から外れます" in message
