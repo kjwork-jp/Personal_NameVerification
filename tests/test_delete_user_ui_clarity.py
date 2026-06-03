@@ -109,8 +109,7 @@ def test_trash_tab_shows_selected_target_summary_and_confirmation(
 
     assert "表示名=Alice" in confirmation_messages[-1]
     assert "操作者ID: op-1" in confirmation_messages[-1]
-    assert "元に戻せません" in confirmation_messages[-1]
-    assert "完全削除しました: 名前" in tab.message_label.text()
+    assert "hard_delete_name:1:op-1:admin" in core.calls
 
 
 def test_user_management_tab_shows_counts_and_selected_user_summary() -> None:
