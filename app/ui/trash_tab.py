@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
 )
 
 from app.application.read_models import NameDetail, RelatedRow, SubtitleDetail, TitleDetail
+from app.ui.datetime_display import format_datetime_display
 from app.ui.dialogs import confirm_destructive_action
 from app.ui.input_defaults import default_operator_id
 from app.ui.permissions import can_run_destructive_actions
@@ -310,7 +311,7 @@ class TrashTab(QWidget):
             self.list_table.setItem(i, 3, QTableWidgetItem(row.display_name))
             self.list_table.setItem(i, 4, QTableWidgetItem(row.title_name))
             self.list_table.setItem(i, 5, QTableWidgetItem(row.subtitle_code))
-            self.list_table.setItem(i, 6, QTableWidgetItem(row.deleted_at or ""))
+            self.list_table.setItem(i, 6, QTableWidgetItem(_deleted_at_display(row)))
             self.list_table.setItem(i, 7, QTableWidgetItem(row.detail))
 
     def _on_selected(self) -> None:
@@ -326,7 +327,7 @@ class TrashTab(QWidget):
         summary = _selected_summary(self._selected)
         self.selected_summary_label.setText(f"選択中: {summary}")
         self.detail_label.setText(
-            f"詳細: {summary} / 削除日時={self._selected.deleted_at or '不明'} / "
+            f"詳細: {summary} / 削除日時={_deleted_at_display(self._selected)} / "
             f"{self._selected.detail}"
         )
 
@@ -343,7 +344,7 @@ class TrashTab(QWidget):
             "復元の確認",
             "次の削除済みデータを復元します。\n"
             f"{_selected_summary(selected)}\n"
-            f"削除日時: {selected.deleted_at or '不明'}\n"
+            f"削除日時: {_deleted_at_display(selected)}\n"
             f"操作者ID: {operator_id}",
         ):
             self._set_message("復元をキャンセルしました")
@@ -375,7 +376,7 @@ class TrashTab(QWidget):
             "完全削除の確認",
             "次の削除済みデータを完全削除します。元に戻せません。\n"
             f"{_selected_summary(selected)}\n"
-            f"削除日時: {selected.deleted_at or '不明'}\n"
+            f"削除日時: {_deleted_at_display(selected)}\n"
             f"操作者ID: {operator_id}",
         ):
             self._set_message("完全削除をキャンセルしました")
@@ -423,6 +424,10 @@ def _selected_summary(row: _TrashRow) -> str:
         f"{row.entity_label} / 表示名={row.display_name or '-'} / "
         f"内部ID={row.entity_id} / 公開ID={short_public_id(row.public_id)}"
     )
+
+
+def _deleted_at_display(row: _TrashRow) -> str:
+    return format_datetime_display(row.deleted_at, fallback="不明")
 
 
 def _row_from_name(row: NameDetail) -> _TrashRow:
