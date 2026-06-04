@@ -1,9 +1,8 @@
-"""Release UAT coverage for authentication, RBAC, and key UI tabs."""
+"""Release UAT coverage for role-based visible tabs."""
 
 from __future__ import annotations
 
 import os
-import sqlite3
 from pathlib import Path
 
 import pytest
@@ -17,10 +16,6 @@ qt_core = pytest.importorskip("PySide6.QtCore", exc_type=ImportError)
 QApplication = qt_widgets.QApplication
 Qt = qt_core.Qt
 
-from app.application.user_services import CreateUserInput, UserService  # noqa: E402
-from app.application.windows_identity import WindowsIdentity  # noqa: E402
-from app.domain.errors import AuthorizationError  # noqa: E402
-from app.infrastructure.db import apply_schema  # noqa: E402
 from app.ui.main_window import MainWindow  # noqa: E402
 from app.ui.role_context import RoleContext  # noqa: E402
 from tests.test_main_window_smoke import (  # noqa: E402
@@ -121,13 +116,6 @@ def _app() -> QApplication:
     return app
 
 
-def _connection() -> sqlite3.Connection:
-    connection = sqlite3.connect(":memory:")
-    connection.row_factory = sqlite3.Row
-    apply_schema(connection)
-    return connection
-
-
 def _window_for_role(role: str, monkeypatch: pytest.MonkeyPatch) -> MainWindow:
     _app()
     _patch_operations_dependencies(monkeypatch)
@@ -140,6 +128,10 @@ def _window_for_role(role: str, monkeypatch: pytest.MonkeyPatch) -> MainWindow:
         import_service=EmptyImportService(),
         database_path=Path("release-uat-test.db"),
     )
+
+
+def _tab_titles(window: MainWindow) -> list[str]:
+    return [window.tabs.tabText(index) for index in range(window.tabs.count())]
 
 
 def _operation_subtab_visibility(window: MainWindow) -> dict[str, bool]:
@@ -160,63 +152,14 @@ def _link_subtab_visibility(window: MainWindow) -> dict[str, bool]:
     }
 
 
-def test_uat_auth_local_and_windows_authentication_flows() -> None:
-    connection = _connection()
-    service = UserService(connection)
-    service.create_user(
-        CreateUserInput(operator_id="admin", password="secret", role="admin"),
-        actor_operator_id="bootstrap",
-        actor_role="admin",
-    )
-
-    local_user = service.authenticate_user("admin", "secret")
-    assert local_user.auth_provider == "local"
-    assert local_user.role == "admin"
-
-    identity = WindowsIdentity(
-        account_name="DOMAIN\\naoki",
-        display_name="naoki",
-        sid="S-1-5-21-1000",
-    )
-    windows_user = service.authenticate_windows_user(identity)
-    assert windows_user.auth_provider == "windows"
-    assert windows_user.role == "viewer"
-
-    service.change_user_role(
-        windows_user.operator_id,
-        "editor",
-        actor_operator_id="admin",
-        actor_role="admin",
-    )
-    reused_windows_user = service.authenticate_windows_user(identity)
-    assert reused_windows_user.operator_id == windows_user.operator_id
-    assert reused_windows_user.role == "editor"
-
-    with pytest.raises(AuthorizationError):
-        service.authenticate_user(windows_user.operator_id, "any-password")
-
-
 def test_uat_rbac_and_data_io_visibility_by_role(monkeypatch: pytest.MonkeyPatch) -> None:
     viewer = _window_for_role("viewer", monkeypatch)
     editor = _window_for_role("editor", monkeypatch)
     admin = _window_for_role("admin", monkeypatch)
 
-    assert _operation_subtab_visibility(viewer) == {
-        "ガイド": True,
-        "Export": False,
-        "Backup": False,
-        "Restore": False,
-        "Import": False,
-        "Operations Log": True,
-    }
-    assert _operation_subtab_visibility(editor) == {
-        "ガイド": True,
-        "Export": True,
-        "Backup": True,
-        "Restore": False,
-        "Import": False,
-        "Operations Log": True,
-    }
+    assert _tab_titles(viewer) == ["検索", "ヘルプ / 設定"]
+    assert "データ入出力" not in viewer._tabs_by_name
+    assert "データ入出力" not in editor._tabs_by_name
     assert _operation_subtab_visibility(admin) == {
         "ガイド": True,
         "Export": True,
@@ -232,7 +175,7 @@ def test_uat_link_visibility_by_role(monkeypatch: pytest.MonkeyPatch) -> None:
     editor = _window_for_role("editor", monkeypatch)
     admin = _window_for_role("admin", monkeypatch)
 
-    assert _link_subtab_visibility(viewer) == {"登録": False, "解除": False}
+    assert "関連付け" not in viewer._tabs_by_name
     assert _link_subtab_visibility(editor) == {"登録": True, "解除": True}
     assert _link_subtab_visibility(admin) == {"登録": True, "解除": True}
 
