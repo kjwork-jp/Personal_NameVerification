@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+from typing import Protocol
 
 import pytest
 
@@ -13,6 +14,7 @@ qt_widgets = pytest.importorskip("PySide6.QtWidgets", exc_type=ImportError)
 QApplication = qt_widgets.QApplication
 QLabel = qt_widgets.QLabel
 QPushButton = qt_widgets.QPushButton
+QTabWidget = qt_widgets.QTabWidget
 
 from app.ui.main_window import MainWindow  # noqa: E402
 from app.ui.operations_tab import OperationsTab  # noqa: E402
@@ -25,6 +27,10 @@ from tests.test_main_window_smoke import (  # noqa: E402
     EmptyQueryService,
     _patch_operations_dependencies,
 )
+
+
+class HasWorkflowTabs(Protocol):
+    workflow_tabs: QTabWidget
 
 
 class EmptyUserService:
@@ -86,8 +92,8 @@ def _tab_titles(window: MainWindow) -> list[str]:
     return [window.tabs.tabText(index) for index in range(window.tabs.count())]
 
 
-def _workflow_subtab_visible_map(tab: object) -> dict[str, bool]:
-    sub_tabs = getattr(tab, "workflow_tabs")
+def _workflow_subtab_visible_map(tab: HasWorkflowTabs) -> dict[str, bool]:
+    sub_tabs = tab.workflow_tabs
     return {
         sub_tabs.tabText(index): sub_tabs.tabBar().isTabVisible(index)
         for index in range(sub_tabs.count())
