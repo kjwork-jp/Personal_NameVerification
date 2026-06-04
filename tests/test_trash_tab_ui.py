@@ -31,7 +31,12 @@ class StubCoreService:
     def restore_title(self, title_id: int, operator_id: str, role: str = "admin") -> None:
         self.calls.append(f"restore_title:{title_id}:{operator_id}:{role}")
 
-    def hard_delete_title(self, title_id: int, operator_id: str = "admin", role: str = "admin") -> None:
+    def hard_delete_title(
+        self,
+        title_id: int,
+        operator_id: str,
+        role: str = "admin",
+    ) -> None:
         self.calls.append(f"hard_delete_title:{title_id}:{operator_id}:{role}")
 
     def restore_subtitle(self, subtitle_id: int, operator_id: str, role: str = "admin") -> None:
