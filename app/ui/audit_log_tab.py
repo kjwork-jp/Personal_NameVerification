@@ -27,6 +27,7 @@ from PySide6.QtWidgets import (
 )
 
 from app.application.read_models import ChangeLogRow
+from app.ui.datetime_display import format_datetime_display
 from app.ui.public_id_display import short_public_id
 from app.ui.role_context import RoleContext, UserRole
 from app.ui.ui_style import (
@@ -97,7 +98,7 @@ class AuditLogTab(QWidget):
         self.created_from_enabled = QCheckBox("開始日時を使う")
         self.created_from_input = QDateTimeEdit()
         self.created_from_input.setCalendarPopup(True)
-        self.created_from_input.setDisplayFormat("yyyy-MM-dd HH:mm:ss")
+        self.created_from_input.setDisplayFormat("yyyy/MM/dd HH:mm:ss")
         self.created_from_input.setDateTime(QDateTime.currentDateTime().addDays(-7))
         self.created_from_input.setEnabled(False)
         self.created_from_enabled.stateChanged.connect(
@@ -109,7 +110,7 @@ class AuditLogTab(QWidget):
         self.created_to_enabled = QCheckBox("終了日時を使う")
         self.created_to_input = QDateTimeEdit()
         self.created_to_input.setCalendarPopup(True)
-        self.created_to_input.setDisplayFormat("yyyy-MM-dd HH:mm:ss")
+        self.created_to_input.setDisplayFormat("yyyy/MM/dd HH:mm:ss")
         self.created_to_input.setDateTime(QDateTime.currentDateTime())
         self.created_to_input.setEnabled(False)
         self.created_to_enabled.stateChanged.connect(
@@ -231,7 +232,7 @@ class AuditLogTab(QWidget):
             self.logs_table.setItem(i, 2, QTableWidgetItem(row.entity_type))
             self.logs_table.setItem(i, 3, QTableWidgetItem(str(row.entity_id)))
             self.logs_table.setItem(i, 4, QTableWidgetItem(row.action))
-            self.logs_table.setItem(i, 5, QTableWidgetItem(row.created_at))
+            self.logs_table.setItem(i, 5, QTableWidgetItem(_created_at_display(row)))
 
         self.detail_summary_label.setText("選択中の操作: 未選択")
         self.before_json_view.clear()
@@ -276,7 +277,7 @@ class AuditLogTab(QWidget):
         self.detail_summary_label.setText(
             f"操作: {row.action} / データ種類: {row.entity_type} / "
             f"公開ID: {row.public_id or '未採番'} / 内部対象ID: {row.entity_id} / "
-            f"操作者: {row.operator_id} / 実行日時: {row.created_at}"
+            f"操作者: {row.operator_id} / 実行日時: {_created_at_display(row)}"
         )
         self.before_json_view.setPlainText(_format_json_like(row.before_json, before))
         self.after_json_view.setPlainText(_format_json_like(row.after_json, after))
@@ -338,6 +339,10 @@ def _optional_datetime(widget: QDateTimeEdit, *, enabled: bool) -> str | None:
     if not enabled:
         return None
     return widget.dateTime().toUTC().toString("yyyy-MM-ddTHH:mm:ssZ")
+
+
+def _created_at_display(row: ChangeLogRow) -> str:
+    return format_datetime_display(row.created_at, fallback="不明")
 
 
 def _parse_json_object(value: str | None) -> dict[str, Any] | None:
