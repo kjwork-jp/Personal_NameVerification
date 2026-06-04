@@ -31,7 +31,7 @@ class StubCoreService:
     def restore_title(self, title_id: int, operator_id: str, role: str = "admin") -> None:
         self.calls.append(f"restore_title:{title_id}:{operator_id}:{role}")
 
-    def hard_delete_title(self, title_id: int, operator_id: str, role: str = "admin") -> None:
+    def hard_delete_title(self, title_id: int, operator_id: str = "admin", role: str = "admin") -> None:
         self.calls.append(f"hard_delete_title:{title_id}:{operator_id}:{role}")
 
     def restore_subtitle(self, subtitle_id: int, operator_id: str, role: str = "admin") -> None:
@@ -162,6 +162,15 @@ def test_trash_tab_marks_hard_delete_as_danger_action() -> None:
     assert "完全削除" in tab.danger_hint_label.text()
     assert tab.hard_delete_button.property("workflowAccent") == "delete"
     assert tab.hard_delete_button.property("danger_operation_button") is True
+
+
+def test_trash_tab_formats_deleted_timestamps_for_display() -> None:
+    _app()
+    tab = TrashTab(core_service=StubCoreService(), query_service=StubQueryService())
+
+    assert tab.list_table.item(0, 6).text() == "2026/01/01 00:00:00"
+    assert "削除日時=2026/01/01 00:00:00" in tab.detail_label.text()
+    assert "2026-01-01T00:00:00Z" not in tab.detail_label.text()
 
 
 def test_trash_tab_restore_and_hard_delete_for_all_entities(
