@@ -198,13 +198,17 @@ def _operations_tab(window: MainWindow) -> OperationsTab:
     return tab
 
 
-def test_main_window_has_required_tabs(monkeypatch: pytest.MonkeyPatch) -> None:
+def _tab_titles(window: MainWindow) -> list[str]:
+    return [window.tabs.tabText(i) for i in range(window.tabs.count())]
+
+
+def test_main_window_has_required_admin_tabs(monkeypatch: pytest.MonkeyPatch) -> None:
     _get_app()
     _patch_operations_dependencies(monkeypatch)
     window = _build_main_window()
 
     assert window.centralWidget() is not None
-    assert [window.tabs.tabText(i) for i in range(window.tabs.count())] == [
+    assert _tab_titles(window) == [
         "検索",
         "名前を管理",
         "タイトル管理",
@@ -226,11 +230,42 @@ def test_main_window_has_required_tabs(monkeypatch: pytest.MonkeyPatch) -> None:
     ]
 
 
-def test_main_window_accepts_role_context(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_main_window_viewer_shows_only_search_and_help(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     _get_app()
     _patch_operations_dependencies(monkeypatch)
     window = _build_main_window(role_context=RoleContext(role="viewer"))
 
     assert window.centralWidget() is not None
+    assert _tab_titles(window) == ["検索", "ヘルプ / 設定"]
     assert window.role_banner.property("operatorRole") == "viewer"
     assert "VIEWER / 参照専用" in window.role_banner.text()
+    assert "名前管理" not in window._tabs_by_name
+    assert "タイトル管理" not in window._tabs_by_name
+    assert "サブタイトル管理" not in window._tabs_by_name
+    assert "関連付け" not in window._tabs_by_name
+    assert "削除データ" not in window._tabs_by_name
+    assert "監査ログ" not in window._tabs_by_name
+    assert "データ入出力" not in window._tabs_by_name
+
+
+def test_main_window_editor_hides_admin_only_tabs(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _get_app()
+    _patch_operations_dependencies(monkeypatch)
+    window = _build_main_window(role_context=RoleContext(role="editor"))
+
+    assert _tab_titles(window) == [
+        "検索",
+        "名前を管理",
+        "タイトル管理",
+        "サブタイトル管理",
+        "関連付け",
+        "ヘルプ / 設定",
+    ]
+    assert window.role_banner.property("operatorRole") == "editor"
+    assert "削除データ" not in window._tabs_by_name
+    assert "監査ログ" not in window._tabs_by_name
+    assert "データ入出力" not in window._tabs_by_name

@@ -30,7 +30,6 @@ OPERATIONS_TAB = "データ入出力"
 EXPECTED_REGISTER_NAME = "Alice"
 EXPECTED_REGISTER_TITLE = "Title1"
 EXPECTED_UNREGISTER_LINK = "Title1 / S1 / Sub1"
-READONLY_TEXT = "参照のみ"
 CHANGE_LOG_TEXT = "データ変更ログ"
 USER_AUTH_LOG_TEXT = "ユーザー/認証ログ"
 AUDIT_GUIDE_TEXT = "ガイド"
@@ -101,40 +100,31 @@ def test_remaining_uat_crud_and_delete_controls_follow_role_order(
     editor = _window_for_role("editor", monkeypatch)
     admin = _window_for_role("admin", monkeypatch)
 
-    viewer_name = viewer._tabs_by_name[NAME_TAB]
+    assert NAME_TAB not in viewer._tabs_by_name
+    assert TITLE_TAB not in viewer._tabs_by_name
+    assert SUBTITLE_TAB not in viewer._tabs_by_name
+    assert LINK_TAB not in viewer._tabs_by_name
+
     editor_name = editor._tabs_by_name[NAME_TAB]
     admin_name = admin._tabs_by_name[NAME_TAB]
-    assert viewer_name.create_button.isHidden()
-    assert viewer_name.update_button.isHidden()
-    assert viewer_name.delete_button.isHidden()
     assert not editor_name.create_button.isHidden()
     assert not editor_name.update_button.isHidden()
     assert editor_name.delete_button.isHidden()
     assert not admin_name.delete_button.isHidden()
 
-    viewer_title = viewer._tabs_by_name[TITLE_TAB]
     editor_title = editor._tabs_by_name[TITLE_TAB]
     admin_title = admin._tabs_by_name[TITLE_TAB]
-    viewer_subtitle = viewer._tabs_by_name[SUBTITLE_TAB]
     editor_subtitle = editor._tabs_by_name[SUBTITLE_TAB]
     admin_subtitle = admin._tabs_by_name[SUBTITLE_TAB]
-    assert isinstance(viewer_title, TitleManagementTab)
     assert isinstance(editor_title, TitleManagementTab)
     assert isinstance(admin_title, TitleManagementTab)
-    assert isinstance(viewer_subtitle, SubtitleManagementTab)
     assert isinstance(editor_subtitle, SubtitleManagementTab)
     assert isinstance(admin_subtitle, SubtitleManagementTab)
 
-    viewer_title_editor = viewer_title.editor
     editor_title_editor = editor_title.editor
     admin_title_editor = admin_title.editor
-    viewer_subtitle_editor = viewer_subtitle.editor
     editor_subtitle_editor = editor_subtitle.editor
     admin_subtitle_editor = admin_subtitle.editor
-    assert viewer_title_editor.title_create_button.isHidden()
-    assert viewer_title_editor.title_update_button.isHidden()
-    assert viewer_subtitle_editor.subtitle_create_button.isHidden()
-    assert viewer_subtitle_editor.subtitle_update_button.isHidden()
     assert not editor_title_editor.title_create_button.isHidden()
     assert not editor_title_editor.title_update_button.isHidden()
     assert editor_title_editor.title_delete_button.isHidden()

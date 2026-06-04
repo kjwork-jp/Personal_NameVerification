@@ -108,96 +108,16 @@ class MainWindow(QMainWindow):
 
         self.tabs = QTabWidget(self)
         self._tabs_by_name: dict[str, QWidget] = {}
-        self._add_tab(
-            SearchTab(query_service=query_service, role_context=self._role_context),
-            "検索",
-        )
-        self._add_tab(
-            NameManagementTab(
-                core_service=core_service,
-                query_service=query_service,
-                role_context=self._role_context,
-            ),
-            "名前を管理",
-        )
-        self._add_tab(
-            TitleManagementTab(
-                core_service=core_service,
-                query_service=query_service,
-                role_context=self._role_context,
-            ),
-            "タイトル管理",
-        )
-        self._add_tab(
-            SubtitleManagementTab(
-                core_service=core_service,
-                query_service=query_service,
-                role_context=self._role_context,
-            ),
-            "サブタイトル管理",
-        )
-        self._add_tab(
-            LinkManagementTab(
-                core_service=core_service,
-                query_service=query_service,
-                role_context=self._role_context,
-            ),
-            "関連付け",
-        )
-        self._add_tab(
-            TrashTab(
-                core_service=core_service,
-                query_service=query_service,
-                role_context=self._role_context,
-            ),
-            "削除データ",
-        )
-        if user_service is not None and self._role_context.role == "admin":
-            self._add_tab(
-                UserManagementTab(
-                    user_service=user_service,
-                    role_context=self._role_context,
-                ),
-                "ユーザー管理",
-            )
-        self._add_tab(
-            AuditLogsTab(
-                query_service=query_service,
-                role_context=self._role_context,
-                user_audit_service=user_audit_service,
-            ),
-            "監査ログ",
-        )
-        if (
-            export_backup_service is not None
-            and backup_restore_service is not None
-            and import_service is not None
-        ):
-            operation_logger = self._operation_logger
-            if operation_logger is None and operations_log_jsonl_path is not None:
-                operation_logger = OperationsJsonlLogger(log_path=operations_log_jsonl_path)
-            operations_tab = OperationsTab(
-                export_backup_service=export_backup_service,
-                backup_restore_service=backup_restore_service,
-                import_service=import_service,
-                role_context=self._role_context,
-                operation_logger=operation_logger,
-            )
-            apply_restore_current_db_guard(operations_tab, self._database_path)
-            apply_sql_dump_protection_warning(operations_tab)
-            apply_sanitized_export_ui(operations_tab)
-            self._prefill_operations_paths(operations_tab)
-            apply_operations_subtabs(operations_tab)
-            apply_operations_tab_role_guards(operations_tab, self._role_context)
-            self._add_tab(operations_tab, "データ入出力")
-        self._add_tab(
-            HelpSettingsTab(
-                package_root=self._package_root,
-                database_path=database_path,
-                change_log_jsonl_path=self._change_log_jsonl_path,
-                operations_log_jsonl_path=self._operations_log_jsonl_path,
-            ),
-            "ヘルプ / 設定",
+        self._build_tabs(
+            query_service=query_service,
+            core_service=core_service,
+            export_backup_service=export_backup_service,
+            backup_restore_service=backup_restore_service,
+            import_service=import_service,
+            user_service=user_service,
+            user_audit_service=user_audit_service,
+            operations_log_jsonl_path=operations_log_jsonl_path,
+            database_path=database_path,
         )
         self.tabs.currentChanged.connect(self._refresh_current_tab)
         self.role_banner = make_role_banner(self._role_context)
@@ -209,6 +129,114 @@ class MainWindow(QMainWindow):
         central_layout.addWidget(self.tabs, 1)
         self.setCentralWidget(central)
         apply_searchable_comboboxes(self)
+
+    def _build_tabs(
+        self,
+        *,
+        query_service: QueryService,
+        core_service: CoreService,
+        export_backup_service: ExportBackupService | None,
+        backup_restore_service: BackupRestoreService | None,
+        import_service: ImportService | None,
+        user_service: UserService | None,
+        user_audit_service: UserAuditLogService | None,
+        operations_log_jsonl_path: Path | None,
+        database_path: Path | None,
+    ) -> None:
+        role = self._role_context.role
+        self._add_tab(
+            SearchTab(query_service=query_service, role_context=self._role_context),
+            "検索",
+        )
+        if role in {"editor", "admin"}:
+            self._add_tab(
+                NameManagementTab(
+                    core_service=core_service,
+                    query_service=query_service,
+                    role_context=self._role_context,
+                ),
+                "名前を管理",
+            )
+            self._add_tab(
+                TitleManagementTab(
+                    core_service=core_service,
+                    query_service=query_service,
+                    role_context=self._role_context,
+                ),
+                "タイトル管理",
+            )
+            self._add_tab(
+                SubtitleManagementTab(
+                    core_service=core_service,
+                    query_service=query_service,
+                    role_context=self._role_context,
+                ),
+                "サブタイトル管理",
+            )
+            self._add_tab(
+                LinkManagementTab(
+                    core_service=core_service,
+                    query_service=query_service,
+                    role_context=self._role_context,
+                ),
+                "関連付け",
+            )
+        if role == "admin":
+            self._add_tab(
+                TrashTab(
+                    core_service=core_service,
+                    query_service=query_service,
+                    role_context=self._role_context,
+                ),
+                "削除データ",
+            )
+            if user_service is not None:
+                self._add_tab(
+                    UserManagementTab(
+                        user_service=user_service,
+                        role_context=self._role_context,
+                    ),
+                    "ユーザー管理",
+                )
+            self._add_tab(
+                AuditLogsTab(
+                    query_service=query_service,
+                    role_context=self._role_context,
+                    user_audit_service=user_audit_service,
+                ),
+                "監査ログ",
+            )
+            if (
+                export_backup_service is not None
+                and backup_restore_service is not None
+                and import_service is not None
+            ):
+                operation_logger = self._operation_logger
+                if operation_logger is None and operations_log_jsonl_path is not None:
+                    operation_logger = OperationsJsonlLogger(log_path=operations_log_jsonl_path)
+                operations_tab = OperationsTab(
+                    export_backup_service=export_backup_service,
+                    backup_restore_service=backup_restore_service,
+                    import_service=import_service,
+                    role_context=self._role_context,
+                    operation_logger=operation_logger,
+                )
+                apply_restore_current_db_guard(operations_tab, self._database_path)
+                apply_sql_dump_protection_warning(operations_tab)
+                apply_sanitized_export_ui(operations_tab)
+                self._prefill_operations_paths(operations_tab)
+                apply_operations_subtabs(operations_tab)
+                apply_operations_tab_role_guards(operations_tab, self._role_context)
+                self._add_tab(operations_tab, "データ入出力")
+        self._add_tab(
+            HelpSettingsTab(
+                package_root=self._package_root,
+                database_path=database_path,
+                change_log_jsonl_path=self._change_log_jsonl_path,
+                operations_log_jsonl_path=self._operations_log_jsonl_path,
+            ),
+            "ヘルプ / 設定",
+        )
 
     @property
     def role_context(self) -> RoleContext:

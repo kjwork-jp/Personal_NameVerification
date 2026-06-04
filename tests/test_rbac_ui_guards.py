@@ -108,36 +108,37 @@ def _operations_guide_text(window: MainWindow) -> str:
     return guide_label.text()
 
 
-def test_viewer_rbac_disables_write_controls(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_viewer_rbac_hides_non_readonly_top_level_tabs(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     window = _window_for_role("viewer", monkeypatch)
-    operations = _operations(window)
 
-    assert not _button(window, "名前を管理", "create_button").isEnabled()
-    assert not _button(window, "名前を管理", "update_button").isEnabled()
-    assert not _button(window, "関連付け", "link_button").isEnabled()
-    assert not _button(window, "関連付け", "unlink_button").isEnabled()
-    assert not operations.export_csv_button.isEnabled()
-    assert not operations.create_backup_button.isEnabled()
-    assert not operations.export_logs_button.isEnabled()
-    assert not operations.export_logs_button.isVisible()
+    assert _tab_titles(window) == ["検索", "ヘルプ / 設定"]
+    assert "名前を管理" not in window._tabs_by_name
+    assert "関連付け" not in window._tabs_by_name
+    assert "データ入出力" not in window._tabs_by_name
+    assert "監査ログ" not in window._tabs_by_name
 
 
-def test_editor_rbac_allows_normal_link_and_output_controls(
+def test_editor_rbac_hides_admin_only_top_level_tabs(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     window = _window_for_role("editor", monkeypatch)
-    operations = _operations(window)
 
+    assert _tab_titles(window) == [
+        "検索",
+        "名前を管理",
+        "タイトル管理",
+        "サブタイトル管理",
+        "関連付け",
+        "ヘルプ / 設定",
+    ]
     assert _button(window, "名前を管理", "create_button").isEnabled()
-    assert not _button(window, "名前を管理", "update_button").isEnabled()
     assert _button(window, "関連付け", "link_button").isEnabled()
     assert _button(window, "関連付け", "unlink_button").isEnabled()
-
-    assert operations.export_csv_button.isEnabled()
-    assert operations.export_json_button.isEnabled()
-    assert operations.export_sql_dump_button.isEnabled()
-    assert operations.create_backup_button.isEnabled()
-    assert operations.export_logs_button.isEnabled()
+    assert "削除データ" not in window._tabs_by_name
+    assert "監査ログ" not in window._tabs_by_name
+    assert "データ入出力" not in window._tabs_by_name
 
 
 def test_admin_rbac_allows_management_controls(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -186,23 +187,7 @@ def test_user_management_tab_is_admin_only_when_user_service_is_available(
     assert "ユーザー管理" in admin_window._tabs_by_name
 
 
-def test_operations_subtabs_are_role_aware(monkeypatch: pytest.MonkeyPatch) -> None:
-    assert _operations_subtab_enabled_map(_window_for_role("viewer", monkeypatch)) == {
-        "ガイド": True,
-        "Export": False,
-        "Backup": False,
-        "Restore": False,
-        "Import": False,
-        "Operations Log": True,
-    }
-    assert _operations_subtab_enabled_map(_window_for_role("editor", monkeypatch)) == {
-        "ガイド": True,
-        "Export": True,
-        "Backup": True,
-        "Restore": False,
-        "Import": False,
-        "Operations Log": True,
-    }
+def test_operations_subtabs_are_admin_available(monkeypatch: pytest.MonkeyPatch) -> None:
     assert _operations_subtab_enabled_map(_window_for_role("admin", monkeypatch)) == {
         "ガイド": True,
         "Export": True,
@@ -213,22 +198,20 @@ def test_operations_subtabs_are_role_aware(monkeypatch: pytest.MonkeyPatch) -> N
     }
 
 
-def test_operations_subtabs_visibility_matches_role_permissions(
+def test_operations_subtabs_visibility_matches_admin_permissions(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    assert _operations_subtab_visible_map(_window_for_role("viewer", monkeypatch)) == {
+    assert _operations_subtab_visible_map(_window_for_role("admin", monkeypatch)) == {
         "ガイド": True,
-        "Export": False,
-        "Backup": False,
-        "Restore": False,
-        "Import": False,
+        "Export": True,
+        "Backup": True,
+        "Restore": True,
+        "Import": True,
         "Operations Log": True,
     }
 
 
-def test_operations_guide_is_role_specific(monkeypatch: pytest.MonkeyPatch) -> None:
-    assert "参照専用" in _operations_guide_text(_window_for_role("viewer", monkeypatch))
-    editor_text = _operations_guide_text(_window_for_role("editor", monkeypatch))
-    assert "通常の出力とバックアップ" in editor_text
-    assert "Restore / Import" in editor_text
-    assert "Restore / Import" in _operations_guide_text(_window_for_role("admin", monkeypatch))
+def test_operations_guide_is_admin_specific(monkeypatch: pytest.MonkeyPatch) -> None:
+    assert "Restore / Import" in _operations_guide_text(
+        _window_for_role("admin", monkeypatch)
+    )
