@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+from typing import Protocol
 
 import pytest
 
@@ -13,6 +14,7 @@ qt_widgets = pytest.importorskip("PySide6.QtWidgets", exc_type=ImportError)
 QApplication = qt_widgets.QApplication
 QLabel = qt_widgets.QLabel
 QPushButton = qt_widgets.QPushButton
+QTabWidget = qt_widgets.QTabWidget
 
 from app.ui.main_window import MainWindow  # noqa: E402
 from app.ui.operations_tab import OperationsTab  # noqa: E402
@@ -25,6 +27,10 @@ from tests.test_main_window_smoke import (  # noqa: E402
     EmptyQueryService,
     _patch_operations_dependencies,
 )
+
+
+class HasWorkflowTabs(Protocol):
+    workflow_tabs: QTabWidget
 
 
 class EmptyUserService:
@@ -86,6 +92,14 @@ def _tab_titles(window: MainWindow) -> list[str]:
     return [window.tabs.tabText(index) for index in range(window.tabs.count())]
 
 
+def _workflow_subtab_visible_map(tab: HasWorkflowTabs) -> dict[str, bool]:
+    sub_tabs = tab.workflow_tabs
+    return {
+        sub_tabs.tabText(index): sub_tabs.tabBar().isTabVisible(index)
+        for index in range(sub_tabs.count())
+    }
+
+
 def _operations_subtab_enabled_map(window: MainWindow) -> dict[str, bool]:
     sub_tabs = _operations(window).operations_subtabs
     return {
@@ -141,6 +155,34 @@ def test_editor_rbac_hides_admin_only_top_level_tabs(
     assert "データ入出力" not in window._tabs_by_name
 
 
+def test_editor_rbac_hides_admin_only_workflow_subtabs(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    window = _window_for_role("editor", monkeypatch)
+
+    assert _workflow_subtab_visible_map(window._tabs_by_name["名前を管理"]) == {
+        "一覧": True,
+        "新規追加": True,
+        "編集": True,
+        "削除": False,
+        "ガイド": True,
+    }
+    assert _workflow_subtab_visible_map(window._tabs_by_name["タイトル管理"].editor) == {
+        "一覧": True,
+        "新規追加": True,
+        "編集": True,
+        "削除": False,
+        "ガイド": True,
+    }
+    assert _workflow_subtab_visible_map(window._tabs_by_name["サブタイトル管理"].editor) == {
+        "一覧": True,
+        "新規追加": True,
+        "編集": True,
+        "削除": False,
+        "ガイド": True,
+    }
+
+
 def test_admin_rbac_allows_management_controls(monkeypatch: pytest.MonkeyPatch) -> None:
     window = _window_for_role("admin", monkeypatch)
     operations = _operations(window)
@@ -152,6 +194,20 @@ def test_admin_rbac_allows_management_controls(monkeypatch: pytest.MonkeyPatch) 
     assert operations.export_csv_button.isEnabled()
     assert operations.create_backup_button.isEnabled()
     assert operations.export_logs_button.isEnabled()
+
+
+def test_admin_rbac_keeps_admin_only_workflow_subtabs_visible(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    window = _window_for_role("admin", monkeypatch)
+
+    assert _workflow_subtab_visible_map(window._tabs_by_name["名前を管理"])["削除"] is True
+    assert _workflow_subtab_visible_map(window._tabs_by_name["タイトル管理"].editor)[
+        "削除"
+    ] is True
+    assert _workflow_subtab_visible_map(window._tabs_by_name["サブタイトル管理"].editor)[
+        "削除"
+    ] is True
 
 
 def test_operations_cancel_button_is_visible_only_while_busy(

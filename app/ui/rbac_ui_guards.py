@@ -48,6 +48,7 @@ _DESTRUCTIVE_ACTION_BUTTON_NAMES = (
 )
 _LINK_ACTION_BUTTON_NAMES = ("link_button",)
 _UNLINK_ACTION_BUTTON_NAMES = ("unlink_button",)
+_ADMIN_ONLY_WORKFLOW_TAB_TITLES = {"削除"}
 
 
 def _set_enabled(widget: QWidget | None, enabled: bool, tooltip: str | None = None) -> None:
@@ -148,6 +149,7 @@ def apply_tab_action_visibility_guards(tab: Any, role_context: RoleContext) -> N
         _set_buttons_visible(target, _UNLINK_ACTION_BUTTON_NAMES, can_unlink(role_context.role))
         _apply_readonly_layout_guards(target, role_context)
         _apply_link_subtab_role_guards(target, role_context)
+        _apply_admin_only_workflow_tab_guards(target, role_context)
 
 
 def _iter_role_guard_targets(root: Any) -> Iterator[Any]:
@@ -235,6 +237,28 @@ def _apply_link_subtab_role_guards(tab: Any, role_context: RoleContext) -> None:
         "登録": can_link(role_context.role),
         "解除": can_unlink(role_context.role),
     }
+    _apply_subtab_visibility(sub_tabs, enabled_by_title)
+
+
+def _apply_admin_only_workflow_tab_guards(tab: Any, role_context: RoleContext) -> None:
+    workflow_tabs = getattr(tab, "workflow_tabs", None)
+    if not isinstance(workflow_tabs, QTabWidget):
+        return
+
+    can_destructive = can_run_destructive_actions(role_context.role)
+    enabled_by_title = {
+        workflow_tabs.tabText(index): can_destructive
+        if workflow_tabs.tabText(index) in _ADMIN_ONLY_WORKFLOW_TAB_TITLES
+        else True
+        for index in range(workflow_tabs.count())
+    }
+    _apply_subtab_visibility(workflow_tabs, enabled_by_title)
+
+
+def _apply_subtab_visibility(
+    sub_tabs: QTabWidget,
+    enabled_by_title: dict[str, bool],
+) -> None:
     first_visible_enabled_index: int | None = None
     current_visible_enabled = True
     tab_bar = sub_tabs.tabBar()
