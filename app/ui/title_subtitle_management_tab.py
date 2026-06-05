@@ -1082,3 +1082,12 @@ class TitleSubtitleManagementTab(QWidget):
 def _title_combo_label(row: TitleDetail) -> str:
     status = "削除済み" if row.deleted_at else "有効"
     return f"タイトル: {row.title_name}（公開ID: {short_public_id(row.public_id)} / 状態: {status}）"
+
+
+def _install_title_subtitle_summary_counters() -> None:
+    from app.ui.title_subtitle_summary_patch import install_title_subtitle_summary_counters
+
+    install_title_subtitle_summary_counters()
+
+
+_install_title_subtitle_summary_counters()

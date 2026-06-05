@@ -4,9 +4,10 @@ from __future__ import annotations
 
 from pathlib import Path
 from types import MethodType
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
-from PySide6.QtWidgets import QPushButton
+if TYPE_CHECKING:
+    from PySide6.QtWidgets import QPushButton
 
 SANITIZED_EXPORT_TOOLTIP = (
     "共有用JSONを出力します。業務データのみを許可リスト方式で出力し、"
@@ -20,7 +21,8 @@ def apply_sanitized_export_ui(operations_tab: Any) -> None:
     if getattr(operations_tab, "_sanitized_export_ui_applied", False):
         return
 
-    button = QPushButton("共有用JSON出力")
+    button_factory = type(operations_tab.export_json_button)
+    button = button_factory("共有用JSON出力")
     button.setToolTip(SANITIZED_EXPORT_TOOLTIP)
     button.setMinimumHeight(24)
     operations_tab.export_sanitized_json_button = button
@@ -34,7 +36,10 @@ def apply_sanitized_export_ui(operations_tab: Any) -> None:
     operations_tab._sanitized_export_ui_applied = True
 
 
-def _insert_button_near_json_export(operations_tab: Any, button: QPushButton) -> None:
+def _insert_button_near_json_export(
+    operations_tab: Any,
+    button: QPushButton,
+) -> None:
     parent = operations_tab.export_json_button.parentWidget()
     if parent is None or parent.layout() is None:
         operations_tab.layout().addWidget(button)
