@@ -117,6 +117,71 @@ def test_subtitle_unique_conflict() -> None:
         )
 
 
+def test_title_name_duplicate_is_rejected_with_normalized_match() -> None:
+    _, service = _service()
+    first_id = service.create_title(TitleInput(title_name=" Main Title "), operator_id="op-1")
+
+    with pytest.raises(ConflictError, match="title already exists"):
+        service.create_title(TitleInput(title_name="ｍａｉｎ title"), operator_id="op-1")
+
+    service.update_title(first_id, TitleInput(title_name="MAIN TITLE"), operator_id="op-1")
+
+
+def test_title_name_duplicate_ignores_deleted_until_restore() -> None:
+    _, service = _service()
+    deleted_id = service.create_title(TitleInput(title_name="Reusable"), operator_id="op-1")
+    service.delete_title(deleted_id, operator_id="op-1")
+
+    service.create_title(TitleInput(title_name=" reusable "), operator_id="op-1")
+
+    with pytest.raises(ConflictError, match="title already exists"):
+        service.restore_title(deleted_id, operator_id="op-1")
+
+
+def test_subtitle_name_duplicate_is_rejected_per_title_with_normalized_match() -> None:
+    _, service = _service()
+    first_title_id = service.create_title(TitleInput(title_name="Main"), operator_id="op-1")
+    second_title_id = service.create_title(TitleInput(title_name="Other"), operator_id="op-1")
+    first_subtitle_id = service.create_subtitle(
+        SubtitleInput(title_id=first_title_id, subtitle_code="S1", subtitle_name=" Sub Name "),
+        operator_id="op-1",
+    )
+
+    with pytest.raises(ConflictError, match="subtitle already exists for title"):
+        service.create_subtitle(
+            SubtitleInput(title_id=first_title_id, subtitle_code="S2", subtitle_name="ｓｕｂ name"),
+            operator_id="op-1",
+        )
+
+    service.create_subtitle(
+        SubtitleInput(title_id=second_title_id, subtitle_code="S1", subtitle_name="sub name"),
+        operator_id="op-1",
+    )
+    service.update_subtitle(
+        first_subtitle_id,
+        SubtitleInput(title_id=first_title_id, subtitle_code="S1", subtitle_name="SUB NAME"),
+        operator_id="op-1",
+    )
+
+
+def test_subtitle_name_duplicate_ignores_deleted_until_restore() -> None:
+    _, service = _service()
+    title_id = service.create_title(TitleInput(title_name="Main"), operator_id="op-1")
+    deleted_id = service.create_subtitle(
+        SubtitleInput(title_id=title_id, subtitle_code="S1", subtitle_name="Reusable"),
+        operator_id="op-1",
+    )
+    service.delete_subtitle(deleted_id, operator_id="op-1")
+
+    service.create_subtitle(
+        SubtitleInput(title_id=title_id, subtitle_code="S2", subtitle_name=" reusable "),
+        operator_id="op-1",
+    )
+
+    with pytest.raises(ConflictError, match="subtitle already exists for title"):
+        service.restore_subtitle(deleted_id, operator_id="op-1")
+
+
 def test_viewer_cannot_run_write_operations() -> None:
     _, service = _service()
 
