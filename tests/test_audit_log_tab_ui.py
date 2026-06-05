@@ -124,6 +124,9 @@ def test_audit_log_tab_reload_with_filters_and_detail() -> None:
         "limit": 50,
     }
     assert tab.logs_table.rowCount() == 1
+    assert tab.logs_table.item(0, 5).text() == "2026/01/01 00:00:00"
+    assert "実行日時: 2026/01/01 00:00:00" in tab.detail_summary_label.text()
+    assert "2026-01-01T00:00:00Z" not in tab.detail_summary_label.text()
     assert '"note": null' in tab.before_json_view.toPlainText()
     assert '"raw_name": "A"' in tab.before_json_view.toPlainText()
     assert '"note": "memo"' in tab.after_json_view.toPlainText()
@@ -163,6 +166,7 @@ def test_audit_log_tab_exports_visible_rows_as_review_json(tmp_path: Path) -> No
     assert payload["rows"][0]["entity_type"] == "names"
     assert payload["rows"][0]["action"] == "update"
     assert payload["rows"][0]["operator_id"] == "op-1"
+    assert payload["rows"][0]["created_at"] == "2026-01-01T00:00:00Z"
     assert payload["rows"][0]["before_json"] == '{"raw_name":"A","note":null}'
     assert payload["rows"][0]["after_json"] == '{"raw_name":"B","note":"memo"}'
     assert "JSON出力しました" in tab.message_label.text()
