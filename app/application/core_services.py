@@ -143,6 +143,7 @@ class CoreService:
         def operation() -> int:
             require_editor_or_admin(role, action="create_title")
             self._validate_operator_id(operator_id)
+            self._ensure_unique_title_name(payload.title_name)
             now = _utc_now()
             cursor = self._connection.execute(
                 """
@@ -181,6 +182,7 @@ class CoreService:
             if before["deleted_at"] is not None:
                 raise StateTransitionError("cannot update deleted title")
 
+            self._ensure_unique_title_name(payload.title_name, exclude_title_id=title_id)
             now = _utc_now()
             self._connection.execute(
                 """
@@ -214,6 +216,7 @@ class CoreService:
             require_editor_or_admin(role, action="create_subtitle")
             self._validate_operator_id(operator_id)
             self._assert_active("titles", payload.title_id)
+            self._ensure_unique_subtitle_name(payload.title_id, payload.subtitle_name)
 
             now = _utc_now()
             try:
@@ -266,6 +269,11 @@ class CoreService:
                 raise StateTransitionError("cannot update deleted subtitle")
 
             self._assert_active("titles", payload.title_id)
+            self._ensure_unique_subtitle_name(
+                payload.title_id,
+                payload.subtitle_name,
+                exclude_subtitle_id=subtitle_id,
+            )
             now = _utc_now()
             try:
                 self._connection.execute(
@@ -578,6 +586,7 @@ class CoreService:
             if before["deleted_at"] is None:
                 raise StateTransitionError(f"{table} is active")
 
+            self._ensure_unique_on_restore(table, before)
             now = _utc_now()
             try:
                 self._connection.execute(
@@ -615,6 +624,60 @@ class CoreService:
         entity = self._get_entity(table, entity_id)
         if entity["deleted_at"] is not None:
             raise StateTransitionError(f"{table} is deleted")
+
+    def _ensure_unique_title_name(
+        self, title_name: str, *, exclude_title_id: int | None = None
+    ) -> None:
+        normalized_title_name = normalize_for_comparison(title_name)
+        rows = self._connection.execute(
+            """
+            SELECT id, title_name
+            FROM titles
+            WHERE deleted_at IS NULL
+            """
+        ).fetchall()
+        for row in rows:
+            title_id = int(row["id"])
+            if exclude_title_id is not None and title_id == exclude_title_id:
+                continue
+            if normalize_for_comparison(str(row["title_name"])) == normalized_title_name:
+                raise ConflictError("title already exists")
+
+    def _ensure_unique_subtitle_name(
+        self,
+        title_id: int,
+        subtitle_name: str,
+        *,
+        exclude_subtitle_id: int | None = None,
+    ) -> None:
+        normalized_subtitle_name = normalize_for_comparison(subtitle_name)
+        rows = self._connection.execute(
+            """
+            SELECT id, subtitle_name
+            FROM subtitles
+            WHERE title_id = ? AND deleted_at IS NULL
+            """,
+            (title_id,),
+        ).fetchall()
+        for row in rows:
+            subtitle_id = int(row["id"])
+            if exclude_subtitle_id is not None and subtitle_id == exclude_subtitle_id:
+                continue
+            if normalize_for_comparison(str(row["subtitle_name"])) == normalized_subtitle_name:
+                raise ConflictError("subtitle already exists for title")
+
+    def _ensure_unique_on_restore(self, table: str, before: dict[str, Any]) -> None:
+        if table == "titles":
+            self._ensure_unique_title_name(
+                str(before["title_name"]),
+                exclude_title_id=int(before["id"]),
+            )
+        elif table == "subtitles":
+            self._ensure_unique_subtitle_name(
+                int(before["title_id"]),
+                str(before["subtitle_name"]),
+                exclude_subtitle_id=int(before["id"]),
+            )
 
     def _get_name(self, name_id: int) -> dict[str, Any]:
         return self._get_entity("names", name_id)
