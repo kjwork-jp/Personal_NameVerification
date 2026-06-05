@@ -11,7 +11,7 @@ from typing import Any, TypeVar
 
 from app.application.authorization import ServiceRole, require_admin, require_editor_or_admin
 from app.domain.errors import ConflictError, NotFoundError, StateTransitionError, ValidationError
-from app.domain.normalization import normalize_for_comparison
+from app.domain.normalization import normalize_for_comparison, normalize_with_raw
 
 T = TypeVar("T")
 
@@ -628,7 +628,10 @@ class CoreService:
     def _ensure_unique_title_name(
         self, title_name: str, *, exclude_title_id: int | None = None
     ) -> None:
-        normalized_title_name = normalize_for_comparison(title_name)
+        normalized_title_name = _normalize_required_display_name(
+            title_name,
+            field_label="title_name",
+        )
         rows = self._connection.execute(
             """
             SELECT id, title_name
@@ -640,7 +643,8 @@ class CoreService:
             title_id = int(row["id"])
             if exclude_title_id is not None and title_id == exclude_title_id:
                 continue
-            if normalize_for_comparison(str(row["title_name"])) == normalized_title_name:
+            existing = _normalize_existing_display_name(row["title_name"])
+            if existing is not None and existing == normalized_title_name:
                 raise ConflictError("title already exists")
 
     def _ensure_unique_subtitle_name(
@@ -650,7 +654,10 @@ class CoreService:
         *,
         exclude_subtitle_id: int | None = None,
     ) -> None:
-        normalized_subtitle_name = normalize_for_comparison(subtitle_name)
+        normalized_subtitle_name = _normalize_required_display_name(
+            subtitle_name,
+            field_label="subtitle_name",
+        )
         rows = self._connection.execute(
             """
             SELECT id, subtitle_name
@@ -663,19 +670,20 @@ class CoreService:
             subtitle_id = int(row["id"])
             if exclude_subtitle_id is not None and subtitle_id == exclude_subtitle_id:
                 continue
-            if normalize_for_comparison(str(row["subtitle_name"])) == normalized_subtitle_name:
+            existing = _normalize_existing_display_name(row["subtitle_name"])
+            if existing is not None and existing == normalized_subtitle_name:
                 raise ConflictError("subtitle already exists for title")
 
     def _ensure_unique_on_restore(self, table: str, before: dict[str, Any]) -> None:
         if table == "titles":
             self._ensure_unique_title_name(
-                str(before["title_name"]),
+                before.get("title_name"),
                 exclude_title_id=int(before["id"]),
             )
         elif table == "subtitles":
             self._ensure_unique_subtitle_name(
                 int(before["title_id"]),
-                str(before["subtitle_name"]),
+                before.get("subtitle_name"),
                 exclude_subtitle_id=int(before["id"]),
             )
 
@@ -742,6 +750,19 @@ class CoreService:
     def _validate_operator_id(operator_id: str) -> None:
         if not operator_id.strip():
             raise ValidationError("operator_id must not be blank")
+
+
+def _normalize_required_display_name(value: str | None, *, field_label: str) -> str:
+    try:
+        return normalize_for_comparison(value)
+    except ValueError as exc:
+        raise ValidationError(f"{field_label} must not be blank") from exc
+
+
+def _normalize_existing_display_name(value: Any) -> str | None:
+    if value is None:
+        return None
+    return normalize_with_raw(str(value)).normalized_text
 
 
 def _to_json(value: dict[str, Any] | None) -> str | None:
