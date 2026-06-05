@@ -35,6 +35,10 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_titles_public_id
 ON titles(public_id)
 WHERE public_id IS NOT NULL;
 
+CREATE UNIQUE INDEX IF NOT EXISTS uq_titles_normalized_name_active
+ON titles(lower(trim(title_name)))
+WHERE deleted_at IS NULL;
+
 CREATE TABLE IF NOT EXISTS subtitles (
     id INTEGER PRIMARY KEY,
     public_id TEXT,
@@ -58,6 +62,10 @@ WHERE public_id IS NOT NULL;
 
 CREATE UNIQUE INDEX IF NOT EXISTS uq_subtitles_title_code_active
 ON subtitles(title_id, subtitle_code)
+WHERE deleted_at IS NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_subtitles_title_normalized_name_active
+ON subtitles(title_id, lower(trim(subtitle_name)))
 WHERE deleted_at IS NULL;
 
 CREATE TABLE IF NOT EXISTS name_subtitle_links (
