@@ -270,7 +270,12 @@ class CoreService:
                 raise StateTransitionError("cannot update deleted subtitle")
 
             self._assert_active("titles", payload.title_id)
-            if _display_name_changed(before.get("subtitle_name"), payload.subtitle_name):
+            title_changed = int(before["title_id"]) != payload.title_id
+            name_changed = _display_name_changed(
+                before.get("subtitle_name"),
+                payload.subtitle_name,
+            )
+            if title_changed or name_changed:
                 self._ensure_unique_subtitle_name(
                     payload.title_id,
                     payload.subtitle_name,
