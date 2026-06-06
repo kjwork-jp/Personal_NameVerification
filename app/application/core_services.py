@@ -11,7 +11,7 @@ from typing import Any, TypeVar
 
 from app.application.authorization import ServiceRole, require_admin, require_editor_or_admin
 from app.domain.errors import ConflictError, NotFoundError, StateTransitionError, ValidationError
-from app.domain.normalization import normalize_for_comparison
+from app.domain.normalization import normalize_for_comparison, normalize_with_raw
 
 T = TypeVar("T")
 
@@ -143,6 +143,7 @@ class CoreService:
         def operation() -> int:
             require_editor_or_admin(role, action="create_title")
             self._validate_operator_id(operator_id)
+            self._ensure_unique_title_name(payload.title_name)
             now = _utc_now()
             cursor = self._connection.execute(
                 """
@@ -181,6 +182,8 @@ class CoreService:
             if before["deleted_at"] is not None:
                 raise StateTransitionError("cannot update deleted title")
 
+            if _display_name_changed(before.get("title_name"), payload.title_name):
+                self._ensure_unique_title_name(payload.title_name, exclude_title_id=title_id)
             now = _utc_now()
             self._connection.execute(
                 """
@@ -214,6 +217,7 @@ class CoreService:
             require_editor_or_admin(role, action="create_subtitle")
             self._validate_operator_id(operator_id)
             self._assert_active("titles", payload.title_id)
+            self._ensure_unique_subtitle_name(payload.title_id, payload.subtitle_name)
 
             now = _utc_now()
             try:
@@ -266,6 +270,17 @@ class CoreService:
                 raise StateTransitionError("cannot update deleted subtitle")
 
             self._assert_active("titles", payload.title_id)
+            title_changed = int(before["title_id"]) != payload.title_id
+            name_changed = _display_name_changed(
+                before.get("subtitle_name"),
+                payload.subtitle_name,
+            )
+            if title_changed or name_changed:
+                self._ensure_unique_subtitle_name(
+                    payload.title_id,
+                    payload.subtitle_name,
+                    exclude_subtitle_id=subtitle_id,
+                )
             now = _utc_now()
             try:
                 self._connection.execute(
@@ -578,6 +593,7 @@ class CoreService:
             if before["deleted_at"] is None:
                 raise StateTransitionError(f"{table} is active")
 
+            self._ensure_unique_on_restore(table, before)
             now = _utc_now()
             try:
                 self._connection.execute(
@@ -615,6 +631,68 @@ class CoreService:
         entity = self._get_entity(table, entity_id)
         if entity["deleted_at"] is not None:
             raise StateTransitionError(f"{table} is deleted")
+
+    def _ensure_unique_title_name(
+        self, title_name: str, *, exclude_title_id: int | None = None
+    ) -> None:
+        normalized_title_name = _normalize_required_display_name(
+            title_name,
+            field_label="title_name",
+        )
+        rows = self._connection.execute(
+            """
+            SELECT id, title_name
+            FROM titles
+            WHERE deleted_at IS NULL
+            """
+        ).fetchall()
+        for row in rows:
+            title_id = int(row["id"])
+            if exclude_title_id is not None and title_id == exclude_title_id:
+                continue
+            existing = _normalize_existing_display_name(row["title_name"])
+            if existing is not None and existing == normalized_title_name:
+                raise ConflictError("title already exists")
+
+    def _ensure_unique_subtitle_name(
+        self,
+        title_id: int,
+        subtitle_name: str,
+        *,
+        exclude_subtitle_id: int | None = None,
+    ) -> None:
+        normalized_subtitle_name = _normalize_required_display_name(
+            subtitle_name,
+            field_label="subtitle_name",
+        )
+        rows = self._connection.execute(
+            """
+            SELECT id, subtitle_name
+            FROM subtitles
+            WHERE title_id = ? AND deleted_at IS NULL
+            """,
+            (title_id,),
+        ).fetchall()
+        for row in rows:
+            subtitle_id = int(row["id"])
+            if exclude_subtitle_id is not None and subtitle_id == exclude_subtitle_id:
+                continue
+            existing = _normalize_existing_display_name(row["subtitle_name"])
+            if existing is not None and existing == normalized_subtitle_name:
+                raise ConflictError("subtitle already exists for title")
+
+    def _ensure_unique_on_restore(self, table: str, before: dict[str, Any]) -> None:
+        if table == "titles":
+            self._ensure_unique_title_name(
+                _require_string(before.get("title_name"), field_label="title_name"),
+                exclude_title_id=int(before["id"]),
+            )
+        elif table == "subtitles":
+            self._ensure_unique_subtitle_name(
+                int(before["title_id"]),
+                _require_string(before.get("subtitle_name"), field_label="subtitle_name"),
+                exclude_subtitle_id=int(before["id"]),
+            )
 
     def _get_name(self, name_id: int) -> dict[str, Any]:
         return self._get_entity("names", name_id)
@@ -667,7 +745,10 @@ class CoreService:
         )
 
     def _write(self, operation: Callable[[], T]) -> T:
+        already_in_transaction = self._connection.in_transaction
         try:
+            if not already_in_transaction:
+                self._connection.execute("BEGIN IMMEDIATE")
             result = operation()
         except Exception:
             self._connection.rollback()
@@ -679,6 +760,35 @@ class CoreService:
     def _validate_operator_id(operator_id: str) -> None:
         if not operator_id.strip():
             raise ValidationError("operator_id must not be blank")
+
+
+def _require_string(value: object, *, field_label: str) -> str:
+    if not isinstance(value, str):
+        raise ValidationError(f"{field_label} must not be blank")
+    return value
+
+
+def _normalize_required_display_name(value: object, *, field_label: str) -> str:
+    raw_value = _require_string(value, field_label=field_label)
+    try:
+        return normalize_for_comparison(raw_value)
+    except ValueError as exc:
+        raise ValidationError(f"{field_label} must not be blank") from exc
+
+
+def _normalize_existing_display_name(value: object) -> str | None:
+    if not isinstance(value, str):
+        return None
+    try:
+        return normalize_with_raw(value).normalized_text
+    except ValueError:
+        return None
+
+
+def _display_name_changed(before_value: object, after_value: object) -> bool:
+    return _normalize_existing_display_name(before_value) != _normalize_existing_display_name(
+        after_value
+    )
 
 
 def _to_json(value: dict[str, Any] | None) -> str | None:
