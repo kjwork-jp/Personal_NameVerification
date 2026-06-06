@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
 )
 
 from app.application.read_models import NameDetail, RelatedRow, SubtitleDetail, TitleDetail
+from app.domain.errors import ConflictError, StateTransitionError, ValidationError
 from app.ui.datetime_display import format_datetime_display
 from app.ui.dialogs import confirm_destructive_action
 from app.ui.input_defaults import default_operator_id
@@ -355,11 +356,19 @@ class TrashTab(QWidget):
             "subtitle": "restore_subtitle",
             "link": "restore_link",
         }[selected.entity_key]
-        getattr(self._core_service, method)(
-            selected.entity_id,
-            operator_id,
-            role=self._role_context.role,
-        )
+        try:
+            getattr(self._core_service, method)(
+                selected.entity_id,
+                operator_id,
+                role=self._role_context.role,
+            )
+        except (ConflictError, StateTransitionError, ValidationError) as exc:
+            self._set_message(
+                f"復元できません: {_selected_summary(selected)} / {exc}",
+                is_error=True,
+            )
+            self._reload()
+            return
         self._set_message(f"復元しました: {_selected_summary(selected)}")
         self._reload()
 
