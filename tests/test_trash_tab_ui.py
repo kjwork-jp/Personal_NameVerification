@@ -7,6 +7,7 @@ import os
 import pytest
 
 from app.application.read_models import NameDetail, RelatedRow, SubtitleDetail, TitleDetail
+from app.domain.errors import ConflictError
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
@@ -50,6 +51,12 @@ class StubCoreService:
 
     def hard_delete_link(self, link_id: int, operator_id: str, role: str = "admin") -> None:
         self.calls.append(f"hard_delete_link:{link_id}:{operator_id}:{role}")
+
+
+class ConflictRestoreCoreService(StubCoreService):
+    def restore_title(self, title_id: int, operator_id: str, role: str = "admin") -> None:
+        _ = (title_id, operator_id, role)
+        raise ConflictError("title already exists")
 
 
 class StubQueryService:
@@ -217,6 +224,28 @@ def test_trash_tab_restore_and_hard_delete_for_all_entities(
     assert "hard_delete_subtitle:100:op-1:admin" in core.calls
     assert "restore_link:500:op-1:admin" in core.calls
     assert "hard_delete_link:500:op-1:admin" in core.calls
+
+
+def test_trash_tab_restore_conflict_shows_inline_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _app()
+    monkeypatch.setattr(
+        trash_tab_module, "confirm_destructive_action", lambda *args, **kwargs: True
+    )
+    tab = TrashTab(
+        core_service=ConflictRestoreCoreService(),
+        query_service=StubQueryService(),
+    )
+    tab.operator_input.setText("op-1")
+    tab.entity_selector.setCurrentText("Title")
+
+    tab._restore_selected()
+
+    message = tab.message_label.text()
+    assert "復元できません" in message
+    assert "title already exists" in message
+    assert "タイトル" in message
 
 
 def test_trash_tab_requires_operator_id() -> None:
