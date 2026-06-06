@@ -363,11 +363,9 @@ class TrashTab(QWidget):
                 role=self._role_context.role,
             )
         except (ConflictError, StateTransitionError, ValidationError) as exc:
-            self._set_message(
-                f"復元できません: {_selected_summary(selected)} / {exc}",
-                is_error=True,
-            )
+            message = f"復元できません: {_selected_summary(selected)} / {exc}"
             self._reload()
+            self._set_message(message, is_error=True)
             return
         self._set_message(f"復元しました: {_selected_summary(selected)}")
         self._reload()
