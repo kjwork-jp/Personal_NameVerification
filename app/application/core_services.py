@@ -781,9 +781,8 @@ def _normalize_existing_display_name(value: object) -> str | None:
 
 
 def _display_name_changed(before_value: object, after_value: object) -> bool:
-    return (
-        _normalize_existing_display_name(before_value)
-        != _normalize_existing_display_name(after_value)
+    return _normalize_existing_display_name(before_value) != _normalize_existing_display_name(
+        after_value
     )
 
 
