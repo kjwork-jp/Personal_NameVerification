@@ -18,6 +18,16 @@ def _service() -> tuple[sqlite3.Connection, CoreService]:
     return connection, CoreService(connection)
 
 
+def test_write_operations_start_begin_immediate() -> None:
+    connection, service = _service()
+    statements: list[str] = []
+    connection.set_trace_callback(statements.append)
+
+    service.create_title(TitleInput(title_name="Atomic"), operator_id="op-1")
+
+    assert any(statement.upper().startswith("BEGIN IMMEDIATE") for statement in statements)
+
+
 def test_title_duplicate_is_rejected_by_project_normalization() -> None:
     _, service = _service()
     first_id = service.create_title(TitleInput(title_name=" Ｄｅｍｏ　Title "), operator_id="op-1")
@@ -60,6 +70,21 @@ def test_title_scan_ignores_legacy_blank_rows() -> None:
     title_id = service.create_title(TitleInput(title_name="Valid"), operator_id="op-1")
 
     assert isinstance(title_id, int)
+
+
+def test_title_metadata_edit_allows_unchanged_legacy_duplicate_display_name() -> None:
+    connection, service = _service()
+    first_id = _insert_title(connection, "Legacy Duplicate")
+    _insert_title(connection, " legacy duplicate ")
+
+    service.update_title(
+        first_id,
+        TitleInput(title_name="Legacy Duplicate", note="metadata only"),
+        operator_id="op-1",
+    )
+
+    row = connection.execute("SELECT note FROM titles WHERE id = ?", (first_id,)).fetchone()
+    assert row["note"] == "metadata only"
 
 
 def test_subtitle_duplicate_is_rejected_per_title_by_project_normalization() -> None:
@@ -136,3 +161,58 @@ def test_subtitle_scan_ignores_legacy_blank_rows() -> None:
     )
 
     assert isinstance(subtitle_id, int)
+
+
+def test_subtitle_metadata_edit_allows_unchanged_legacy_duplicate_display_name() -> None:
+    connection, service = _service()
+    title_id = service.create_title(TitleInput(title_name="Main"), operator_id="op-1")
+    first_id = _insert_subtitle(connection, title_id, "S1", "Legacy Duplicate")
+    _insert_subtitle(connection, title_id, "S2", " legacy duplicate ")
+
+    service.update_subtitle(
+        first_id,
+        SubtitleInput(
+            title_id=title_id,
+            subtitle_code="S1",
+            subtitle_name="Legacy Duplicate",
+            note="metadata only",
+        ),
+        operator_id="op-1",
+    )
+
+    row = connection.execute("SELECT note FROM subtitles WHERE id = ?", (first_id,)).fetchone()
+    assert row["note"] == "metadata only"
+
+
+def _insert_title(connection: sqlite3.Connection, title_name: str) -> int:
+    cursor = connection.execute(
+        """
+        INSERT INTO titles(title_name, created_at, updated_at)
+        VALUES (?, '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z')
+        """,
+        (title_name,),
+    )
+    lastrowid = cursor.lastrowid
+    assert lastrowid is not None
+    connection.commit()
+    return int(lastrowid)
+
+
+def _insert_subtitle(
+    connection: sqlite3.Connection,
+    title_id: int,
+    subtitle_code: str,
+    subtitle_name: str,
+) -> int:
+    cursor = connection.execute(
+        """
+        INSERT INTO subtitles(
+            title_id, subtitle_code, subtitle_name, sort_order, created_at, updated_at
+        ) VALUES (?, ?, ?, 0, '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z')
+        """,
+        (title_id, subtitle_code, subtitle_name),
+    )
+    lastrowid = cursor.lastrowid
+    assert lastrowid is not None
+    connection.commit()
+    return int(lastrowid)
