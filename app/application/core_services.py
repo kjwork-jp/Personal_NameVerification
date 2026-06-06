@@ -182,7 +182,8 @@ class CoreService:
             if before["deleted_at"] is not None:
                 raise StateTransitionError("cannot update deleted title")
 
-            self._ensure_unique_title_name(payload.title_name, exclude_title_id=title_id)
+            if _display_name_changed(before.get("title_name"), payload.title_name):
+                self._ensure_unique_title_name(payload.title_name, exclude_title_id=title_id)
             now = _utc_now()
             self._connection.execute(
                 """
@@ -269,11 +270,12 @@ class CoreService:
                 raise StateTransitionError("cannot update deleted subtitle")
 
             self._assert_active("titles", payload.title_id)
-            self._ensure_unique_subtitle_name(
-                payload.title_id,
-                payload.subtitle_name,
-                exclude_subtitle_id=subtitle_id,
-            )
+            if _display_name_changed(before.get("subtitle_name"), payload.subtitle_name):
+                self._ensure_unique_subtitle_name(
+                    payload.title_id,
+                    payload.subtitle_name,
+                    exclude_subtitle_id=subtitle_id,
+                )
             now = _utc_now()
             try:
                 self._connection.execute(
@@ -738,7 +740,10 @@ class CoreService:
         )
 
     def _write(self, operation: Callable[[], T]) -> T:
+        already_in_transaction = self._connection.in_transaction
         try:
+            if not already_in_transaction:
+                self._connection.execute("BEGIN IMMEDIATE")
             result = operation()
         except Exception:
             self._connection.rollback()
@@ -769,7 +774,14 @@ def _normalize_required_display_name(value: object, *, field_label: str) -> str:
 def _normalize_existing_display_name(value: object) -> str | None:
     if not isinstance(value, str):
         return None
-    return normalize_with_raw(value).normalized_text
+    try:
+        return normalize_with_raw(value).normalized_text
+    except ValueError:
+        return None
+
+
+def _display_name_changed(before_value: object, after_value: object) -> bool:
+    return _normalize_existing_display_name(before_value) != _normalize_existing_display_name(after_value)
 
 
 def _to_json(value: dict[str, Any] | None) -> str | None:
