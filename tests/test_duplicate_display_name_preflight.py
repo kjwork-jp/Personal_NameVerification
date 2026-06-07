@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import sqlite3
 
-from app.application.duplicate_display_name_preflight import inspect_duplicate_display_names
 from app.application.core_services import CoreService, TitleInput
+from app.application.duplicate_display_name_preflight import inspect_duplicate_display_names
 from app.infrastructure.db import apply_schema
 
 
