@@ -17,7 +17,7 @@
 - Head SHA: `b32dd6010a7acf3761f7ada658390c3ac12c1636`
 - State: open
 - Merged: false
-- Mergeable: true
+- 直近再確認: `mergeable=false`
 - 最新CI: Quality Gates #247 success
 - CI内訳: ruff / black / mypy / pytest success
 
@@ -27,8 +27,11 @@
 2. head SHA が `b32dd6010a7acf3761f7ada658390c3ac12c1636` 以降であることを確認する。
 3. Quality Gates がsuccessであることを確認する。
 4. review thread未解決がないことを確認する。
-5. `mergeable=true` ならPR #175をsquash mergeする。
-6. merge後、次P0へ進む。
+5. `mergeable=false` の原因を確認する。
+6. 今回はhandoff docs更新commitでmainが進んだ直後に `mergeable=false` へ変わったため、まずbase/head差分とconflict有無を確認する。
+7. 実conflictがなければbase追従commitまたはGitHub側の再評価を待って、必要なら再CIを通す。
+8. `mergeable=true` かつ Quality Gates success になったら、PR #175をsquash mergeする。
+9. merge後、次P0へ進む。
 
 注意:
 
@@ -73,6 +76,8 @@
 - State: open / merge待ち
 - Head SHA: `b32dd6010a7acf3761f7ada658390c3ac12c1636`
 - Quality Gates #247: success
+- 直近再確認: `mergeable=false`
+- 推定原因: handoff docs更新でmainが進んだため。実conflict有無は新チャットで再確認する。
 - 内容:
   - `TrashTab._restore_selected()` で `ConflictError`, `StateTransitionError`, `ValidationError` を捕捉。
   - raw service exceptionを漏らさず、`message_label` に「復元できません: ...」を表示。
@@ -124,7 +129,8 @@
 
 | 優先度 | 残工程 | 難易度 | 人間操作 | 状態 |
 |---:|---|---:|---|---|
-| P0 | PR #175 review/mergeable再確認・squash merge | 3 | 不要 | CI success / mergeable=true 確認済み。新チャットで再確認してmerge |
+| P0 | PR #175 base/head差分・conflict有無・mergeable再確認 | 3 | 不要 | CI success / 直近mergeable=false。handoff docs更新後のbase進行影響を確認 |
+| P0 | PR #175 必要ならbase追従・再CI・squash merge | 4 | 不要 | mergeable回復後 |
 | P0 | UI事前チェックで重複入力を登録前に止める | 6 | 不要 | #175 merge後 |
 | P0 | Issue #174: import経路のtitle/subtitle重複validation | 7 | 不要 | 起票済み / 未着手 |
 | P0 | DB制約化前のpreflight/cleanup設計 | 7 | 不要 | DB制約化の前提。PR #172ではDB制約追加なし |
@@ -170,16 +176,18 @@ GitHub repo `kjwork-jp/Personal_NameVerification` の名前解決アプリ開発
 
 1. PR #175 `fix: show trash restore conflicts in UI` の最新状態を確認する。
 2. head SHA、CI success、review未解決指摘、mergeable状態を確認する。
-3. `mergeable=true` かつ Quality Gates success ならPR #175をsquash mergeする。
-4. `mergeable=false` / `unknown` / `null` なら、base/head差分、conflict有無、最新CIを再確認し、必要ならbase追従・競合解消・再CIを行う。
-5. merge後、詳細引継ぎMarkdownの残工程に従って次タスクへ進む。
+3. 現時点ではhandoff docs更新でmainが進んだ後に `mergeable=false` を確認しているため、まずbase/head差分とconflict有無を確認する。
+4. 実conflictがなければbase追従またはGitHub再評価後、必要なら再CIを行う。
+5. `mergeable=true` かつ Quality Gates success ならPR #175をsquash mergeする。
+6. merge後、詳細引継ぎMarkdownの残工程に従って次タスクへ進む。
 
 現時点の記録:
 
 - PR #175 branch: `feature/trash-restore-conflict-feedback`
 - head SHA: `b32dd6010a7acf3761f7ada658390c3ac12c1636`
 - 最新CI: Quality Gates run #247 success
-- 直近確認: open / 未merge / CI success / mergeable=true
+- 直近確認: open / 未merge / CI success / mergeable=false
+- 推定原因: handoff docs更新commitでmainが進んだため。実conflict有無は再確認すること。
 
 回答では、要点サマリ、今回実施した作業、現在状態、完了済みを除いた残工程一覧を出してください。
 ```
