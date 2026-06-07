@@ -16,6 +16,11 @@ QApplication = qt_widgets.QApplication
 
 from app.ui.role_context import RoleContext  # noqa: E402
 from app.ui.title_subtitle_management_tab import TitleSubtitleManagementTab  # noqa: E402
+from app.ui.title_subtitle_summary_patch import (  # noqa: E402
+    install_title_subtitle_summary_counters,
+)
+
+install_title_subtitle_summary_counters()
 
 
 class StubCoreService:
