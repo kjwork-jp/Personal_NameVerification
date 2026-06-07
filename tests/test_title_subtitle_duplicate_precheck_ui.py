@@ -3,15 +3,11 @@
 from __future__ import annotations
 
 import os
+from typing import Any
 
 import pytest
 
-from app.application.read_models import (
-    NameSearchRow,
-    NameTitleLinkRow,
-    SubtitleDetail,
-    TitleDetail,
-)
+from app.application.read_models import SubtitleDetail, TitleDetail
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
@@ -28,54 +24,47 @@ class StubCoreService:
 
     def create_title(
         self,
-        payload,
+        payload: Any,
         operator_id: str,
         role: str = "admin",
         *,
-        name_ids=None,
-    ) -> int:  # type: ignore[no-untyped-def]
-        self.calls.append(
-            f"create_title:{payload.title_name}:{operator_id}:{role}:{name_ids or []}"
-        )
+        name_ids: list[int] | None = None,
+    ) -> int:
+        self.calls.append(f"create_title:{payload.title_name}:{operator_id}:{role}:{name_ids or []}")
         return 1
 
     def update_title(
         self,
         title_id: int,
-        payload,
+        payload: Any,
         operator_id: str,
         role: str = "admin",
-    ) -> None:  # type: ignore[no-untyped-def]
-        self.calls.append(
-            f"update_title:{title_id}:{payload.title_name}:{operator_id}:{role}"
-        )
+    ) -> None:
+        self.calls.append(f"update_title:{title_id}:{payload.title_name}:{operator_id}:{role}")
 
     def create_subtitle(
         self,
-        payload,
+        payload: Any,
         operator_id: str,
         role: str = "admin",
-    ) -> int:  # type: ignore[no-untyped-def]
-        self.calls.append(
-            f"create_subtitle:{payload.title_id}:{payload.subtitle_code}:{operator_id}:{role}"
-        )
+    ) -> int:
+        self.calls.append(f"create_subtitle:{payload.title_id}:{payload.subtitle_code}:{operator_id}:{role}")
         return 1
 
     def update_subtitle(
         self,
         subtitle_id: int,
-        payload,
+        payload: Any,
         operator_id: str,
         role: str = "admin",
-    ) -> None:  # type: ignore[no-untyped-def]
-        self.calls.append(
-            f"update_subtitle:{subtitle_id}:{payload.subtitle_code}:{operator_id}:{role}"
-        )
+    ) -> None:
+        self.calls.append(f"update_subtitle:{subtitle_id}:{payload.subtitle_code}:{operator_id}:{role}")
 
 
 class DuplicateQueryService:
-    def __init__(self) -> None:
-        self.titles = [
+    def list_titles(self, role: str = "admin", *, include_deleted: bool = False) -> list[TitleDetail]:
+        _ = (role, include_deleted)
+        return [
             TitleDetail(
                 id=1,
                 title_name="Title1",
@@ -84,40 +73,8 @@ class DuplicateQueryService:
                 deleted_at=None,
                 created_at="2026-01-01T00:00:00Z",
                 updated_at="2026-01-01T00:00:00Z",
-            ),
-            TitleDetail(
-                id=2,
-                title_name="DeletedTitle",
-                note=None,
-                icon_path=None,
-                deleted_at="2026-01-02T00:00:00Z",
-                created_at="2026-01-01T00:00:00Z",
-                updated_at="2026-01-02T00:00:00Z",
-            ),
+            )
         ]
-
-    def search_names(self, *args, **kwargs) -> list[NameSearchRow]:  # type: ignore[no-untyped-def]
-        _ = (args, kwargs)
-        return []
-
-    def list_names_for_title(
-        self,
-        title_id: int,
-        role: str = "admin",
-        *,
-        include_deleted: bool = False,
-    ) -> list[NameTitleLinkRow]:
-        _ = (title_id, role, include_deleted)
-        return []
-
-    def list_titles(
-        self,
-        role: str = "admin",
-        *,
-        include_deleted: bool = False,
-    ) -> list[TitleDetail]:
-        _ = (role, include_deleted)
-        return self.titles
 
     def list_subtitles(
         self,
@@ -156,16 +113,24 @@ class DuplicateQueryService:
             ),
         ]
 
+    def search_names(self, *args: Any, **kwargs: Any) -> list[Any]:
+        _ = (args, kwargs)
+        return []
 
-def _app() -> QApplication:
-    app = QApplication.instance()
-    if app is None:
-        app = QApplication([])
-    return app
+    def list_names_for_title(
+        self,
+        title_id: int,
+        role: str = "admin",
+        *,
+        include_deleted: bool = False,
+    ) -> list[Any]:
+        _ = (title_id, role, include_deleted)
+        return []
 
 
 def _tab(core: StubCoreService | None = None) -> TitleSubtitleManagementTab:
-    _app()
+    app = QApplication.instance() or QApplication([])
+    _ = app
     return TitleSubtitleManagementTab(
         core_service=core or StubCoreService(),
         query_service=DuplicateQueryService(),
@@ -205,8 +170,8 @@ def test_subtitle_update_duplicate_name_is_stopped_before_service_call() -> None
     core = StubCoreService()
     tab = _tab(core)
     tab.workflow_tabs.setCurrentWidget(tab.edit_tab)
-    tab.titles_table.selectRow(0)
-    tab.subtitles_table.selectRow(0)
+    tab._select_title(0)
+    tab._select_subtitle(0)
     tab.subtitle_code_input.setText("S1")
     tab.subtitle_name_input.setText("sub2")
 
