@@ -123,9 +123,15 @@ def _subtitle_duplicate_message(
             continue
         if excluding_subtitle_id is not None and int(subtitle.id) == excluding_subtitle_id:
             continue
-        if candidate_code_key is not None and _comparison_key(subtitle.subtitle_code) == candidate_code_key:
+        if (
+            candidate_code_key is not None
+            and _comparison_key(subtitle.subtitle_code) == candidate_code_key
+        ):
             return f"同じタイトル配下に有効な管理番号『{subtitle.subtitle_code}』があります。"
-        if candidate_name_key is not None and _comparison_key(subtitle.subtitle_name) == candidate_name_key:
+        if (
+            candidate_name_key is not None
+            and _comparison_key(subtitle.subtitle_name) == candidate_name_key
+        ):
             return f"同じタイトル配下に有効なサブタイトル名『{subtitle.subtitle_name}』があります。"
     return None
 
