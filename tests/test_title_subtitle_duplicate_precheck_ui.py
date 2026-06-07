@@ -183,8 +183,8 @@ def test_subtitle_update_duplicate_name_is_stopped_before_service_call() -> None
     core = StubCoreService()
     tab = _tab(core)
     tab.workflow_tabs.setCurrentWidget(tab.edit_tab)
-    tab._select_title(0)
-    tab._select_subtitle(0)
+    tab._select_title(tab._titles[0])
+    tab._select_subtitle(tab._subtitles[0])
     tab.subtitle_code_input.setText("S1")
     tab.subtitle_name_input.setText("sub2")
 
