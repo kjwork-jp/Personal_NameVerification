@@ -156,13 +156,13 @@ def _validate_title_display_names(
     for row in rows:
         if not _is_active_row(row):
             continue
-        normalized = _normalize_required_display_name(
+        imported_key = _normalize_required_display_name(
             row.get("title_name"),
             field_label="title_name",
         )
-        if normalized in imported:
+        if imported_key in imported:
             raise ConflictError("title already exists")
-        imported.add(normalized)
+        imported.add(imported_key)
 
     if not imported:
         return
@@ -175,8 +175,8 @@ def _validate_title_display_names(
         """
     ).fetchall()
     for existing in existing_rows:
-        normalized = _normalize_existing_display_name(existing[0])
-        if normalized is not None and normalized in imported:
+        existing_key = _normalize_existing_display_name(existing[0])
+        if existing_key is not None and existing_key in imported:
             raise ConflictError("title already exists")
 
 
@@ -189,11 +189,11 @@ def _validate_subtitle_display_names(
         if not _is_active_row(row):
             continue
         title_id = _normalize_required_int(row.get("title_id"), field_label="title_id")
-        normalized = _normalize_required_display_name(
+        imported_key = _normalize_required_display_name(
             row.get("subtitle_name"),
             field_label="subtitle_name",
         )
-        key = (title_id, normalized)
+        key = (title_id, imported_key)
         if key in imported:
             raise ConflictError("subtitle already exists for title")
         imported.add(key)
@@ -209,11 +209,11 @@ def _validate_subtitle_display_names(
         """
     ).fetchall()
     for existing in existing_rows:
-        normalized = _normalize_existing_display_name(existing[1])
-        if normalized is None:
+        existing_key = _normalize_existing_display_name(existing[1])
+        if existing_key is None:
             continue
         title_id = int(existing[0])
-        if (title_id, normalized) in imported:
+        if (title_id, existing_key) in imported:
             raise ConflictError("subtitle already exists for title")
 
 
