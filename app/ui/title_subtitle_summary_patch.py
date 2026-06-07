@@ -20,6 +20,7 @@ def install_title_subtitle_summary_counters() -> None:
 
     target: Any = TitleSubtitleManagementTab
     if getattr(target, _PATCHED_ATTR, False):
+        _install_duplicate_prechecks()
         return
 
     original_init = target.__init__
@@ -73,6 +74,17 @@ def install_title_subtitle_summary_counters() -> None:
     target._select_subtitle = select_subtitle_with_summary
     target._update_action_states = update_action_states_with_summary
     setattr(target, _PATCHED_ATTR, True)
+    _install_duplicate_prechecks()
+
+
+def _install_duplicate_prechecks() -> None:
+    from app.ui.title_subtitle_duplicate_precheck import install_title_subtitle_duplicate_precheck
+    from app.ui.title_subtitle_update_duplicate_precheck import (
+        install_title_subtitle_update_duplicate_precheck,
+    )
+
+    install_title_subtitle_duplicate_precheck()
+    install_title_subtitle_update_duplicate_precheck()
 
 
 def _ensure_summary_label(tab: Any) -> None:
