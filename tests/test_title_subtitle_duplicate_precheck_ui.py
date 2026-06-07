@@ -30,7 +30,9 @@ class StubCoreService:
         *,
         name_ids: list[int] | None = None,
     ) -> int:
-        self.calls.append(f"create_title:{payload.title_name}:{operator_id}:{role}:{name_ids or []}")
+        self.calls.append(
+            f"create_title:{payload.title_name}:{operator_id}:{role}:{name_ids or []}"
+        )
         return 1
 
     def update_title(
@@ -40,7 +42,9 @@ class StubCoreService:
         operator_id: str,
         role: str = "admin",
     ) -> None:
-        self.calls.append(f"update_title:{title_id}:{payload.title_name}:{operator_id}:{role}")
+        self.calls.append(
+            f"update_title:{title_id}:{payload.title_name}:{operator_id}:{role}"
+        )
 
     def create_subtitle(
         self,
@@ -48,7 +52,9 @@ class StubCoreService:
         operator_id: str,
         role: str = "admin",
     ) -> int:
-        self.calls.append(f"create_subtitle:{payload.title_id}:{payload.subtitle_code}:{operator_id}:{role}")
+        self.calls.append(
+            f"create_subtitle:{payload.title_id}:{payload.subtitle_code}:{operator_id}:{role}"
+        )
         return 1
 
     def update_subtitle(
@@ -58,11 +64,18 @@ class StubCoreService:
         operator_id: str,
         role: str = "admin",
     ) -> None:
-        self.calls.append(f"update_subtitle:{subtitle_id}:{payload.subtitle_code}:{operator_id}:{role}")
+        self.calls.append(
+            f"update_subtitle:{subtitle_id}:{payload.subtitle_code}:{operator_id}:{role}"
+        )
 
 
 class DuplicateQueryService:
-    def list_titles(self, role: str = "admin", *, include_deleted: bool = False) -> list[TitleDetail]:
+    def list_titles(
+        self,
+        role: str = "admin",
+        *,
+        include_deleted: bool = False,
+    ) -> list[TitleDetail]:
         _ = (role, include_deleted)
         return [
             TitleDetail(
