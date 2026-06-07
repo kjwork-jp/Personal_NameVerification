@@ -6,7 +6,7 @@ import csv
 import json
 import sqlite3
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from app.domain.errors import ConflictError, ValidationError
 from app.domain.normalization import normalize_for_comparison, normalize_with_raw
@@ -90,12 +90,13 @@ def import_from_json_file(
     _validate_empty_target_db(connection, table_names)
 
     try:
-        payload = json.loads(source.read_text("utf-8"))
+        payload_raw = json.loads(source.read_text("utf-8"))
     except json.JSONDecodeError as exc:
         raise ValidationError("json file is invalid") from exc
 
-    if not isinstance(payload, dict):
+    if not isinstance(payload_raw, dict):
         raise ValidationError("json payload must be an object")
+    payload = cast(dict[str, Any], payload_raw)
 
     for table_name in table_names:
         if table_name not in payload:
@@ -111,12 +112,15 @@ def import_from_json_file(
 
             columns, _ = _table_columns(connection, table_name)
             rows_raw = payload[table_name]
+            if not isinstance(rows_raw, list):
+                raise ValidationError(f"json payload key is not a list: {table_name}")
             rows: list[dict[str, Any]] = []
             for row in rows_raw:
                 if not isinstance(row, dict):
                     raise ValidationError(f"json row is not object: {table_name}")
-                _validate_required_columns(table_name, list(row.keys()), columns)
-                rows.append({key: row.get(key) for key in columns})
+                row_dict = cast(dict[str, Any], row)
+                _validate_required_columns(table_name, list(row_dict.keys()), columns)
+                rows.append({key: row_dict.get(key) for key in columns})
 
             _validate_import_display_names(connection, table_name, rows)
             _insert_rows(connection, table_name, columns, rows)
@@ -236,12 +240,14 @@ def _normalize_existing_display_name(value: object) -> str | None:
 
 
 def _normalize_required_int(value: object, *, field_label: str) -> int:
-    if value is None:
-        raise ValidationError(f"{field_label} must be valid")
-    try:
-        return int(value)
-    except (TypeError, ValueError) as exc:
-        raise ValidationError(f"{field_label} must be valid") from exc
+    if isinstance(value, int):
+        return value
+    if isinstance(value, str):
+        try:
+            return int(value)
+        except ValueError as exc:
+            raise ValidationError(f"{field_label} must be valid") from exc
+    raise ValidationError(f"{field_label} must be valid")
 
 
 def _table_columns(connection: sqlite3.Connection, table_name: str) -> tuple[list[str], set[str]]:
