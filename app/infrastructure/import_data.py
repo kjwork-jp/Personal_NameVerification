@@ -171,7 +171,7 @@ def _validate_title_display_names(
         """
     ).fetchall()
     for existing in existing_rows:
-        normalized = _normalize_existing_display_name(existing["title_name"])
+        normalized = _normalize_existing_display_name(existing[0])
         if normalized is not None and normalized in imported:
             raise ConflictError("title already exists")
 
@@ -205,10 +205,10 @@ def _validate_subtitle_display_names(
         """
     ).fetchall()
     for existing in existing_rows:
-        normalized = _normalize_existing_display_name(existing["subtitle_name"])
+        normalized = _normalize_existing_display_name(existing[1])
         if normalized is None:
             continue
-        title_id = int(existing["title_id"])
+        title_id = int(existing[0])
         if (title_id, normalized) in imported:
             raise ConflictError("subtitle already exists for title")
 
