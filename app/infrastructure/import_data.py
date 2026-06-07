@@ -8,7 +8,8 @@ import sqlite3
 from pathlib import Path
 from typing import Any
 
-from app.domain.errors import ValidationError
+from app.domain.errors import ConflictError, ValidationError
+from app.domain.normalization import normalize_for_comparison, normalize_with_raw
 
 IMPORT_TABLES: tuple[str, ...] = (
     "names",
@@ -68,6 +69,7 @@ def import_from_csv_directory(
                 rows = [
                     _normalize_row_values(dict(row), columns, nullable_columns) for row in reader
                 ]
+            _validate_import_display_names(connection, table_name, rows)
             _insert_rows(connection, table_name, columns, rows)
             imported_counts[table_name] = len(rows)
 
@@ -116,6 +118,7 @@ def import_from_json_file(
                 _validate_required_columns(table_name, list(row.keys()), columns)
                 rows.append({key: row.get(key) for key in columns})
 
+            _validate_import_display_names(connection, table_name, rows)
             _insert_rows(connection, table_name, columns, rows)
             imported_counts[table_name] = len(rows)
 
@@ -128,6 +131,117 @@ def _validate_empty_target_db(connection: sqlite3.Connection, table_names: tuple
             raise ValidationError(
                 f"import target db must be empty: table {table_name} has {count} rows"
             )
+
+
+def _validate_import_display_names(
+    connection: sqlite3.Connection,
+    table_name: str,
+    rows: list[dict[str, Any]],
+) -> None:
+    if table_name == "titles":
+        _validate_title_display_names(connection, rows)
+    elif table_name == "subtitles":
+        _validate_subtitle_display_names(connection, rows)
+
+
+def _validate_title_display_names(
+    connection: sqlite3.Connection,
+    rows: list[dict[str, Any]],
+) -> None:
+    imported: set[str] = set()
+    for row in rows:
+        if not _is_active_row(row):
+            continue
+        normalized = _normalize_required_display_name(
+            row.get("title_name"),
+            field_label="title_name",
+        )
+        if normalized in imported:
+            raise ConflictError("title already exists")
+        imported.add(normalized)
+
+    if not imported:
+        return
+
+    existing_rows = connection.execute(
+        """
+        SELECT title_name
+        FROM titles
+        WHERE deleted_at IS NULL
+        """
+    ).fetchall()
+    for existing in existing_rows:
+        normalized = _normalize_existing_display_name(existing["title_name"])
+        if normalized is not None and normalized in imported:
+            raise ConflictError("title already exists")
+
+
+def _validate_subtitle_display_names(
+    connection: sqlite3.Connection,
+    rows: list[dict[str, Any]],
+) -> None:
+    imported: set[tuple[int, str]] = set()
+    for row in rows:
+        if not _is_active_row(row):
+            continue
+        title_id = _normalize_required_int(row.get("title_id"), field_label="title_id")
+        normalized = _normalize_required_display_name(
+            row.get("subtitle_name"),
+            field_label="subtitle_name",
+        )
+        key = (title_id, normalized)
+        if key in imported:
+            raise ConflictError("subtitle already exists for title")
+        imported.add(key)
+
+    if not imported:
+        return
+
+    existing_rows = connection.execute(
+        """
+        SELECT title_id, subtitle_name
+        FROM subtitles
+        WHERE deleted_at IS NULL
+        """
+    ).fetchall()
+    for existing in existing_rows:
+        normalized = _normalize_existing_display_name(existing["subtitle_name"])
+        if normalized is None:
+            continue
+        title_id = int(existing["title_id"])
+        if (title_id, normalized) in imported:
+            raise ConflictError("subtitle already exists for title")
+
+
+def _is_active_row(row: dict[str, Any]) -> bool:
+    return row.get("deleted_at") is None
+
+
+def _normalize_required_display_name(value: object, *, field_label: str) -> str:
+    if not isinstance(value, str):
+        raise ValidationError(f"{field_label} must not be blank")
+    try:
+        return normalize_for_comparison(value)
+    except ValueError as exc:
+        raise ValidationError(f"{field_label} must not be blank") from exc
+
+
+def _normalize_existing_display_name(value: object) -> str | None:
+    if not isinstance(value, str):
+        return None
+    try:
+        return normalize_with_raw(value).normalized_text
+    except ValueError:
+        return None
+
+
+def _normalize_required_int(value: object, *, field_label: str) -> int:
+    if value is None:
+        raise ValidationError(f"{field_label} must be valid")
+    try:
+        return int(value)
+    except (TypeError, ValueError) as exc:
+        raise ValidationError(f"{field_label} must be valid") from exc
 
 
 def _table_columns(connection: sqlite3.Connection, table_name: str) -> tuple[list[str], set[str]]:
