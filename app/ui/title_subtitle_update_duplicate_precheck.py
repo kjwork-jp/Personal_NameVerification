@@ -7,16 +7,19 @@ from typing import Any
 from app.domain.normalization import normalize_with_raw
 
 _PATCHED_ATTR = "_title_subtitle_update_duplicate_precheck_installed"
+_WRAPPER_ATTR = "_title_subtitle_update_duplicate_precheck_wrapper"
 
 
 def install_title_subtitle_update_duplicate_precheck() -> None:
     from app.ui.title_subtitle_management_tab import TitleSubtitleManagementTab
 
     target: Any = TitleSubtitleManagementTab
-    if getattr(target, _PATCHED_ATTR, False):
+    current_update_subtitle = target._update_subtitle
+    if getattr(current_update_subtitle, _WRAPPER_ATTR, False):
+        setattr(target, _PATCHED_ATTR, True)
         return
 
-    original_update_subtitle = target._update_subtitle
+    original_update_subtitle = current_update_subtitle
 
     def update_subtitle_with_strict_duplicate_precheck(self: Any) -> None:
         title_id = _selected_title_id(self)
@@ -34,6 +37,7 @@ def install_title_subtitle_update_duplicate_precheck() -> None:
                 return
         original_update_subtitle(self)
 
+    setattr(update_subtitle_with_strict_duplicate_precheck, _WRAPPER_ATTR, True)
     target._update_subtitle = update_subtitle_with_strict_duplicate_precheck
     setattr(target, _PATCHED_ATTR, True)
 
