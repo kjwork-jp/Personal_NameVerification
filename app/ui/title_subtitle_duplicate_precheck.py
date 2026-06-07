@@ -145,9 +145,19 @@ def _subtitle_create_title_id(tab: Any) -> int | None:
 
 
 def _subtitles_for_title(tab: Any, title_id: int) -> list[Any]:
+    rendered_rows = _rendered_subtitles_for_title(tab, title_id)
+    queried_rows = _queried_subtitles_for_title(tab, title_id)
+    return _dedupe_subtitles([*rendered_rows, *queried_rows])
+
+
+def _rendered_subtitles_for_title(tab: Any, title_id: int) -> list[Any]:
     selected_title = getattr(tab, "_selected_title", None)
-    if selected_title is not None and int(selected_title.id) == title_id:
-        return list(getattr(tab, "_subtitles", []))
+    if selected_title is None or int(selected_title.id) != title_id:
+        return []
+    return list(getattr(tab, "_subtitles", []))
+
+
+def _queried_subtitles_for_title(tab: Any, title_id: int) -> list[Any]:
     try:
         from app.ui.title_subtitle_management_tab import _call_with_optional_role
 
@@ -161,6 +171,18 @@ def _subtitles_for_title(tab: Any, title_id: int) -> list[Any]:
         )
     except Exception:  # noqa: BLE001
         return []
+
+
+def _dedupe_subtitles(subtitles: list[Any]) -> list[Any]:
+    deduped: list[Any] = []
+    seen_ids: set[int] = set()
+    for subtitle in subtitles:
+        subtitle_id = int(subtitle.id)
+        if subtitle_id in seen_ids:
+            continue
+        seen_ids.add(subtitle_id)
+        deduped.append(subtitle)
+    return deduped
 
 
 def _comparison_key(value: str | None) -> str | None:
