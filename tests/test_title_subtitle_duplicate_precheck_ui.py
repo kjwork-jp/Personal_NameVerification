@@ -196,6 +196,7 @@ def test_subtitle_update_duplicate_name_is_stopped_before_service_call() -> None
     tab._select_subtitle(tab._subtitles[0])
     tab.subtitle_code_input.setText("S1")
     tab.subtitle_name_input.setText("Sub2")
+    install_title_subtitle_update_duplicate_precheck()
 
     tab._update_subtitle()
 
