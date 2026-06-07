@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import csv
 import json
 import sqlite3
 from pathlib import Path
@@ -11,7 +12,7 @@ import pytest
 from app.application.core_services import CoreService, NameInput, SubtitleInput, TitleInput
 from app.application.export_backup_services import ExportBackupService
 from app.application.import_services import ImportService
-from app.domain.errors import AuthorizationError, ValidationError
+from app.domain.errors import AuthorizationError, ConflictError, ValidationError
 from app.infrastructure.db import initialize_database
 
 TABLES = (
@@ -97,6 +98,53 @@ def test_import_csv_success_for_admin_on_empty_db(tmp_path: Path) -> None:
     title_row = target_conn.execute("SELECT title_name FROM titles").fetchone()
     assert title_row is not None
     assert title_row["title_name"] == "Title-A"
+
+
+def test_import_json_rejects_duplicate_active_title_display_name(tmp_path: Path) -> None:
+    source_db = _build_source_db(tmp_path / "source.sqlite3")
+    export_service = ExportBackupService(source_db)
+    json_path = tmp_path / "export.json"
+    export_service.export_json(json_path, role="admin")
+    source_db.close()
+    payload = json.loads(json_path.read_text("utf-8"))
+    duplicate = dict(payload["titles"][0])
+    duplicate["id"] = 999
+    duplicate["title_name"] = " title-a "
+    duplicate["deleted_at"] = None
+    payload["titles"].append(duplicate)
+    json_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    target_conn = initialize_database(tmp_path / "target.sqlite3")
+    import_service = ImportService(target_conn)
+    with pytest.raises(ConflictError, match="title already exists"):
+        import_service.import_json(json_path, role="admin")
+
+
+def test_import_csv_rejects_duplicate_active_subtitle_display_name(tmp_path: Path) -> None:
+    source_db = _build_source_db(tmp_path / "source.sqlite3")
+    export_service = ExportBackupService(source_db)
+    csv_dir = tmp_path / "csv"
+    csv_dir.mkdir()
+    export_service.export_csv(csv_dir, role="admin")
+    source_db.close()
+    subtitles_csv = csv_dir / "subtitles.csv"
+    with subtitles_csv.open("r", encoding="utf-8", newline="") as fp:
+        rows = [dict(row) for row in csv.DictReader(fp)]
+    duplicate = dict(rows[0])
+    duplicate["id"] = "999"
+    duplicate["subtitle_code"] = "S02"
+    duplicate["subtitle_name"] = " sub-1 "
+    duplicate["deleted_at"] = ""
+    rows.append(duplicate)
+    with subtitles_csv.open("w", encoding="utf-8", newline="") as fp:
+        writer = csv.DictWriter(fp, fieldnames=list(rows[0].keys()))
+        writer.writeheader()
+        writer.writerows(rows)
+
+    target_conn = initialize_database(tmp_path / "target.sqlite3")
+    import_service = ImportService(target_conn)
+    with pytest.raises(ConflictError, match="subtitle already exists for title"):
+        import_service.import_csv(csv_dir, role="admin")
 
 
 def test_import_csv_preview_reports_counts_and_unknown_files(tmp_path: Path) -> None:
