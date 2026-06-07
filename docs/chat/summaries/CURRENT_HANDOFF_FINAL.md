@@ -8,7 +8,7 @@ GitHub repoを一次情報として扱い、Google Driveは基本参照しない
 
 ## 現在状態
 
-PR #172 はmerge済みです。現在の最優先は、PR #175 `fix: show trash restore conflicts in UI` の最終確認とsquash mergeです。
+PR #172 はmerge済みです。現在の最優先は、PR #175 `fix: show trash restore conflicts in UI` のbase/head差分・conflict有無・mergeable再確認です。
 
 - 現行詳細引継ぎ: `docs/chat/summaries/20260607_personal_nameverification_current_handoff.md`
 - 旧完了サマリ: `docs/chat/summaries/20260603_personal_nameverification_completion_summary.md`
@@ -26,14 +26,16 @@ PR #172 はmerge済みです。現在の最優先は、PR #175 `fix: show trash 
 | Base | `main` |
 | Head SHA | `b32dd6010a7acf3761f7ada658390c3ac12c1636` |
 | 最新CI | Quality Gates #247 success |
-| 直近確認 | open / 未merge / CI success / mergeable=true |
+| 直近確認 | open / 未merge / CI success / mergeable=false |
 
 新チャットの最初の実作業:
 
 1. PR #175 の最新状態を再取得する。
 2. head SHA、CI success、review未解決指摘、mergeable状態を確認する。
-3. 問題なければPR #175をsquash mergeする。
-4. merge後、現行詳細引継ぎの残工程へ進む。
+3. 直近ではhandoff docs更新commitでmainが進んだ後に `mergeable=false` を確認しているため、base/head差分とconflict有無を確認する。
+4. 実conflictがなければbase追従またはGitHub再評価後、必要なら再CIを行う。
+5. `mergeable=true` かつ Quality Gates success になったらPR #175をsquash mergeする。
+6. merge後、現行詳細引継ぎの残工程へ進む。
 
 注意:
 
@@ -58,7 +60,8 @@ PR #172 はmerge済みです。現在の最優先は、PR #175 `fix: show trash 
 
 | 優先度 | 残工程 | 人間操作 | 状態 |
 |---:|---|---|---|
-| P0 | PR #175 review/mergeable再確認・squash merge | 不要 | CI success / mergeable=true 確認済み。新チャットで再確認してmerge |
+| P0 | PR #175 base/head差分・conflict有無・mergeable再確認 | 不要 | CI success / 直近mergeable=false。handoff docs更新後のbase進行影響を確認 |
+| P0 | PR #175 必要ならbase追従・再CI・squash merge | 不要 | mergeable回復後 |
 | P0 | UI事前チェックで重複入力を登録前に止める | 不要 | #175 merge後 |
 | P0 | Issue #174: import経路のtitle/subtitle重複validation | 不要 | 起票済み / 未着手 |
 | P0 | DB制約化前のpreflight/cleanup設計 | 不要 | DB制約化の前提 |
