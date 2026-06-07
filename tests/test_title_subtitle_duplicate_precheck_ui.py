@@ -19,8 +19,12 @@ from app.ui.title_subtitle_management_tab import TitleSubtitleManagementTab  # n
 from app.ui.title_subtitle_summary_patch import (  # noqa: E402
     install_title_subtitle_summary_counters,
 )
+from app.ui.title_subtitle_update_duplicate_precheck import (  # noqa: E402
+    install_title_subtitle_update_duplicate_precheck,
+)
 
 install_title_subtitle_summary_counters()
+install_title_subtitle_update_duplicate_precheck()
 
 
 class StubCoreService:
