@@ -6,6 +6,7 @@ import sqlite3
 from pathlib import Path
 from typing import Any
 
+from app.domain.normalization import normalize_with_raw
 from app.domain.public_id import new_public_id
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -36,12 +37,20 @@ def apply_schema(connection: sqlite3.Connection, schema_path: Path = DEFAULT_SCH
     """Apply schema SQL and pending migrations to an existing SQLite connection."""
     sql_script = schema_path.read_text(encoding="utf-8")
     connection.execute("PRAGMA foreign_keys = ON;")
+    register_sqlite_functions(connection)
     ensure_legacy_public_id_columns(connection)
     connection.executescript(sql_script)
     apply_migrations(connection)
     ensure_user_auth_columns(connection)
     ensure_public_ids(connection)
+    ensure_display_name_unique_indexes(connection)
     check_database_integrity(connection)
+
+
+def register_sqlite_functions(connection: sqlite3.Connection) -> None:
+    """Register app-specific SQLite functions required by expression indexes."""
+
+    connection.create_function("app_normalize", 1, _sqlite_app_normalize, deterministic=True)
 
 
 def apply_migrations(
@@ -154,6 +163,47 @@ def ensure_public_ids(connection: sqlite3.Connection) -> None:
                 (new_public_id(), _row_value(row, "id", 0)),
             )
     connection.commit()
+
+
+def ensure_display_name_unique_indexes(connection: sqlite3.Connection) -> None:
+    """Create normalized active display-name unique indexes for titles/subtitles."""
+
+    if not _table_exists(connection, "titles") or not _table_exists(connection, "subtitles"):
+        return
+
+    from app.application.duplicate_display_name_preflight import (
+        inspect_duplicate_display_names,
+    )
+
+    report = inspect_duplicate_display_names(connection)
+    if report.has_blockers:
+        raise sqlite3.IntegrityError(
+            "title/subtitle display-name unique indexes blocked: "
+            f"{len(report.title_duplicates)} title blocker(s), "
+            f"{len(report.subtitle_duplicates)} subtitle blocker(s)"
+        )
+
+    connection.execute(
+        """
+        CREATE UNIQUE INDEX IF NOT EXISTS uq_titles_active_display_name
+        ON titles(app_normalize(title_name))
+        WHERE deleted_at IS NULL
+        """
+    )
+    connection.execute(
+        """
+        CREATE UNIQUE INDEX IF NOT EXISTS uq_subtitles_active_title_display_name
+        ON subtitles(title_id, app_normalize(subtitle_name))
+        WHERE deleted_at IS NULL
+        """
+    )
+    connection.commit()
+
+
+def _sqlite_app_normalize(value: object) -> str | None:
+    if not isinstance(value, str):
+        return None
+    return normalize_with_raw(value).normalized_text
 
 
 def _table_exists(connection: sqlite3.Connection, table: str) -> bool:
