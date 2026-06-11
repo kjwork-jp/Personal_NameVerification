@@ -74,6 +74,7 @@ def test_title_scan_ignores_legacy_blank_rows() -> None:
 
 def test_title_metadata_edit_allows_unchanged_legacy_duplicate_display_name() -> None:
     connection, service = _service()
+    _drop_display_name_indexes(connection)
     first_id = _insert_title(connection, "Legacy Duplicate")
     _insert_title(connection, " legacy duplicate ")
 
@@ -165,6 +166,7 @@ def test_subtitle_scan_ignores_legacy_blank_rows() -> None:
 
 def test_subtitle_metadata_edit_allows_unchanged_legacy_duplicate_display_name() -> None:
     connection, service = _service()
+    _drop_display_name_indexes(connection)
     title_id = service.create_title(TitleInput(title_name="Main"), operator_id="op-1")
     first_id = _insert_subtitle(connection, title_id, "S1", "Legacy Duplicate")
     _insert_subtitle(connection, title_id, "S2", " legacy duplicate ")
@@ -182,6 +184,12 @@ def test_subtitle_metadata_edit_allows_unchanged_legacy_duplicate_display_name()
 
     row = connection.execute("SELECT note FROM subtitles WHERE id = ?", (first_id,)).fetchone()
     assert row["note"] == "metadata only"
+
+
+def _drop_display_name_indexes(connection: sqlite3.Connection) -> None:
+    connection.execute("DROP INDEX IF EXISTS uq_titles_active_display_name")
+    connection.execute("DROP INDEX IF EXISTS uq_subtitles_active_title_display_name")
+    connection.commit()
 
 
 def _insert_title(connection: sqlite3.Connection, title_name: str) -> int:
