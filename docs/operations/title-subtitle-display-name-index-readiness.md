@@ -7,13 +7,12 @@ active title and subtitle display names.
 
 The cleanup policy is already documented in
 `docs/operations/title-subtitle-display-name-cleanup-policy.md`. This document
-turns that policy into implementation acceptance criteria for the next schema PR.
+turns that policy into implementation acceptance criteria for the schema change.
 
 ## Required readiness check
 
-Before a schema change adds title/subtitle display-name indexes, the application
-or migration task must run `inspect_duplicate_display_names()` against the target
-database.
+Before title/subtitle display-name indexes are created, the application must run
+`inspect_duplicate_display_names()` against the target database.
 
 The schema change is ready only when all of these are true:
 
@@ -23,7 +22,7 @@ The schema change is ready only when all of these are true:
 - `report.subtitle_duplicates == ()`
 
 When the report contains any duplicate group, the schema change must stop before
-writing schema changes. The output should include only safe metadata:
+writing index changes. The output should include only safe metadata:
 
 - entity type
 - normalized key
@@ -31,29 +30,21 @@ writing schema changes. The output should include only safe metadata:
 - row ids
 - current display names
 
-## Planned index shape
+## Implemented index shape
 
-The schema PR should use active-row partial indexes.
+The schema uses active-row partial expression indexes. The expression calls the
+SQLite deterministic function `app_normalize()`, which is registered by
+`app.infrastructure.db.register_sqlite_functions()` and follows the repository's
+normalization rules.
 
-Planned title index:
+Index names:
 
-```sql
-CREATE UNIQUE INDEX IF NOT EXISTS uq_titles_active_display_name
-ON titles(title_name)
-WHERE deleted_at IS NULL;
-```
+- `uq_titles_active_display_name`
+- `uq_subtitles_active_title_display_name`
 
-Planned subtitle index:
-
-```sql
-CREATE UNIQUE INDEX IF NOT EXISTS uq_subtitles_active_title_display_name
-ON subtitles(title_id, subtitle_name)
-WHERE deleted_at IS NULL;
-```
-
-The preflight remains the required safety check because the future index shape
-uses SQLite's stored text values, while the application duplicate policy compares
-normalized display names.
+A raw `title_name` / `subtitle_name` index is not sufficient because the
+application duplicate policy compares normalized display names, including NFKC,
+casefolding, control-character cleaning, and whitespace collapsing.
 
 ## Restore compatibility
 
@@ -61,11 +52,11 @@ Restore flows must keep checking duplicate conflicts before making deleted rows
 active again. Deleted rows are not initial readiness blockers, but restoring one
 can create an active conflict.
 
-## Acceptance criteria for the schema PR
+## Acceptance criteria
 
-- The schema PR documents the exact index names.
-- The schema PR includes a readiness check that calls `inspect_duplicate_display_names()`.
-- The readiness check allows the schema update only for no-blocker reports.
+- The exact index names are documented.
+- The readiness check calls `inspect_duplicate_display_names()`.
+- Index creation is allowed only for no-blocker reports.
 - The readiness check returns safe blocker metadata for duplicate reports.
 - Tests cover both no-blocker and duplicate-report states.
-- The schema PR keeps existing restore-conflict behavior intact.
+- Existing restore-conflict behavior remains intact.
