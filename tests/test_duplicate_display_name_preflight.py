@@ -13,6 +13,7 @@ def _connection() -> sqlite3.Connection:
     connection = sqlite3.connect(":memory:")
     connection.row_factory = sqlite3.Row
     apply_schema(connection)
+    _drop_display_name_indexes(connection)
     return connection
 
 
@@ -79,6 +80,12 @@ def test_preflight_passes_without_active_display_name_duplicates() -> None:
     assert report.blocker_count == 0
     assert report.title_duplicates == ()
     assert report.subtitle_duplicates == ()
+
+
+def _drop_display_name_indexes(connection: sqlite3.Connection) -> None:
+    connection.execute("DROP INDEX IF EXISTS uq_titles_active_display_name")
+    connection.execute("DROP INDEX IF EXISTS uq_subtitles_active_title_display_name")
+    connection.commit()
 
 
 def _insert_title(
