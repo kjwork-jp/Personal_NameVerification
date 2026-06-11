@@ -177,11 +177,7 @@ def ensure_display_name_unique_indexes(connection: sqlite3.Connection) -> None:
 
     report = inspect_duplicate_display_names(connection)
     if report.has_blockers:
-        raise sqlite3.IntegrityError(
-            "title/subtitle display-name unique indexes blocked: "
-            f"{len(report.title_duplicates)} title blocker(s), "
-            f"{len(report.subtitle_duplicates)} subtitle blocker(s)"
-        )
+        raise sqlite3.IntegrityError(_display_name_readiness_message(report))
 
     connection.execute(
         """
@@ -198,6 +194,30 @@ def ensure_display_name_unique_indexes(connection: sqlite3.Connection) -> None:
         """
     )
     connection.commit()
+
+
+def _display_name_readiness_message(report: Any) -> str:
+    entries = [
+        "title/subtitle display-name index readiness failed",
+        f"title_groups={len(report.title_duplicates)}",
+        f"subtitle_groups={len(report.subtitle_duplicates)}",
+    ]
+    for group in report.title_duplicates:
+        entries.append(
+            "title_group("
+            f"key={group.normalized_key!r}, "
+            f"ids={group.ids!r}, "
+            f"display_names={group.display_names!r})"
+        )
+    for group in report.subtitle_duplicates:
+        entries.append(
+            "subtitle_group("
+            f"title_id={group.title_id!r}, "
+            f"key={group.normalized_key!r}, "
+            f"ids={group.ids!r}, "
+            f"display_names={group.display_names!r})"
+        )
+    return "; ".join(entries)
 
 
 def _sqlite_app_normalize(value: object) -> str | None:
