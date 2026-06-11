@@ -1,4 +1,8 @@
-"""Regression tests for threaded operations I/O services."""
+"""Regression tests for threaded operations I/O services.
+
+Covers #111: OperationsTab export/import/backup actions must not reuse a
+main-thread SQLite connection from worker threads.
+"""
 
 from __future__ import annotations
 
