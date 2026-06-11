@@ -18,3 +18,16 @@ old/
 *.py[codz]
 *$py.class
 *.so
+50_backups/daily/nameverification_20260604_053245.db
+60_exports/csv/change_logs.csv
+60_exports/csv/name_subtitle_links.csv
+60_exports/csv/name_title_links.csv
+60_exports/csv/names.csv
+60_exports/csv/subtitles.csv
+60_exports/csv/titles.csv
+60_exports/json/nameverification_export_20260604_053245.json
+60_exports/sql/nameverification_dump_20260604_053245.sql
+audit_logs_review.json
+logs/change_logs.jsonl
+logs/change_logs.jsonl
+/logs
