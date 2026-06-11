@@ -7,6 +7,7 @@ import sqlite3
 from pathlib import Path
 
 from app.domain.errors import ValidationError
+from app.infrastructure.db import register_sqlite_functions
 
 
 def restore_database_from_backup(backup_path: Path, target_db_path: Path) -> Path:
@@ -53,6 +54,7 @@ def restore_database_from_backup(backup_path: Path, target_db_path: Path) -> Pat
 def _validate_sqlite_file(path: Path, *, label: str) -> None:
     try:
         connection = sqlite3.connect(f"file:{path}?mode=ro", uri=True)
+        register_sqlite_functions(connection)
         try:
             row = connection.execute("PRAGMA integrity_check").fetchone()
         finally:
