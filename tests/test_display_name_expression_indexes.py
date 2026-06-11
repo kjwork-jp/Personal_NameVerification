@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from app.infrastructure.db import initialize_database
+from app.infrastructure.db import ensure_display_name_unique_indexes, initialize_database
 
 
 def test_title_display_name_index_uses_app_normalization(tmp_path: Path) -> None:
@@ -69,5 +69,25 @@ def test_deleted_display_name_duplicates_do_not_block_active_index(tmp_path: Pat
             (" demo　title ", "2026-01-01T00:00:00Z"),
         )
         assert connection.execute("SELECT COUNT(*) FROM titles").fetchone()[0] == 2
+    finally:
+        connection.close()
+
+
+def test_index_readiness_error_includes_safe_blocker_details(tmp_path: Path) -> None:
+    connection = initialize_database(tmp_path / "readiness-details.db")
+    try:
+        connection.execute("DROP INDEX IF EXISTS uq_titles_active_display_name")
+        connection.execute("INSERT INTO titles(title_name) VALUES (?)", ("Demo Title",))
+        connection.execute("INSERT INTO titles(title_name) VALUES (?)", (" demo　title ",))
+
+        with pytest.raises(sqlite3.IntegrityError) as exc_info:
+            ensure_display_name_unique_indexes(connection)
+
+        message = str(exc_info.value)
+        assert "title/subtitle display-name index readiness failed" in message
+        assert "title_groups=1" in message
+        assert "key='demo title'" in message
+        assert "ids=(1, 2)" in message
+        assert "display_names=('Demo Title', ' demo　title ')" in message
     finally:
         connection.close()
