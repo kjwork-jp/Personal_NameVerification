@@ -12,6 +12,10 @@ from __future__ import annotations
 
 from typing import Any
 
+from app.ui.title_subtitle_summary_patch import install_title_subtitle_summary_counters
+
+install_title_subtitle_summary_counters()
+
 _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
     "MainWindow": ("app.ui.main_window", "MainWindow"),
     "SearchTab": ("app.ui.search_tab", "SearchTab"),
@@ -60,11 +64,5 @@ def __getattr__(name: str) -> Any:
 
     module = import_module(module_name)
     value = getattr(module, attribute_name)
-
-    if name == "TitleSubtitleManagementTab":
-        from app.ui.title_subtitle_summary_patch import install_title_subtitle_summary_counters
-
-        install_title_subtitle_summary_counters()
-
     globals()[name] = value
     return value
