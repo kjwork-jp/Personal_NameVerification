@@ -27,6 +27,10 @@ SANITIZED_EXPORT_TABLES: tuple[str, ...] = (
     "name_title_links",
 )
 
+_APP_ONLY_SQL_DUMP_MARKERS: tuple[str, ...] = (
+    "app_normalize(",
+)
+
 
 def export_tables_to_csv(
     connection: sqlite3.Connection,
@@ -99,9 +103,14 @@ def export_sanitized_tables_to_json(
 
 
 def export_sql_dump(connection: sqlite3.Connection, output_path: Path | PathLike[str]) -> Path:
-    """Write SQLite SQL dump output to output_path."""
+    """Write a portable SQLite SQL dump to output_path.
+
+    App-only expression indexes that depend on Python-registered SQLite
+    functions are intentionally omitted. A restored database remains valid and
+    application startup recreates those indexes through schema initialization.
+    """
     validated = _validated_output_file_path(output_path)
-    dump_text = "\n".join(connection.iterdump()) + "\n"
+    dump_text = "\n".join(_portable_dump_lines(connection)) + "\n"
     validated.write_text(dump_text, "utf-8")
     return validated
 
@@ -140,6 +149,17 @@ def create_backup_file(db_path: Path | PathLike[str], backup_path: Path | PathLi
             temp_target.unlink()
 
     return target
+
+
+def _portable_dump_lines(connection: sqlite3.Connection) -> list[str]:
+    return [line for line in connection.iterdump() if not _is_app_only_dump_line(line)]
+
+
+def _is_app_only_dump_line(line: str) -> bool:
+    normalized = line.lower()
+    if "create" not in normalized or "index" not in normalized:
+        return False
+    return any(marker in normalized for marker in _APP_ONLY_SQL_DUMP_MARKERS)
 
 
 def _validated_output_file_path(path: Path | PathLike[str]) -> Path:
