@@ -8,6 +8,7 @@ from contextlib import contextmanager
 from pathlib import Path
 
 from app.application.authorization import ServiceRole, require_editor_or_admin
+from app.infrastructure.db import register_sqlite_functions
 from app.infrastructure.export_backup import (
     create_backup_file,
     export_sanitized_tables_to_json,
@@ -36,6 +37,7 @@ class ExportBackupService:
     ) -> None:
         self._connection = connection
         self._database_path = database_path
+        register_sqlite_functions(self._connection)
         self._connection.execute("PRAGMA foreign_keys = ON;")
 
     def export_csv(self, output_dir: Path, role: ServiceRole = "admin") -> dict[str, Path]:
@@ -70,6 +72,7 @@ class ExportBackupService:
 
         connection = sqlite3.connect(self._database_path)
         connection.row_factory = sqlite3.Row
+        register_sqlite_functions(connection)
         connection.execute("PRAGMA foreign_keys = ON;")
         try:
             yield connection
