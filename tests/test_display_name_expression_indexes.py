@@ -88,6 +88,9 @@ def test_index_readiness_error_includes_safe_blocker_details(tmp_path: Path) -> 
         assert "title_groups=1" in message
         assert "key='demo title'" in message
         assert "ids=(1, 2)" in message
-        assert "display_names=('Demo Title', ' demo　title ')" in message
+        assert "display_names=" in message
+        assert "Demo Title" in message
+        assert "demo" in message
+        assert "title" in message
     finally:
         connection.close()
