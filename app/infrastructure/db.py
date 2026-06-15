@@ -128,20 +128,16 @@ def ensure_user_auth_columns(connection: sqlite3.Connection) -> None:
         if column_name not in columns:
             connection.execute(f"ALTER TABLE users ADD COLUMN {column_name} {ddl}")
     connection.execute("UPDATE users SET auth_provider = 'local' WHERE auth_provider IS NULL")
-    connection.execute(
-        """
+    connection.execute("""
         CREATE UNIQUE INDEX IF NOT EXISTS uq_users_windows_sid
         ON users(windows_sid)
         WHERE windows_sid IS NOT NULL
-        """
-    )
-    connection.execute(
-        """
+        """)
+    connection.execute("""
         CREATE UNIQUE INDEX IF NOT EXISTS uq_users_windows_account_name
         ON users(windows_account_name)
         WHERE windows_account_name IS NOT NULL
-        """
-    )
+        """)
     connection.commit()
 
 
@@ -179,20 +175,16 @@ def ensure_display_name_unique_indexes(connection: sqlite3.Connection) -> None:
     if report.has_blockers:
         raise sqlite3.IntegrityError(_display_name_readiness_message(report))
 
-    connection.execute(
-        """
+    connection.execute("""
         CREATE UNIQUE INDEX IF NOT EXISTS uq_titles_active_display_name
         ON titles(app_normalize(title_name))
         WHERE deleted_at IS NULL
-        """
-    )
-    connection.execute(
-        """
+        """)
+    connection.execute("""
         CREATE UNIQUE INDEX IF NOT EXISTS uq_subtitles_active_title_display_name
         ON subtitles(title_id, app_normalize(subtitle_name))
         WHERE deleted_at IS NULL
-        """
-    )
+        """)
     connection.commit()
 
 

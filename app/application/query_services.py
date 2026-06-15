@@ -275,8 +275,7 @@ class QueryService:
 
     def list_deleted_links(self, role: ServiceRole = "admin") -> list[RelatedRow]:
         require_known_role(role, action="list_deleted_links")
-        rows = self._connection.execute(
-            """
+        rows = self._connection.execute("""
             SELECT
                 l.id AS link_id,
                 l.public_id AS link_public_id,
@@ -297,8 +296,7 @@ class QueryService:
             JOIN titles t ON t.id = s.title_id
             WHERE l.deleted_at IS NOT NULL
             ORDER BY l.deleted_at DESC, l.id DESC
-            """
-        ).fetchall()
+            """).fetchall()
         return [
             RelatedRow(
                 link_id=int(row["link_id"]),

@@ -246,11 +246,11 @@ def test_user_management_tab_is_admin_only_when_user_service_is_available(
 def test_operations_subtabs_are_admin_available(monkeypatch: pytest.MonkeyPatch) -> None:
     assert _operations_subtab_enabled_map(_window_for_role("admin", monkeypatch)) == {
         "ガイド": True,
-        "Export": True,
-        "Backup": True,
-        "Restore": True,
-        "Import": True,
-        "Operations Log": True,
+        "データ出力": True,
+        "バックアップ": True,
+        "復元": True,
+        "データ取込": True,
+        "実行ログ": True,
     }
 
 
@@ -259,15 +259,15 @@ def test_operations_subtabs_visibility_matches_admin_permissions(
 ) -> None:
     assert _operations_subtab_visible_map(_window_for_role("admin", monkeypatch)) == {
         "ガイド": True,
-        "Export": True,
-        "Backup": True,
-        "Restore": True,
-        "Import": True,
-        "Operations Log": True,
+        "データ出力": True,
+        "バックアップ": True,
+        "復元": True,
+        "データ取込": True,
+        "実行ログ": True,
     }
 
 
 def test_operations_guide_is_admin_specific(monkeypatch: pytest.MonkeyPatch) -> None:
-    assert "Restore / Import" in _operations_guide_text(
+    assert "復元 / データ取込" in _operations_guide_text(
         _window_for_role("admin", monkeypatch)
     )

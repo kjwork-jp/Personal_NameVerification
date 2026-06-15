@@ -325,8 +325,7 @@ class UserService:
         """Return users ordered by operator_id."""
 
         where = "" if include_disabled else "WHERE disabled_at IS NULL"
-        rows = self._connection.execute(
-            f"""
+        rows = self._connection.execute(f"""
             SELECT
                 id,
                 public_id,
@@ -345,8 +344,7 @@ class UserService:
             FROM users
             {where}
             ORDER BY operator_id
-            """
-        ).fetchall()
+            """).fetchall()
         return [_user_record_from_row(row) for row in rows]
 
     def _create_windows_viewer(self, identity: WindowsIdentity) -> UserRecord:

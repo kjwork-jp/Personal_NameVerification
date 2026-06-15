@@ -167,13 +167,11 @@ def _validate_title_display_names(
     if not imported:
         return
 
-    existing_rows = connection.execute(
-        """
+    existing_rows = connection.execute("""
         SELECT title_name
         FROM titles
         WHERE deleted_at IS NULL
-        """
-    ).fetchall()
+        """).fetchall()
     for existing in existing_rows:
         existing_key = _normalize_existing_display_name(existing[0])
         if existing_key is not None and existing_key in imported:
@@ -201,13 +199,11 @@ def _validate_subtitle_display_names(
     if not imported:
         return
 
-    existing_rows = connection.execute(
-        """
+    existing_rows = connection.execute("""
         SELECT title_id, subtitle_name
         FROM subtitles
         WHERE deleted_at IS NULL
-        """
-    ).fetchall()
+        """).fetchall()
     for existing in existing_rows:
         existing_key = _normalize_existing_display_name(existing[1])
         if existing_key is None:

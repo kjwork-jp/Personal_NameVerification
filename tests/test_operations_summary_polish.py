@@ -53,8 +53,8 @@ def test_operations_tab_exposes_log_filters_and_current_events() -> None:
 
     assert tab.export_json_button.isEnabled()
     assert tab.import_json_button.isEnabled()
-    assert tab.log_source_selector.currentText() == "current only"
-    assert tab.log_status_filter.currentText() == "all"
-    assert tab.log_message_search_input.placeholderText() == "message 検索（部分一致）"
+    assert tab.log_source_selector.currentText() == "現在のログのみ"
+    assert tab.log_status_filter.currentText() == "すべて"
+    assert tab.log_message_search_input.placeholderText() == "メッセージ検索（部分一致）"
     assert "export_json" in tab.operation_log_view.toPlainText()
     assert "exported" in tab.operation_log_view.toPlainText()

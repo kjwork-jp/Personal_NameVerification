@@ -53,14 +53,12 @@ def inspect_duplicate_display_names(
 def _find_title_duplicates(
     connection: sqlite3.Connection,
 ) -> tuple[DuplicateDisplayNameGroup, ...]:
-    rows = connection.execute(
-        """
+    rows = connection.execute("""
         SELECT id, title_name
         FROM titles
         WHERE deleted_at IS NULL
         ORDER BY id
-        """
-    ).fetchall()
+        """).fetchall()
     groups: dict[str, list[tuple[int, str]]] = {}
     for row in rows:
         row_id = int(_row_value(row, "id", 0))
@@ -84,14 +82,12 @@ def _find_title_duplicates(
 def _find_subtitle_duplicates(
     connection: sqlite3.Connection,
 ) -> tuple[DuplicateDisplayNameGroup, ...]:
-    rows = connection.execute(
-        """
+    rows = connection.execute("""
         SELECT id, title_id, subtitle_name
         FROM subtitles
         WHERE deleted_at IS NULL
         ORDER BY title_id, id
-        """
-    ).fetchall()
+        """).fetchall()
     groups: dict[tuple[int, str], list[tuple[int, str]]] = {}
     for row in rows:
         row_id = int(_row_value(row, "id", 0))
