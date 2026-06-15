@@ -11,7 +11,156 @@ permissions:
   contents: write
 
 jobs:
-  prepare:
+  repair:
     runs-on: ubicloud-standard-2
+    timeout-minutes: 30
     steps:
-      - run: echo prepared
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      - name: Apply audited integration fixes
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace_once(path: str, old: str, new: str) -> None:
+              target = Path(path)
+              text = target.read_text(encoding="utf-8")
+              count = text.count(old)
+              if count != 1:
+                  raise RuntimeError(f"{path}: expected one match, found {count}: {old!r}")
+              target.write_text(text.replace(old, new), encoding="utf-8")
+
+          replace_once(
+              "tests/test_p1_ui_audit_batch.py",
+              'def test_batch_scope_has_six_confirmed_items() -> None:\n'
+              '    assert len(expected_scope := {"datetime", "title-layout", "audit-diff", "data-io", "title-filter", "unlink"}) == 6\n'
+              '    assert "data-io" in expected_scope',
+              'def test_batch_scope_has_six_confirmed_items() -> None:\n'
+              '    expected_scope = {\n'
+              '        "datetime",\n'
+              '        "title-layout",\n'
+              '        "audit-diff",\n'
+              '        "data-io",\n'
+              '        "title-filter",\n'
+              '        "unlink",\n'
+              '    }\n'
+              '    assert len(expected_scope) == 6\n'
+              '    assert "data-io" in expected_scope',
+          )
+          replace_once(
+              "tests/test_operations_summary_polish.py",
+              '    assert tab.log_source_selector.currentText() == "current only"\n'
+              '    assert tab.log_status_filter.currentText() == "all"\n'
+              '    assert tab.log_message_search_input.placeholderText() == "message 検索（部分一致）"',
+              '    assert tab.log_source_selector.currentText() == "現在のログのみ"\n'
+              '    assert tab.log_status_filter.currentText() == "すべて"\n'
+              '    assert tab.log_message_search_input.placeholderText() == "メッセージ検索（部分一致）"',
+          )
+          replace_once(
+              "tests/test_operations_tab_compact_layout_ui.py",
+              '    assert "destructive" in tab.restore_button.toolTip()\n'
+              '    assert "destructive" in tab.import_csv_button.toolTip()',
+              '    assert "破壊的操作" in tab.restore_button.toolTip()\n'
+              '    assert "破壊的操作" in tab.import_csv_button.toolTip()',
+          )
+          replace_once(
+              "tests/test_operations_tab_ui.py",
+              '    tab.log_status_filter.setCurrentText("error")',
+              '    tab.log_status_filter.setCurrentText("失敗")',
+          )
+          replace_once(
+              "tests/test_operations_tab_ui.py",
+              '    tab.log_source_selector.setCurrentText(f"archive:{archive}")',
+              '    tab.log_source_selector.setCurrentText(f"過去ログ:{archive}")',
+          )
+
+          navigation = Path("app/ui/operations_tab_navigation.py")
+          text = navigation.read_text(encoding="utf-8")
+          navigation_replacements = {
+              "Export / Backup / Restore / Import は表示しません。": "データ出力 / バックアップ / 復元 / データ取込は表示しません。",
+              "1. Operations Log": "1. 実行ログ",
+              "Restore / Import は破壊的操作のため表示しません。": "復元 / データ取込は破壊的操作のため表示しません。",
+              "1. Export": "1. データ出力",
+              "2. Backup": "2. バックアップ",
+              "3. Operations Log": "3. 実行ログ",
+              "Restore / Import は破壊的操作のため、実行前に必ずバックアップを取得してください。": "復元 / データ取込は破壊的操作のため、実行前に必ずバックアップを取得してください。",
+              "3. Restore": "3. 復元",
+              "4. Import": "4. データ取込",
+              "5. Operations Log": "5. 実行ログ",
+              'logs_group = _take_group_box_by_title(root_layout, "Operations 実行ログ")': 'logs_group = _take_group_box_by_title(root_layout, "データ入出力 実行ログ")',
+              '("Export", "Export"),': '("データ出力", "データ出力"),',
+              '("Backup", "Backup"),': '("バックアップ", "バックアップ"),',
+              '("Restore（destructive）", "Restore"),': '("復元（破壊的操作）", "復元"),',
+              '("Import（destructive）", "Import"),': '("データ取込（破壊的操作）", "データ取込"),',
+              'sub_tabs.addTab(_page_with_group(logs_group), "Operations Log")': 'sub_tabs.addTab(_page_with_group(logs_group), "実行ログ")',
+              'if group_title.startswith("Operations 実行ログ")': 'if group_title.startswith("データ入出力 実行ログ")',
+          }
+          for old, new in navigation_replacements.items():
+              if old not in text:
+                  raise RuntimeError(f"navigation marker missing: {old!r}")
+              text = text.replace(old, new)
+          navigation.write_text(text, encoding="utf-8")
+
+          Path("app/ui/operations_guidance.py").write_text(
+              '''"""データ入出力画面で使用する表示文言。"""\n\n'
+              'from __future__ import annotations\n\n'
+              'DATA_IO_PAGE_TITLE = "データ入出力"\n'
+              'DATA_IO_PAGE_DESCRIPTION = (\n'
+              '    "データ出力、バックアップ、復元、データ取込、実行ログ確認を管理します。"\n'
+              ')\n\n'
+              'DATA_IO_GROUP_DESCRIPTIONS = {\n'
+              '    "データ出力": "現在のデータを確認、移行、外部保管用に出力します。",\n'
+              '    "バックアップ": "保守作業の前に現在のSQLiteデータベースを複製します。",\n'
+              '    "復元": "バックアップから対象データベースを置換します。管理者専用操作です。",\n'
+              '    "データ取込": "CSVまたはJSONを初期化済みデータベースへ取り込みます。管理者専用操作です。",\n'
+              '}\n\n'
+              'DATA_IO_RESULT_DESCRIPTION = "実行結果をOKまたはERROR付きで追記します。"\n'
+              'DATA_IO_LOG_DESCRIPTION = "実行ログを絞り込み、ページ移動、証跡用出力できます。"\n''',
+              encoding="utf-8",
+          )
+
+          tab_mapping = {
+              '"Export": True': '"データ出力": True',
+              '"Backup": True': '"バックアップ": True',
+              '"Restore": True': '"復元": True',
+              '"Import": True': '"データ取込": True',
+              '"Operations Log": True': '"実行ログ": True',
+          }
+          for path in ["tests/test_rbac_ui_guards.py", "tests/test_release_uat_coverage.py"]:
+              target = Path(path)
+              text = target.read_text(encoding="utf-8")
+              for old, new in tab_mapping.items():
+                  text = text.replace(old, new)
+              text = text.replace(
+                  'assert "Restore / Import" in _operations_guide_text(',
+                  'assert "復元 / データ取込" in _operations_guide_text(',
+              )
+              target.write_text(text, encoding="utf-8")
+
+          Path("tests/.p1-audit-repair-marker").unlink(missing_ok=True)
+          Path("tests/.gitignore").unlink(missing_ok=True)
+          Path(".github/workflows/p1-ui-audit-fix.yml").unlink(missing_ok=True)
+          PY
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+      - name: Validate
+        run: |
+          black app tests
+          ruff check . --fix
+          black --check .
+          mypy app
+          pytest -q
+      - name: Commit repaired branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "fix(ui): align audited P1 integration contracts"
+          git push origin HEAD:fix/p1-ui-audit-batch-20260615
