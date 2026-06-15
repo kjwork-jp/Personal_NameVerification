@@ -9,8 +9,24 @@ User-facing manuals are intentionally separated under `docs/manuals/00_user_manu
 ## Stable baseline
 
 - Current stable baseline: v0.2.0
-- Next development target: v0.3.0
+- Current development line: v0.3.0+
 - Main backlog index: `docs/85_v0_3_0_backlog_initial_20260525.md`
+
+## Recent merges
+
+| PR | Title | Merge type | Exact-head CI | Merge commit | Main CI |
+|---|---:|---|---|---|---|
+| #184 | feat: enforce normalized display-name indexes | squash | success (run `27526922774`) | `325244defdf9658f5ea16c9550fcd73d8c5aefc6` | success |
+| #185 (pending) | fix(ui): close audited P1 usability gaps | squash | failure (run `27537532720`, pytest 7) | TBD | TBD |
+
+## Active / deferred gates
+
+| Gate | Status |
+|---|---|
+| PR #185 exact-head Quality Gates | failure (pytest 7); ruff/black/mypy success |
+| Manual UAT | Deferred explicit gate (V900-UAT-001) |
+| Release publishing | Deferred explicit gate (V100-REL-001) |
+| P2 design candidates | 3 candidates confirmed; see `docs/86_future_roadmap_and_remaining_backlog_20260525.md` |
 
 ## Release evidence
 
@@ -26,6 +42,8 @@ User-facing manuals are intentionally separated under `docs/manuals/00_user_manu
 | Scope | Document |
 |---|---|
 | v0.3.0 backlog | `docs/85_v0_3_0_backlog_initial_20260525.md` |
+| Future roadmap | `docs/86_future_roadmap_and_remaining_backlog_20260525.md` |
+| Quality attribute gap analysis | `docs/67_quality_attribute_gap_analysis.md` |
 | v0.2.0 status ledger | `docs/75_v0_2_0_current_status_and_improvement_ledger.md` |
 | Open issues and constraints | `docs/97_open_issues_and_constraints.md` |
 | RBAC hardening plan | `docs/74_rbac_hardening_plan.md` |
@@ -41,6 +59,12 @@ User-facing manuals are intentionally separated under `docs/manuals/00_user_manu
 | Manual release dry-run | `.github/workflows/release-dry-run.yml` |
 | Release orchestration | `scripts/run_release_windows.ps1` |
 | Release checklist generator | `scripts/generate_release_checklist_windows.ps1` |
+
+## Canonical navigation
+
+- Current handoff: `docs/chat/summaries/CURRENT_HANDOFF_FINAL.md`
+- Current backlog: `docs/85_v0_3_0_backlog_initial_20260525.md`
+- Future roadmap: `docs/86_future_roadmap_and_remaining_backlog_20260525.md`
 
 ## Reading rule
 
