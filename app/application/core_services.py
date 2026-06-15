@@ -12,6 +12,7 @@ from typing import Any, TypeVar
 from app.application.authorization import ServiceRole, require_admin, require_editor_or_admin
 from app.domain.errors import ConflictError, NotFoundError, StateTransitionError, ValidationError
 from app.domain.normalization import normalize_for_comparison, normalize_with_raw
+from app.infrastructure.db import register_sqlite_functions
 
 T = TypeVar("T")
 
@@ -45,6 +46,7 @@ class CoreService:
 
     def __init__(self, connection: sqlite3.Connection) -> None:
         self._connection = connection
+        register_sqlite_functions(self._connection)
         self._connection.execute("PRAGMA foreign_keys = ON;")
 
     def create_name(self, payload: NameInput, operator_id: str, role: ServiceRole = "admin") -> int:

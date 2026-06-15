@@ -15,6 +15,7 @@ from pathlib import Path
 from app.application.authorization import ServiceRole, require_admin
 from app.application.runtime_paths import resolve_destructive_backup_dir
 from app.domain.errors import ValidationError
+from app.infrastructure.db import register_sqlite_functions
 from app.infrastructure.import_data import (
     IMPORT_TABLES,
     import_from_csv_directory,
@@ -47,6 +48,7 @@ class ImportService:
     ) -> None:
         self._connection = connection
         self._database_path = database_path
+        register_sqlite_functions(self._connection)
         self._connection.execute("PRAGMA foreign_keys = ON;")
 
     def import_csv(self, csv_dir: Path, role: ServiceRole = "admin") -> tuple[dict[str, int], Path]:
@@ -228,6 +230,7 @@ class ImportService:
 
         connection = sqlite3.connect(self._database_path)
         connection.row_factory = sqlite3.Row
+        register_sqlite_functions(connection)
         connection.execute("PRAGMA foreign_keys = ON;")
         try:
             yield connection
