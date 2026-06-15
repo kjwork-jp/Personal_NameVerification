@@ -27,8 +27,9 @@ SANITIZED_EXPORT_TABLES: tuple[str, ...] = (
     "name_title_links",
 )
 
-_APP_ONLY_SQL_DUMP_MARKERS: tuple[str, ...] = (
-    "app_normalize(",
+_APP_ONLY_INDEX_NAMES: tuple[str, ...] = (
+    "uq_titles_active_display_name",
+    "uq_subtitles_active_title_display_name",
 )
 
 
@@ -156,10 +157,10 @@ def _portable_dump_lines(connection: sqlite3.Connection) -> list[str]:
 
 
 def _is_app_only_dump_line(line: str) -> bool:
-    normalized = line.lower()
-    if "create" not in normalized or "index" not in normalized:
+    normalized = line.lstrip().lower()
+    if not normalized.startswith("create") or " index " not in normalized:
         return False
-    return any(marker in normalized for marker in _APP_ONLY_SQL_DUMP_MARKERS)
+    return any(index_name in normalized for index_name in _APP_ONLY_INDEX_NAMES)
 
 
 def _validated_output_file_path(path: Path | PathLike[str]) -> Path:
