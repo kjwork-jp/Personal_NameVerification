@@ -1,0 +1,17 @@
+name: P1 UI audit branch repair
+
+on:
+  push:
+    branches:
+      - fix/p1-ui-audit-batch-20260615
+    paths:
+      - .github/workflows/p1-ui-audit-fix.yml
+
+permissions:
+  contents: write
+
+jobs:
+  prepare:
+    runs-on: ubicloud-standard-2
+    steps:
+      - run: echo prepared
