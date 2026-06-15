@@ -25,6 +25,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from app.ui.datetime_display import format_datetime_display
 from app.ui.dialogs import confirm_destructive_action
 from app.ui.operations_log import OperationsJsonlLogger
 from app.ui.operations_workers import OperationExecutorLike, ThreadPoolOperationExecutor
@@ -211,20 +212,20 @@ class OperationsTab(QWidget):
         self.log_prev_button = QPushButton("前へ")
         self.log_next_button = QPushButton("次へ")
         self.log_page_label = QLabel("ページ 0/0")
-        self.log_source_info_label = QLabel("source: current")
+        self.log_source_info_label = QLabel("ログ対象: 現在のログ")
 
         self.log_limit_selector = QComboBox()
         self.log_limit_selector.addItems(["50", "100", "200", "500"])
         self.log_limit_selector.setCurrentText(str(DEFAULT_LOGS_PAGE_SIZE))
-        self.include_archives_checkbox = QCheckBox("archive を含める")
+        self.include_archives_checkbox = QCheckBox("過去ログも含める")
         self.log_source_selector = QComboBox()
-        self.log_source_selector.addItems(["current only", "all (current + archives)"])
+        self.log_source_selector.addItems(["現在のログのみ", "すべて（現在＋過去ログ）"])
         self.log_status_filter = QComboBox()
-        self.log_status_filter.addItems(["all", "success", "error", "cancel"])
+        self.log_status_filter.addItems(["すべて", "成功", "失敗", "キャンセル"])
         self.log_action_filter = QComboBox()
-        self.log_action_filter.addItem("all")
+        self.log_action_filter.addItem("すべて")
         self.log_message_search_input = QLineEdit()
-        self.log_message_search_input.setPlaceholderText("message 検索（部分一致）")
+        self.log_message_search_input.setPlaceholderText("メッセージ検索（部分一致）")
         self.log_regex_checkbox = QCheckBox("正規表現")
         self.log_regex_ignore_case_checkbox = QCheckBox("大文字小文字を無視")
         self.log_regex_ignore_case_checkbox.setChecked(True)
@@ -297,14 +298,14 @@ class OperationsTab(QWidget):
         self.import_csv_dir_browse_button.clicked.connect(
             lambda: self._select_directory(
                 self.import_csv_dir_input,
-                "CSV importディレクトリを選択",
+                "CSV取込ディレクトリを選択",
                 field_key="import_csv_dir",
             )
         )
         self.import_json_browse_button.clicked.connect(
             lambda: self._select_open_file(
                 self.import_json_path_input,
-                "JSON importファイルを選択",
+                "JSON取込ファイルを選択",
                 "JSON Files (*.json);;All Files (*)",
                 field_key="import_json_file",
             )
@@ -369,7 +370,7 @@ class OperationsTab(QWidget):
 
         operations_grid.addWidget(
             self._build_group(
-                "Export",
+                "データ出力",
                 [
                     (
                         "CSV出力先ディレクトリ",
@@ -384,7 +385,7 @@ class OperationsTab(QWidget):
                         "json_export_file",
                     ),
                     (
-                        "SQL dump出力先ファイル",
+                        "SQLダンプ出力先ファイル",
                         self.sql_dump_path_input,
                         self.sql_dump_browse_button,
                         "sql_dump_file",
@@ -401,7 +402,7 @@ class OperationsTab(QWidget):
         )
         operations_grid.addWidget(
             self._build_group(
-                "Backup",
+                "バックアップ",
                 [
                     (
                         "DBファイルパス",
@@ -423,7 +424,7 @@ class OperationsTab(QWidget):
         )
         operations_grid.addWidget(
             self._build_group(
-                "Restore（destructive）",
+                "復元（破壊的操作）",
                 [
                     (
                         "バックアップ入力ファイル",
@@ -446,7 +447,7 @@ class OperationsTab(QWidget):
         )
         operations_grid.addWidget(
             self._build_group(
-                "Import（destructive）",
+                "データ取込（破壊的操作）",
                 [
                     (
                         "CSVディレクトリ",
@@ -481,7 +482,7 @@ class OperationsTab(QWidget):
         utility_row.addStretch(1)
         root.addLayout(utility_row)
 
-        logs_group = QGroupBox("Operations 実行ログ（最新100件）")
+        logs_group = QGroupBox("データ入出力 実行ログ")
         logs_group.setStyleSheet(_COMPACT_GROUP_STYLE)
         logs_layout = QVBoxLayout(logs_group)
         logs_layout.setContentsMargins(8, 8, 8, 8)
@@ -566,7 +567,7 @@ class OperationsTab(QWidget):
             self.import_csv_button,
             self.import_json_button,
         ]:
-            button.setToolTip("destructive 操作です。実行前にバックアップ取得を確認してください。")
+            button.setToolTip("破壊的操作です。実行前にバックアップ取得を確認してください。")
             button.setStyleSheet(_DESTRUCTIVE_BUTTON_STYLE)
 
         self.result_view.setMaximumHeight(72)
@@ -917,7 +918,7 @@ class OperationsTab(QWidget):
             self._push_recent_path("csv_export_dir", path)
             status = "cancel" if self._cancel_requested else "success"
             message = (
-                "CSV export 完了（cancel requested 後に完了）"
+                "CSV export 完了（キャンセル要求 後に完了）"
                 if self._cancel_requested
                 else f"CSV export 成功: {result}"
             )
@@ -945,7 +946,7 @@ class OperationsTab(QWidget):
             self._push_recent_path("json_export_file", path)
             status = "cancel" if self._cancel_requested else "success"
             message = (
-                "JSON export 完了（cancel requested 後に完了）"
+                "JSON export 完了（キャンセル要求 後に完了）"
                 if self._cancel_requested
                 else f"JSON export 成功: {result}"
             )
@@ -962,7 +963,7 @@ class OperationsTab(QWidget):
     def _run_export_sql_dump(self) -> None:
         if not self._ensure_not_busy():
             return
-        path = self._require_text(self.sql_dump_path_input, "SQL dump出力先ファイル")
+        path = self._require_text(self.sql_dump_path_input, "SQLダンプ出力先ファイル")
         if path is None:
             return
 
@@ -973,7 +974,7 @@ class OperationsTab(QWidget):
             self._push_recent_path("sql_dump_file", path)
             status = "cancel" if self._cancel_requested else "success"
             message = (
-                "SQL dump export 完了（cancel requested 後に完了）"
+                "SQL dump export 完了（キャンセル要求 後に完了）"
                 if self._cancel_requested
                 else f"SQL dump export 成功: {result}"
             )
@@ -1013,7 +1014,7 @@ class OperationsTab(QWidget):
             self._push_recent_path("backup_output_file", backup_path)
             status = "cancel" if self._cancel_requested else "success"
             message = (
-                "Backup create 完了（cancel requested 後に完了）"
+                "Backup create 完了（キャンセル要求 後に完了）"
                 if self._cancel_requested
                 else f"Backup create 成功: {result}"
             )
@@ -1088,7 +1089,7 @@ class OperationsTab(QWidget):
             self._push_recent_path("restore_target_file", target_path)
             status = "cancel" if self._cancel_requested else "success"
             message = (
-                "Restore 完了（cancel requested 後に完了）"
+                "Restore 完了（キャンセル要求 後に完了）"
                 if self._cancel_requested
                 else f"Restore 成功: {restored_result[0]} (before_restore: {restored_result[1]})"
             )
@@ -1124,12 +1125,12 @@ class OperationsTab(QWidget):
         is_empty = all(v == 0 for v in counts.values())
         if not confirm_destructive_action(
             self,
-            "CSV Import確認",
+            "CSV取込の確認",
             (
-                "CSV import を実行します。\n"
-                f"- import source: {csv_dir}\n"
-                f"- current DB state: {'空' if is_empty else '非空'} {counts}\n"
-                f"- before_import backup path: <auto>\n"
+                "CSV取込 を実行します。\n"
+                f"- 取込元: {csv_dir}\n"
+                f"- 現在のDB状態: {'空' if is_empty else '非空'} {counts}\n"
+                f"- 取込前バックアップ: <auto>\n"
                 "空DBへの初期取込のみ想定です。続行しますか？"
             ),
         ):
@@ -1146,19 +1147,19 @@ class OperationsTab(QWidget):
             self._push_recent_path("import_csv_dir", csv_dir)
             status = "cancel" if self._cancel_requested else "success"
             message = (
-                "CSV import 完了（cancel requested 後に完了）"
+                "CSV取込 完了（キャンセル要求 後に完了）"
                 if self._cancel_requested
-                else f"CSV import 成功: {import_result[0]} (before_import: {import_result[1]})"
+                else f"CSV取込 成功: {import_result[0]} (before_import: {import_result[1]})"
             )
             self._set_message(message)
             self._record_operation("import_csv", status, message, path=csv_dir)
 
         def _error(exc: Exception) -> None:
-            message = f"CSV import 失敗: {exc}"
+            message = f"CSV取込 失敗: {exc}"
             self._set_message(message, is_error=True)
             self._record_operation("import_csv", "error", message, path=csv_dir)
 
-        self._start_async_operation("import_csv", "CSV import", _work, _success, _error)
+        self._start_async_operation("import_csv", "CSV取込", _work, _success, _error)
 
     def _run_import_json(self) -> None:
         if not self._ensure_not_busy():
@@ -1170,12 +1171,12 @@ class OperationsTab(QWidget):
         is_empty = all(v == 0 for v in counts.values())
         if not confirm_destructive_action(
             self,
-            "JSON Import確認",
+            "JSON取込の確認",
             (
-                "JSON import を実行します。\n"
-                f"- import source: {json_path}\n"
-                f"- current DB state: {'空' if is_empty else '非空'} {counts}\n"
-                f"- before_import backup path: <auto>\n"
+                "JSON取込 を実行します。\n"
+                f"- 取込元: {json_path}\n"
+                f"- 現在のDB状態: {'空' if is_empty else '非空'} {counts}\n"
+                f"- 取込前バックアップ: <auto>\n"
                 "空DBへの初期取込のみ想定です。続行しますか？"
             ),
         ):
@@ -1192,25 +1193,25 @@ class OperationsTab(QWidget):
             self._push_recent_path("import_json_file", json_path)
             status = "cancel" if self._cancel_requested else "success"
             message = (
-                "JSON import 完了（cancel requested 後に完了）"
+                "JSON取込 完了（キャンセル要求 後に完了）"
                 if self._cancel_requested
-                else f"JSON import 成功: {import_result[0]} (before_import: {import_result[1]})"
+                else f"JSON取込 成功: {import_result[0]} (before_import: {import_result[1]})"
             )
             self._set_message(message)
             self._record_operation("import_json", status, message, path=json_path)
 
         def _error(exc: Exception) -> None:
-            message = f"JSON import 失敗: {exc}"
+            message = f"JSON取込 失敗: {exc}"
             self._set_message(message, is_error=True)
             self._record_operation("import_json", "error", message, path=json_path)
 
-        self._start_async_operation("import_json", "JSON import", _work, _success, _error)
+        self._start_async_operation("import_json", "JSON取込", _work, _success, _error)
 
     def _sync_log_source_selector(self) -> None:
-        current = self.log_source_selector.currentText() or "current only"
-        options = ["current only", "all (current + archives)"]
+        current = self.log_source_selector.currentText() or "現在のログのみ"
+        options = ["現在のログのみ", "すべて（現在＋過去ログ）"]
         for archive in self._operation_logger.list_archives():
-            options.append(f"archive:{archive}")
+            options.append(f"過去ログ:{archive}")
         self.log_source_selector.blockSignals(True)
         self.log_source_selector.clear()
         self.log_source_selector.addItems(options)
@@ -1221,18 +1222,18 @@ class OperationsTab(QWidget):
     def _sync_log_source_info(self, mode: str, archive_path: Path | None) -> None:
         archives = self._operation_logger.list_archives()
         if mode == "current":
-            text = f"source: current（archives: {len(archives)}件）"
+            text = f"ログ対象: 現在（過去ログ: {len(archives)}件）"
         elif mode == "all":
-            text = f"source: all（current + archives {len(archives)}件）"
+            text = f"ログ対象: すべて（現在＋過去ログ {len(archives)}件）"
         else:
             name = archive_path.name if archive_path is not None else "(unknown)"
-            text = f"source: archive（{name}）"
+            text = f"ログ対象: 過去ログ（{name}）"
         self.log_source_info_label.setText(text)
-        tooltip = "\n".join(path.name for path in archives) if archives else "archive はありません。"
+        tooltip = "\n".join(path.name for path in archives) if archives else "過去ログはありません。"
         self.log_source_info_label.setToolTip(tooltip)
 
     def _sync_action_filter_options(self, events: list[object]) -> None:
-        current = self.log_action_filter.currentText() or "all"
+        current = self.log_action_filter.currentText() or "すべて"
         actions = sorted(
             {
                 str(getattr(event, "action", "")).strip()
@@ -1242,9 +1243,9 @@ class OperationsTab(QWidget):
         )
         self.log_action_filter.blockSignals(True)
         self.log_action_filter.clear()
-        self.log_action_filter.addItem("all")
+        self.log_action_filter.addItem("すべて")
         self.log_action_filter.addItems(actions)
-        if current in {"all", *actions}:
+        if current in {"すべて", *actions}:
             self.log_action_filter.setCurrentText(current)
         self.log_action_filter.blockSignals(False)
 
@@ -1261,8 +1262,8 @@ class OperationsTab(QWidget):
         )
 
     def _filter_log_events(self, events: list[object]) -> tuple[list[object], str | None]:
-        status_filter = self.log_status_filter.currentText()
-        action_filter = self.log_action_filter.currentText()
+        status_filter = {"すべて": "all", "成功": "success", "失敗": "error", "キャンセル": "cancel"}.get(self.log_status_filter.currentText(), self.log_status_filter.currentText())
+        action_filter = "all" if self.log_action_filter.currentText() == "すべて" else self.log_action_filter.currentText()
         query = self.log_message_search_input.text().strip()
 
         regex_error: str | None = None
@@ -1325,12 +1326,12 @@ class OperationsTab(QWidget):
         include_archives = self.include_archives_checkbox.isChecked()
         archive_path: Path | None = None
         mode = "all" if include_archives else "current"
-        if source_text == "all (current + archives)":
+        if source_text == "すべて（現在＋過去ログ）":
             include_archives = True
             mode = "all"
-        elif source_text.startswith("archive:"):
+        elif source_text.startswith("過去ログ:"):
             include_archives = False
-            archive_path = Path(source_text.removeprefix("archive:").strip())
+            archive_path = Path(source_text.removeprefix("過去ログ:").strip())
             mode = "archive"
 
         raw_events, decode_errors = self._operation_logger.read_latest(
@@ -1379,7 +1380,11 @@ class OperationsTab(QWidget):
             if getattr(event, "path2", None):
                 extras.append(f"path2={getattr(event, 'path2')}")
             suffix = f" ({', '.join(extras)})" if extras else ""
-            lines.append(f"{timestamp} | {action} | {role} | {status} | {message}{suffix}")
+            timestamp_display = format_datetime_display(timestamp, fallback=timestamp or "不明")
+            status_display = {"success": "成功", "error": "失敗", "cancel": "キャンセル"}.get(status, status)
+            lines.append(
+                f"{timestamp_display} | {action} | {role} | {status_display} | {message}{suffix}"
+            )
 
         if regex_error:
             lines.append(f"[WARN] regex エラー: {regex_error}")

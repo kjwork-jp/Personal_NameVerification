@@ -232,3 +232,16 @@ def test_title_management_guidance_labels_are_wrapped() -> None:
     assert tab.editor.property("title_guidance_labels_wrapped") is True
     assert tab.editor.workflow_hint_label.wordWrap()
     assert "選択カード" in tab.editor.workflow_hint_label.text()
+
+
+def test_unlink_summary_identifies_exact_relation() -> None:
+    _app()
+    tab = LinkManagementTab(StubCoreService(), StubQueryService(), _role())
+
+    summary = tab.unlink_target_summary_label.text()
+    assert "解除対象（この1件のみ）" in summary
+    assert "名前: Alice" in summary
+    assert "タイトル: Searchable Parent Title" in summary
+    assert "サブタイトル: S1 / Sub1" in summary
+    assert "関連種別: primary" in summary
+    assert "内部リンクID: 500" in summary

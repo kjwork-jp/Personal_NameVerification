@@ -865,18 +865,18 @@ def test_operations_tab_log_viewer_status_action_search_filters() -> None:
         operation_executor=ImmediateOperationExecutor(),
     )
 
-    tab.log_status_filter.setCurrentText("error")
+    tab.log_status_filter.setCurrentText("失敗")
     text = tab.operation_log_view.toPlainText()
     assert "restore boom" in text
     assert "alpha csv" not in text
 
-    tab.log_status_filter.setCurrentText("all")
+    tab.log_status_filter.setCurrentText("すべて")
     tab.log_action_filter.setCurrentText("import_json")
     text = tab.operation_log_view.toPlainText()
     assert "cancel requested" in text
     assert "restore boom" not in text
 
-    tab.log_action_filter.setCurrentText("all")
+    tab.log_action_filter.setCurrentText("すべて")
     tab.log_message_search_input.setText("alpha")
     text = tab.operation_log_view.toPlainText()
     assert "alpha csv" in text
@@ -1204,11 +1204,11 @@ def test_operations_tab_log_viewer_source_selector(monkeypatch: pytest.MonkeyPat
         operation_executor=ImmediateOperationExecutor(),
     )
 
-    tab.log_source_selector.setCurrentText(f"archive:{archive}")
+    tab.log_source_selector.setCurrentText(f"過去ログ:{archive}")
     text = tab.operation_log_view.toPlainText()
     assert "archived" in text
     assert "current" not in text
-    assert "source: archive" in tab.log_source_info_label.text()
+    assert "ログ対象: 過去ログ" in tab.log_source_info_label.text()
     assert "operations_events.20260422-120000.jsonl" in tab.log_source_info_label.text()
     assert "operations_events.20260422-120000.jsonl" in tab.log_source_info_label.toolTip()
 

@@ -55,17 +55,17 @@ def test_build_guide_page_includes_data_io_page_header() -> None:
 def test_page_with_group_adds_matching_group_description() -> None:
     _app()
 
-    page = _page_with_group(QGroupBox("Restore（destructive）"))
+    page = _page_with_group(QGroupBox("復元（破壊的操作）"))
 
     labels = page.findChildren(QLabel)
-    assert any(label.text() == DATA_IO_GROUP_DESCRIPTIONS["Restore"] for label in labels)
+    assert any(label.text() == DATA_IO_GROUP_DESCRIPTIONS["復元"] for label in labels)
     assert any(label.property("data_io_group_description") is True for label in labels)
 
 
 def test_page_with_group_adds_operations_log_description() -> None:
     _app()
 
-    page = _page_with_group(QGroupBox("Operations 実行ログ（最新100件）"))
+    page = _page_with_group(QGroupBox("データ入出力 実行ログ"))
 
     labels = page.findChildren(QLabel)
     assert any(label.text() == DATA_IO_LOG_DESCRIPTION for label in labels)

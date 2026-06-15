@@ -162,11 +162,11 @@ def test_uat_rbac_and_data_io_visibility_by_role(monkeypatch: pytest.MonkeyPatch
     assert "データ入出力" not in editor._tabs_by_name
     assert _operation_subtab_visibility(admin) == {
         "ガイド": True,
-        "Export": True,
-        "Backup": True,
-        "Restore": True,
-        "Import": True,
-        "Operations Log": True,
+        "データ出力": True,
+        "バックアップ": True,
+        "復元": True,
+        "データ取込": True,
+        "実行ログ": True,
     }
 
 

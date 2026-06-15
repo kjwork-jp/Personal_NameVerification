@@ -114,7 +114,7 @@ def test_operations_tab_marks_destructive_controls_visually() -> None:
     _app()
     tab = _tab()
 
-    assert "destructive" in tab.restore_button.toolTip()
-    assert "destructive" in tab.import_csv_button.toolTip()
+    assert "破壊的操作" in tab.restore_button.toolTip()
+    assert "破壊的操作" in tab.import_csv_button.toolTip()
     assert "#7a332d" in tab.restore_button.styleSheet()
     assert "#7a332d" in tab.import_json_button.styleSheet()

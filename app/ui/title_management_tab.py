@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QGroupBox, QLabel, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QGroupBox, QLabel, QLineEdit, QVBoxLayout, QWidget
 
 from app.ui.dialogs import confirm_destructive_action
 from app.ui.navigation_polish import apply_workflow_tab_navigation
@@ -31,6 +31,14 @@ class TitleManagementTab(QWidget):
             role_context=role_context,
         )
         self.title_list_summary_label = self._build_title_list_summary_label()
+        self.title_name_filter_input = QLineEdit()
+        self.title_name_filter_input.setPlaceholderText(
+            "関連する名前でタイトルを絞り込み"
+        )
+        self.title_name_filter_input.setClearButtonEnabled(True)
+        self.title_name_filter_input.textChanged.connect(
+            lambda _text: self._apply_title_name_filter()
+        )
         self.title_delete_target_summary = self._build_title_summary_label(
             heading="削除対象タイトル"
         )
@@ -39,6 +47,7 @@ class TitleManagementTab(QWidget):
         self._rename_labels()
         self._add_guidance_tooltips()
         self._wrap_guidance_labels()
+        self._insert_title_name_filter()
         self._insert_title_list_summary()
         self._insert_delete_target_summary()
         self._connect_title_defaults()
@@ -61,6 +70,7 @@ class TitleManagementTab(QWidget):
         self.setProperty("focused_title_only_layout", True)
         self.setProperty("title_list_summary_counters", True)
         self.setProperty("title_selection_redesigned", True)
+        self.setProperty("title_linked_name_filter", True)
 
     def _build_title_list_summary_label(self) -> QLabel:
         label = QLabel("一覧 0件 / 選択中 0件 / 有効 0件 / 削除済み 0件 / 関連名あり 0件")
@@ -153,14 +163,21 @@ class TitleManagementTab(QWidget):
         self.editor.selected_title_context_label.setProperty("selected_title_summary_card", True)
         self.editor.selected_title_context_label.setProperty("title_edit_target_summary_card", True)
         self.editor.title_detail_group.setTitle("タイトル編集: 選択カード確認後に更新")
-        self.editor.title_detail_group.setMaximumHeight(240)
+        self.editor.title_detail_group.setMaximumHeight(16777215)
+        self.editor.title_detail_group.setProperty("unbounded_edit_layout", True)
         self.editor.setProperty("title_guidance_labels_wrapped", True)
         self.editor.setProperty("title_edit_target_summary_card", True)
+
+    def _insert_title_name_filter(self) -> None:
+        layout = self.editor.list_tab.layout()
+        if layout is not None:
+            layout.insertWidget(2, self.title_name_filter_input)
+        self.editor.setProperty("title_linked_name_filter", True)
 
     def _insert_title_list_summary(self) -> None:
         layout = self.editor.list_tab.layout()
         if layout is not None:
-            layout.insertWidget(2, self.title_list_summary_label)
+            layout.insertWidget(3, self.title_list_summary_label)
         self.editor.setProperty("title_list_summary_counters", True)
 
     def _insert_delete_target_summary(self) -> None:
@@ -190,7 +207,7 @@ class TitleManagementTab(QWidget):
 
         def refresh_titles_with_list_summary(selected_title_id: int | None = None) -> None:
             original_refresh_titles(selected_title_id)
-            self._update_title_list_summary()
+            self._apply_title_name_filter()
 
         self.editor._update_selected_title_label = update_selected_title_label_with_split_summary
         self.editor._refresh_titles = refresh_titles_with_list_summary
@@ -285,16 +302,31 @@ class TitleManagementTab(QWidget):
             self._title_summary_text(title, heading="削除対象タイトル")
         )
 
+    def _apply_title_name_filter(self) -> None:
+        query = self.title_name_filter_input.text().strip().casefold()
+        for row_index, row in enumerate(self.editor._titles):
+            linked_names = self.editor._linked_names_text(row.id)
+            self.editor.titles_table.setRowHidden(
+                row_index, bool(query and query not in linked_names.casefold())
+            )
+        self._update_title_list_summary()
+
     def _update_title_list_summary(self) -> None:
         total = len(self.editor._titles)
-        deleted = sum(1 for row in self.editor._titles if row.deleted_at)
-        active = total - deleted
+        visible_rows = [
+            row
+            for row_index, row in enumerate(self.editor._titles)
+            if not self.editor.titles_table.isRowHidden(row_index)
+        ]
+        visible = len(visible_rows)
+        deleted = sum(1 for row in visible_rows if row.deleted_at)
+        active = visible - deleted
         selected_count = 1 if self.editor._selected_title is not None else 0
         linked_title_count = sum(
-            1 for row in self.editor._titles if self.editor._linked_names_text(row.id)
+            1 for row in visible_rows if self.editor._linked_names_text(row.id)
         )
         self.title_list_summary_label.setText(
-            f"一覧 {total}件 / 選択中 {selected_count}件 / "
+            f"一覧 {total}件 / 表示中 {visible}件 / 選択中 {selected_count}件 / "
             f"有効 {active}件 / 削除済み {deleted}件 / 関連名あり {linked_title_count}件"
         )
 

@@ -18,6 +18,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from app.ui.datetime_display import format_datetime_display
 from app.ui.navigation_polish import apply_workflow_tab_navigation
 from app.ui.public_id_display import public_id_detail, short_public_id
 from app.ui.role_context import RoleContext
@@ -261,7 +262,7 @@ class SubtitleManagementTab(QWidget):
                         subtitle.subtitle_name,
                         "削除済み" if subtitle.deleted_at else "有効",
                         str(subtitle.sort_order),
-                        subtitle.updated_at,
+                        format_datetime_display(subtitle.updated_at, fallback=""),
                         subtitle.note or "",
                     )
                 )

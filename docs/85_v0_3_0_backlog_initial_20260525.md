@@ -30,12 +30,12 @@
 
 | Priority | Candidate | Status |
 |---|---|---|
-| P1 | datetime helper未適用画面 | 未監査候補 |
-| P1 | title edit UI崩れ | 未監査候補 |
-| P1 | audit log diff display | 未監査候補 |
-| P1 | Data I/O wording / Japanese | 未監査候補 |
-| P1 | title list name filter | 未監査候補 |
-| P1 | unlink granularity | 未監査候補 |
+| P1 | datetime helper未適用画面 | 2026-06-15監査・修正済み |
+| P1 | title edit UI崩れ | 2026-06-15監査・修正済み |
+| P1 | audit log diff display | 2026-06-15監査・修正済み |
+| P1 | Data I/O wording / Japanese | 2026-06-15監査・修正済み |
+| P1 | title list name filter | 2026-06-15監査・実装済み |
+| P1 | unlink granularity | 2026-06-15監査・実装済み |
 | P2 | list columns reduction and detail pane | design候補 |
 | P2 | subtitle-first editing | design候補 |
 | P2 | search single table and detail pane | design候補 |
