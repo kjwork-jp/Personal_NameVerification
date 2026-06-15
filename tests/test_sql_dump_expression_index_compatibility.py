@@ -35,7 +35,10 @@ def test_sql_dump_preserves_rows_containing_index_like_text(tmp_path: Path) -> N
     source = initialize_database(tmp_path / "source-with-text.db")
     index_like_text = "create index uq_titles_active_display_name app_normalize("
     try:
-        source.execute("INSERT INTO titles(title_name, note) VALUES (?, ?)", ("Demo", index_like_text))
+        source.execute(
+            "INSERT INTO titles(title_name, note) VALUES (?, ?)",
+            ("Demo", index_like_text),
+        )
         dump_path = export_sql_dump(source, tmp_path / "dump-with-text.sql")
     finally:
         source.close()
