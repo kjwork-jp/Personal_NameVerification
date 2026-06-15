@@ -6,7 +6,9 @@
 - Stable release status: complete
 - Required v0.2.0 P1 items: complete
 - Current development line: v0.3.0+
-- Latest `Quality Gates`: success for PR #184 exact head and merge commit `325244defdf9658f5ea16c9550fcd73d8c5aefc6`
+- Latest `Quality Gates`:
+  - PR #184: success (exact-head & main merge `325244defdf9658f5ea16c9550fcd73d8c5aefc6`)
+  - PR #185: success on exact-head (`5b59223119d74403ad619f71b8ff6ed4e6bc8d06`, run `27539109959`) and main merge (`0eeaf869de745f5d487ba5bebfb786669fb4ee20`, run `27539233424`)
 
 ## Backlog references
 
@@ -20,11 +22,13 @@
 ## Current state
 
 - Original implementation and maintenance backlog is complete.
-- PR #184 is merged and its main-branch quality gate passed.
+- PR #184 (`feat: enforce normalized display-name indexes`) is merged (squash, merge commit `325244defdf9658f5ea16c9550fcd73d8c5aefc6`).
+- PR #185 (`fix(ui): close audited P1 usability gaps`) is merged (squash, merge commit `0eeaf869de745f5d487ba5bebfb786669fb4ee20`).
 - Issue #110 was closed because its v0.1.0-rc1 line is superseded by v0.2.0 and v0.3.0+.
 - Open PR: 0.
 - Open Issue: 0.
 - Manual UAT, EXE checks, portable checks, local Windows builds, and release publishing are not normal active backlog items.
+- P1候補6件はPR #185で監査・修正/実装済み。
 
 ## Remaining candidates requiring re-audit
 
@@ -44,4 +48,10 @@ Old handoff candidates must be checked against current code, tests, screenshots,
 
 ## Next action
 
-Re-audit the P1 candidates and create or implement only confirmed gaps. Do not reactivate completed work or historical release gates.
+P1候補6件はPR #185で完了。次の確定候補はP2 design 3件:
+1. list columns reduction + detail pane (UI-DESIGN-01)
+2. subtitle-first editing (UI-DESIGN-02)
+3. search single table + detail pane (UI-DESIGN-03)
+
+Re-audit `docs/67_quality_attribute_gap_analysis.md` の `requires re-audit` items against current code/tests.
+Manual UAT / release publishing は deferred explicit gates として自動的な次工程にしない。

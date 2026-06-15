@@ -16,17 +16,16 @@ User-facing manuals are intentionally separated under `docs/manuals/00_user_manu
 
 | PR | Title | Merge type | Exact-head CI | Merge commit | Main CI |
 |---|---:|---|---|---|---|
+| #185 | fix(ui): close audited P1 usability gaps | squash | success (run `27539109959`) | `0eeaf869de745f5d487ba5bebfb786669fb4ee20` | success (run `27539233424`) |
 | #184 | feat: enforce normalized display-name indexes | squash | success (run `27526922774`) | `325244defdf9658f5ea16c9550fcd73d8c5aefc6` | success |
-| #185 (pending) | fix(ui): close audited P1 usability gaps | squash | failure (run `27537532720`, pytest 7) | TBD | TBD |
 
 ## Active / deferred gates
 
 | Gate | Status |
 |---|---|
-| PR #185 exact-head Quality Gates | failure (pytest 7); ruff/black/mypy success |
+| P2 design candidates | 3 candidates confirmed; see `docs/86_future_roadmap_and_remaining_backlog_20260525.md` |
 | Manual UAT | Deferred explicit gate (V900-UAT-001) |
 | Release publishing | Deferred explicit gate (V100-REL-001) |
-| P2 design candidates | 3 candidates confirmed; see `docs/86_future_roadmap_and_remaining_backlog_20260525.md` |
 
 ## Release evidence
 
