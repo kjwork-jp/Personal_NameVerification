@@ -1,6 +1,81 @@
 # 67_quality_attribute_gap_analysis.md
 
-## 1. 目的
+## Current applicability as of 2026-06-15
+
+This document was originally authored for `v0.1.0-rc2` (2026-05 timeframe). Since then, v0.2.0 has been released (stable) and v0.3.0+ is the current development line. Many items classified as P0/P1 below have been implemented, superseded, or deferred. The original analysis text is preserved below as a **historical snapshot** and must not be read as the current active backlog.
+
+See the reclassification table at the end of this header for each ID's current status.
+
+### Reclassification mapping (2026-06-15 audit against main `21a46e1`)
+
+| ID | Original Priority | Current Status | Evidence |
+|---|---|---|---|
+| CONF-001 | P0 | Implemented / superseded | `app/application/password_services.py`, `app/application/user_services.py:authenticate_user()`, `tests/test_password_services.py` |
+| CONF-002 | P0 | Implemented / superseded | `app/ui/login_dialog.py` (no role dropdown), `app/application/authorization.py:require_known_role()` |
+| CONF-003 | P0 | Implemented / superseded | `app/ui/user_management_tab.py` (admin-only, 429 lines), `tests/test_user_services.py` |
+| CONF-004 | P0 | Implemented / superseded | `app/ui/initial_admin_setup_dialog.py`, `app/pyside6_main.py:_ensure_initial_admin()` |
+| CONF-005 | P1 | Partially implemented, requires re-audit | Password empty check only; no minimum length / complexity requirements |
+| CONF-006 | P1 | Implemented / superseded | `app/application/user_services.py:failed_login_count` / `locked_until`, `tests/test_user_authentication.py` |
+| CONF-007 | P2 | Deferred / out of current scope | No encryption implemented; SQLite file protection is documented in `docs/68_database_file_protection_policy.md` |
+| CONF-008 | P1 | Partially implemented, requires re-audit | `app/ui/dialogs.py:confirm_destructive_action()` uses Yes/No; no password re-entry for destructive ops |
+| CONF-009 | P2 | Partially implemented, requires re-audit | `app/ui/audit_log_tab.py` passes role context; viewer-filtered audit view not fully verified |
+| CONF-010 | P2 | Deferred / out of current scope | No external secrets or API keys in scope |
+| REL-001 | P0 | Implemented / superseded | Extensive CRUD test coverage across multiple test files |
+| REL-002 | P1 | Requires re-audit | Smoke tests exist (`test_main_window_smoke.py`, `test_smoke_imports.py`); no full E2E automated suite |
+| REL-003 | P1 | Implemented / superseded | `app/application/core_services.py` (lines 750-756), `app/application/user_services.py:_write()` (lines 535-542) |
+| REL-004 | P1 | Partially implemented, requires re-audit | `app/infrastructure/db.py:check_database_integrity()` on startup; no in-app recovery guide |
+| REL-005 | P1 | Implemented / superseded | `app/infrastructure/restore_backup.py` validates with `PRAGMA integrity_check` before restore; `tests/test_restore_backup_validation.py` |
+| REL-006 | P1 | Implemented / superseded | `app/infrastructure/export_backup.py:create_backup_file()` uses SQLite online backup API; `tests/test_backup_restore_services.py` |
+| REL-007 | P2 | Implemented / superseded | `app/ui/operations_log.py:OperationsJsonlLogger`, `tests/test_operations_tab_ui.py` tests logger failure |
+| AVL-001 | P1 | Requires re-audit | No DB lock detection found |
+| AVL-002 | P1 | Implemented / superseded | Backup creation UI in `app/ui/operations_tab.py`; no retention/rotation management UI |
+| AVL-003 | P1 | Requires re-audit | No automated backup schedule found |
+| AVL-004 | P2 | Requires re-audit | No safe mode found |
+| AVL-005 | P2 | Implemented / superseded | Rollback handling in `app/application/core_services.py`; pre-restore backup enables rollback |
+| AVL-006 | P1 | Implemented / superseded | `app/ui/help_settings_tab.py:_path_diagnostics_text()` checks `os.access(parent, os.W_OK)` |
+| MNT-001 | P1 | Implemented / superseded | `app/infrastructure/db.py:apply_migrations()`, `migrations/` directory with version tracking |
+| MNT-002 | P1 | Requires re-audit | No `app_settings` table found; settings via environment variables / hardcoded defaults |
+| MNT-003 | P0 | Implemented / superseded | `app/application/user_services.py` (630 lines), `app/application/user_audit_services.py` |
+| MNT-004 | P2 | Implemented / superseded | `docs/release_ledger/00_release_ledger_index.md` exists |
+| MNT-005 | P1 | Implemented / superseded | `app/ui/help_settings_tab.py` path diagnostics, protection diagnostics, DB metadata |
+| MNT-006 | P2 | Requires re-audit | No MVVM/presenter pattern; simple service-layer architecture |
+| MNT-007 | P1 | Implemented / superseded | Backlog prioritization docs exist (`docs/85_v0_3_0_backlog_initial_20260525.md`, `docs/86_future_roadmap_and_remaining_backlog_20260525.md`) |
+| INT-001 | P1 | Implemented / superseded | `app/application/import_services.py` restricts import to empty DB + admin-only; `app/ui/rbac_ui_guards.py` hides for non-admin |
+| INT-002 | P1 | Implemented / superseded | `app/infrastructure/import_data.py:read_table_counts()`, `app/application/import_services.py` preview shows before/after |
+| INT-003 | P1 | Requires re-audit | No export row count/hash verification found |
+| INT-004 | P2 | Partially implemented, requires re-audit | `app/infrastructure/db.py:ensure_public_ids()` creates unique indexes; no diagnostic UI for conflicts |
+| INT-005 | P1 | Implemented / superseded | `app/ui/dialogs.py:confirm_destructive_action()` used across all destructive operations |
+| INT-006 | P2 | Partially implemented, requires re-audit | `app/infrastructure/db.py:check_database_integrity()` runs on startup; no tamper-evident logging |
+| INT-007 | P1 | Implemented / superseded | `PRAGMA foreign_keys = ON` set in all connection init paths |
+| UX-001 | P0 | Implemented / superseded | Login is real authentication (operator_id + password), not role selection |
+| UX-002 | P0 | Implemented / superseded | `app/ui/initial_admin_setup_dialog.py` |
+| UX-003 | P0 | Implemented / superseded | `app/ui/user_management_tab.py` |
+| UX-004 | P1 | Implemented / superseded | `app/ui/operations_guidance.py`, `app/ui/help_settings_tab.py` guide entries |
+| UX-005 | P1 | Implemented / superseded | `app/ui/help_settings_tab.py` differentiates Export/Backup/Restore/Import clearly |
+| UX-006 | P1 | Implemented / superseded | `app/ui/input_defaults.py:friendly_error_message()` |
+| UX-007 | P2 | Implemented / superseded | `app/ui/help_settings_tab.py` path diagnostics and protection warnings tabs |
+| UX-008 | P1 | Implemented / superseded | `app/ui/operations_log.py:OperationsJsonlLogger` with OperationLogEvent |
+| UX-009 | P2 | Implemented / superseded | `app/ui/rbac_ui_guards.py` role-based tooltips explain why buttons are disabled |
+| UX-010 | P1 | Partially implemented, requires re-audit | `app/ui/help_settings_tab.py` provides help; no dedicated About dialog with version/SHA |
+| OPS-001 | P1 | Requires re-audit | `app/ui/help_settings_tab.py` is read-only; no editable admin settings |
+| OPS-002 | P1 | Requires re-audit | No backup retention configuration found |
+| OPS-003 | P2 | Partially implemented, requires re-audit | Internal `OperationsJsonlLogger` rotation (max_bytes, ttl_days); no UI configuration |
+| OPS-004 | P2 | Implemented / superseded | `app/ui/operations_tab.py` text inputs for all paths with browse buttons |
+| OPS-005 | P1 | Requires re-audit | `app/__init__.py:__version__ = "0.1.0"` exists; no About dialog in UI |
+| OPS-006 | P1 | Requires re-audit | No diagnostic bundle export found |
+| OPS-007 | P2 | Implemented / superseded | `app/ui/help_settings_tab.py` 20-item guide; `app/ui/tab_guides.py` per-tab contextual help |
+
+**Summary of reclassification:**
+- Implemented / superseded: 36 items (original P0-P2 gaps now resolved)
+- Partially implemented, requires re-audit: 9 items
+- Requires re-audit: 9 items (not found; may exist under different names)
+- Deferred / out of current scope: 2 items
+
+The original analysis follows below as a historical snapshot.
+
+---
+
+## 1. 目的 (historical snapshot from v0.1.0-rc2, 2026-05)
 
 本書は、NameVerification v3 `v0.1.0-rc2` 時点の不足機能・改善工程を、以下の品質属性ごとに網羅的に洗い出す。
 
@@ -204,8 +279,10 @@
 
 ---
 
-## 12. 結論
+## 12. 結論 (historical conclusion from v0.1.0-rc2, 2026-05)
 
 現行の `v0.1.0-rc2` は、配布物・DB配置・backup/export/restore基盤としてはかなり整っている。一方で、認証・ユーザー管理・管理設定・運用診断・完全性検証・UXガードの不足が大きい。
 
 次工程は、単なるDay1/UATではなく、v0.2.0へ向けた **security/user management hardening** をP0として開始するのが妥当である。
+
+**2026-06-15 note:** v0.2.0 has been released (stable) and the P0 security/user management hardening described above has been completed. The v0.3.0+ line continues with backlog items documented in `docs/85_v0_3_0_backlog_initial_20260525.md`. This conclusion is no longer the "next action" and is retained for historical reference only.

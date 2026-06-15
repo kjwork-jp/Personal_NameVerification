@@ -1,6 +1,30 @@
 # 97_open_issues_and_constraints.md
 
-## 2026-05-28追記: viewer/editor UAT follow-up後の最新状態
+## Current applicability / Status (2026-06-15)
+
+This document contains both historical snapshots (2026-05-21 and 2026-05-28 entries) and current standing constraints. The historical sections are preserved as evidence but should not be read as the current active state.
+
+**Current resolved state (main `21a46e1`, as of 2026-06-15):**
+
+- editor UAT follow-up items (BUG-SUBTITLE-001-UAT, UX-SUBTITLE-002-UAT, BUG-LINK-001-UAT, BUG-EDITOR-001-UAT) have been addressed via PR #177, #178, #181, and the upcoming PR #185.
+- docs synchronization (DOC-SYNC-001) is in progress via this reconciliation task.
+- release Go/No-Go is deferred explicit gate (not automated next step).
+- Code quality gates pass on main via PR #184 merge (run `27526922774`).
+- Open PR: #185 (1), Open Issue: 0.
+
+### Issue classification current state
+
+| Category | Items | Status |
+|---|---|---|
+| Completed / superseded | GATE-EDITOR-FOLLOWUP-001, DOC-89-CORRECT-001, DOC-90-EDITOR-UAT, ACC-SWITCH-DB-001, VIEWER-HIDDEN-BUTTON-001, EDITOR-FIX-001, GATE-001, GATE-INVALID-IO-001, GATE-EXPORT-SEC-001, GUI-001, ACC-WHITE-001, PORTABLE-001, AUTH-002, ADMIN-001, DATAIO-002, AUDIT-002, RESTORE-LOCK-001, INVALID-IO-001, EXPORT-SEC-001 + all items in 解消済み・実装済み扱い section below | Resolved per historical record |
+| Current confirmed candidate (P2 design) | UI list columns reduction + detail pane, subtitle-first editing, search single table + detail pane | See `docs/86_future_roadmap_and_remaining_backlog_20260525.md` |
+| Requires re-audit | Password policy (CONF-005), destructive re-auth (CONF-008), audit log role separation (CONF-009), old gap analysis items | See `docs/67_quality_attribute_gap_analysis.md` reclassification |
+| Deferred explicit gate | Manual UAT (V900-UAT-001), Release preparation (V100-REL-001) | Not active backlog; requires explicit human decision |
+| Standing constraint | Windows local, offline, single-site, SQLite file exposure, restore/import admin boundary, offline restore boundary, SQL dump protection | See constraints section below |
+
+---
+
+## Historical snapshot: 2026-05-28 viewer/editor UAT follow-up後の最新状態
 
 - viewer UATの解釈を修正済み。viewerでは復元・完全削除・Restore・Import等の実行ボタンは「表示されているが拒否」ではなく、UI上で非表示になることを `docs/89_account_switch_viewer_uat_20260527.md` に記録済み。
 - アカウント切替時のDB close問題は `fix: avoid closing shared database on account switch` で解消済み。viewer切替後のログイン問題もユーザー確認済み。
@@ -11,7 +35,7 @@
 - editor UAT follow-upの詳細は `docs/90_editor_uat_followup_20260527.md` を参照。
 - 現時点のrelease readinessは、コード品質ゲートはPASSだが、editor再UATと最終docs同期が未完了のためBLOCKED。
 
-## 2026-05-21追記: v0.2.0-rc1 Go/No-Go直前状態
+## Historical snapshot: 2026-05-21 v0.2.0-rc1 Go/No-Go直前状態
 
 - 認証・ユーザー管理は、初回admin setup、local password login、Windows認証ログイン、DB role取得、user management、user audit log、RBAC UI hardeningまで進行済み。
 - 現行ログイン画面は、旧来の「操作者IDとroleを利用者が任意選択する暫定導線」ではない。現在は local認証では `operator_id` + password、Windows認証ではOSユーザー情報でログインし、roleはDB上の `users.role` から取得する。
@@ -31,9 +55,11 @@
 - 最新状況の横断台帳は `docs/75_v0_2_0_current_status_and_improvement_ledger.md` を参照する。
 - v0.2.0-rc1 release evidenceは `docs/78_release_evidence_v0_2_0_rc1.md` を参照する。
 
-## 未解決事項
+## Historical: 未解決事項 (as of 2026-05-28)
 
-### P1: editor再UAT
+The items below reflect the state as of 2026-05-28. Their current resolution status is summarized in the "Current applicability / Status" header above.
+
+### P1: editor再UAT (historical — addressed via PR #177/#178/#181/#185)
 
 - `BUG-SUBTITLE-001-UAT`
   - editorでサブタイトル追加・編集が実行可能であることを再確認する。
@@ -44,20 +70,20 @@
 - `BUG-EDITOR-001-UAT`
   - タイトル編集画面および説明コメント周辺のUI崩れが許容範囲まで軽減していることを再確認する。
 
-### P1: docs synchronization
+### P1: docs synchronization (historical — in progress via docs reconciliation task)
 
 - `DOC-SYNC-001`
   - `docs/72`, `docs/75`, `docs/88`, `docs/89`, `docs/90`, `docs/97` の記述を、viewer/editor UATと最新Quality Gates結果に同期する。
 - `UAT-07-001〜003`
   - 操作マニュアル、UAT記録、現況台帳の整合確認を行う。
 
-### P1: release decision
+### P1: release decision (historical — now deferred explicit gate)
 
 - `RELEASE-001` release Go/No-Go判定
   - editor再UATとdocs同期がPASSした後、Go/No-Goを決定する。
   - Goの場合、final release tagging / package再生成要否 / 配布対象zipの確定方針を決める。
 
-### P2: UI / usability改善
+### P2: UI / usability改善 (historical — see current P2 design candidates in `docs/86_future_roadmap_and_remaining_backlog_20260525.md`)
 
 - ヘルプ/設定の診断画面化
   - ヘルプ / 設定 / パス診断 / 保護警告へ分割する。
@@ -136,6 +162,8 @@
 
 ## 制約
 
+### Current standing constraints (2026-06-15)
+
 - Windows ローカル前提。
 - オフライン前提。
 - 単一拠点利用前提。
@@ -143,6 +171,5 @@
 - restore/import はadmin専用操作であり、実施前後のバックアップ証跡確認を運用で必須とする。
 - 現在利用中DBへのGUI restoreはアプリ起動中には実行しない。必要な場合はアプリ終了後にoffline restore手順で対応する。
 - SQL dumpはfull DB dumpであり、認証関連フィールドを含み得るため保護対象ファイルとして扱う。
-- v0.1.0系ではCSV/JSON importは空DB限定とし、非空DBへのmerge/overwrite/upsert importは扱わない。
-- v0.1.0系ではSQL importは扱わず、DB全体復旧はrestoreで扱う。
-- v0.1.0系ではアイコン・画像資産は実装対象外とし、将来扱う場合はassets配下の相対パス管理を第一候補とする。
+
+### v0.1.0系 scope constraints (historical — superseded by v0.2.0+)

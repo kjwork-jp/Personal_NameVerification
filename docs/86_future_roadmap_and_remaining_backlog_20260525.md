@@ -4,7 +4,7 @@
 
 This document tracks the remaining backlog and future expansion items after the v0.3.0 initial backlog cleanup.
 
-It intentionally includes more than the immediate P2 items so that deferred UAT/release gates remain visible after implementation work is completed.
+UAT and release publishing are **explicitly selected deferred gates** and are not normal active backlog items.
 
 ## Current baseline
 
@@ -12,21 +12,36 @@ It intentionally includes more than the immediate P2 items so that deferred UAT/
 - Current development line: v0.3.0+
 - Main short backlog: `docs/85_v0_3_0_backlog_initial_20260525.md`
 - Open issue source: `docs/97_open_issues_and_constraints.md`
-- Latest `Quality Gates`: pass for `fix: wrap title subtitle layout assertions` / run `26426351458`
+- Latest `Quality Gates`: success for PR #184 exact head and merge commit `325244defdf9658f5ea16c9550fcd73d8c5aefc6` (run `27526922774`)
+- Current open PR: #185 (as of 2026-06-15)
 
 ## Execution policy
 
 - Implementation / documentation / maintenance backlog is complete for this roadmap window.
-- UAT is the next gate, but release preparation remains deferred until UAT is complete.
+- Manual UAT, EXE checks, portable checks, local Windows builds, and release publishing are **not** normal active backlog items.
 - Continue small direct-main changes with GitHub Actions as the default quality gate.
 - Release-like validation scripts can be maintained before release, but publishing/release preparation stays deferred unless explicitly selected.
 
-## Remaining backlog / future roadmap
+## Current confirmed design candidates (P2)
 
-| ID | Horizon | Priority | Area | Status | Candidate |
-|---|---|---:|---|---|---|
-| V900-UAT-001 | post-backlog | P1 | UAT | Ready / deferred gate | Run demo DB based UAT for viewer/editor/admin flows |
-| V100-REL-001 | post-UAT | P1 | Release | Deferred until UAT complete | Prepare v1.0 release criteria, final UAT, and distribution policy |
+These are confirmed design candidates for the v0.3.0+ line, audited against current code/tests:
+
+| ID | Candidate | Status |
+|---|---|---|
+| UI-DESIGN-01 | list columns reduction + detail pane | design candidate |
+| UI-DESIGN-02 | subtitle-first editing | design candidate |
+| UI-DESIGN-03 | search single table + detail pane | design candidate |
+
+These are design candidates, not confirmed defects. Implementation should be based on current code/tests/screenshots, not on old handoff references.
+
+## Explicitly selected deferred gates
+
+These gates are intentionally deferred and are NOT active backlog items to be automatically progressed.
+
+| ID | Gate | Status | Trigger |
+|---|---|---|---|
+| V900-UAT-001 | Manual UAT (viewer/editor/admin flows) | Deferred explicit gate | Requires explicit human decision to start |
+| V100-REL-001 | Release preparation (criteria, tagging, packaging, distribution) | Deferred explicit gate | Requires explicit human decision; not automated next step |
 
 ## Completed in this roadmap window
 
@@ -42,25 +57,13 @@ It intentionally includes more than the immediate P2 items so that deferred UAT/
 - V050-PERF-001: large data performance review plan and bulk generator contract tests added.
 - V050-ASSET-001: asset storage and relative path policy documented.
 - V050-MULTI-001: local SQLite single-user and future multi-user policy documented.
+- PR #184: `feat: enforce normalized display-name indexes` merged (squash, merge commit `325244defdf9658f5ea16c9550fcd73d8c5aefc6`)
 
 ## Quality gate closure
 
-- Latest Quality Gates passed after ruff E501 fixes.
-- Earlier failing workflow runs are superseded by the passing run.
+- Latest Quality Gates: success for PR #184 merge (run `27526922774`)
+- PR #185 exact-head Quality Gates: run `27537532720` / pytest 7 failures, ruff/black/mypy success (pending resolution)
 - No generated DB/CSV data was committed.
-
-## Immediate next items
-
-1. Decide whether to start `V900-UAT-001`.
-2. Keep `V100-REL-001` deferred until UAT is complete.
-3. If more implementation work is found during UAT, route it back into a new backlog before release preparation.
-
-## Deferred gates
-
-| ID | Gate | Trigger |
-|---|---|---|
-| V900-UAT-001 | UAT | Can start now if formal UAT is selected. |
-| V100-REL-001 | Release | Start only after UAT is complete and all release blockers are cleared. |
 
 ## Maintenance review policy
 
@@ -77,5 +80,5 @@ Classify each document as one of the following:
 ## Notes
 
 - This file is a planning ledger.
-- UAT and release remain separate gates.
+- UAT and release are explicitly deferred gates (see section above); they are not sequenced as automatic next steps.
 - Release-like validation scripts can be maintained before release, but publishing/release preparation stays deferred.
