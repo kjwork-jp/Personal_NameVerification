@@ -641,11 +641,13 @@ class CoreService:
             title_name,
             field_label="title_name",
         )
-        rows = self._connection.execute("""
+        rows = self._connection.execute(
+            """
             SELECT id, title_name
             FROM titles
             WHERE deleted_at IS NULL
-            """).fetchall()
+            """
+        ).fetchall()
         for row in rows:
             title_id = int(row["id"])
             if exclude_title_id is not None and title_id == exclude_title_id:
