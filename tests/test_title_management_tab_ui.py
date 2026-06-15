@@ -138,6 +138,8 @@ def test_title_management_split_summary_and_danger_copy_properties() -> None:
     assert "関連名      Alice" in edit_summary
     assert tab.editor.title_detail_group.title() == "タイトル編集: 選択カード確認後に更新"
     assert tab.editor.title_update_button.text() == "選択中タイトルを更新"
+    assert tab.editor.title_detail_group.maximumHeight() == 16777215
+    assert tab.editor.title_detail_group.property("unbounded_edit_layout") is True
 
     tab.editor.workflow_tabs.setCurrentWidget(tab.editor.delete_tab)
     target_summary = tab.title_delete_target_summary.text()
@@ -207,3 +209,19 @@ def test_title_destructive_confirmation_includes_target_details() -> None:
     assert "状態: 有効" in message
     assert "関連名: Alice" in message
     assert "通常の編集対象から外れます" in message
+
+
+def test_title_linked_name_filter_limits_visible_rows() -> None:
+    tab = _title_tab()
+
+    tab.title_name_filter_input.setText("alice")
+
+    assert not tab.editor.titles_table.isRowHidden(0)
+    assert tab.editor.titles_table.isRowHidden(1)
+    assert "一覧 2件" in tab.title_list_summary_label.text()
+    assert "表示中 1件" in tab.title_list_summary_label.text()
+
+    tab.title_name_filter_input.setText("missing")
+    assert tab.editor.titles_table.isRowHidden(0)
+    assert tab.editor.titles_table.isRowHidden(1)
+    assert "表示中 0件" in tab.title_list_summary_label.text()

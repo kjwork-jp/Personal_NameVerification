@@ -26,6 +26,7 @@ from PySide6.QtWidgets import (
 
 from app.application.core_services import SubtitleInput, TitleInput
 from app.application.read_models import NameSearchRow, NameTitleLinkRow, SubtitleDetail, TitleDetail
+from app.ui.datetime_display import format_datetime_display
 from app.ui.dialogs import confirm_destructive_action
 from app.ui.input_defaults import friendly_error_message, generate_subtitle_code
 from app.ui.navigation_polish import apply_workflow_tab_navigation
@@ -503,7 +504,7 @@ class TitleSubtitleManagementTab(QWidget):
             self.titles_table.setItem(row_index, 1, self._public_id_item(row.public_id))
             self.titles_table.setItem(row_index, 2, QTableWidgetItem(row.title_name))
             self.titles_table.setItem(row_index, 3, self._table_item("削除済み" if row.deleted_at else "有効", align_center=True))
-            self.titles_table.setItem(row_index, 4, QTableWidgetItem(row.updated_at))
+            self.titles_table.setItem(row_index, 4, QTableWidgetItem(format_datetime_display(row.updated_at, fallback="")))
             self.titles_table.setItem(row_index, 5, QTableWidgetItem(row.note or ""))
             self.titles_table.setItem(row_index, 6, QTableWidgetItem(linked_names))
         self._refresh_name_candidates()
@@ -572,7 +573,7 @@ class TitleSubtitleManagementTab(QWidget):
             self.subtitles_table.setItem(row_index, 5, QTableWidgetItem(row.subtitle_name))
             self.subtitles_table.setItem(row_index, 6, self._table_item("削除済み" if row.deleted_at else "有効", align_center=True))
             self.subtitles_table.setItem(row_index, 7, self._table_item(str(row.sort_order), align_center=True))
-            self.subtitles_table.setItem(row_index, 8, QTableWidgetItem(row.updated_at))
+            self.subtitles_table.setItem(row_index, 8, QTableWidgetItem(format_datetime_display(row.updated_at, fallback="")))
             self.subtitles_table.setItem(row_index, 9, QTableWidgetItem(row.note or ""))
         self._populate_delete_subtitle_combo()
         if selected_subtitle_id is not None:

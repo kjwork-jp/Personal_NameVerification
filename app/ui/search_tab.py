@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
 )
 
 from app.application.read_models import NameDetail, NameSearchRow, RelatedRow
+from app.ui.datetime_display import format_datetime_display
 from app.ui.public_id_display import short_public_id
 from app.ui.role_context import RoleContext, UserRole
 from app.ui.ui_style import PageHeader, compact_layout
@@ -185,7 +186,13 @@ class SearchTab(QWidget):
             self.results_table.setItem(i, 6, QTableWidgetItem(str(row.linked_count)))
             status = "削除済み" if row.deleted_at else "使用中"
             self.results_table.setItem(i, 7, QTableWidgetItem(status))
-            self.results_table.setItem(i, 8, QTableWidgetItem(detail.updated_at if detail else ""))
+            self.results_table.setItem(
+                i,
+                8,
+                QTableWidgetItem(
+                    format_datetime_display(detail.updated_at, fallback="") if detail else ""
+                ),
+            )
             self.results_table.setItem(i, 9, QTableWidgetItem(detail.note if detail and detail.note else ""))
 
         if rows:

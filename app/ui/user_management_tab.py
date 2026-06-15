@@ -23,6 +23,7 @@ from app.domain.errors import (
     StateTransitionError,
     ValidationError,
 )
+from app.ui.datetime_display import format_datetime_display
 from app.ui.navigation_guide import OperationGuide, SectionPanel
 from app.ui.role_context import RoleContext
 from app.ui.ui_style import (
@@ -262,7 +263,7 @@ class UserManagementTab(QWidget):
             provider,
             user.windows_account_name or "",
             status,
-            user.last_login_at or "",
+            format_datetime_display(user.last_login_at, fallback="未ログイン"),
             str(user.failed_login_count),
             user.public_id or "",
             user.windows_sid or "",

@@ -47,6 +47,8 @@ ENTITY_TYPE_OPTIONS = [
     "name_subtitle_links",
 ]
 ACTION_OPTIONS = ["all", "create", "update", "delete", "restore", "link", "unlink"]
+_SENSITIVE_KEY_PARTS = ("password", "passwd", "secret", "token", "password_hash", "password_salt")
+_MISSING = object()
 
 
 class AuditLogReadService(Protocol):
@@ -355,10 +357,33 @@ def _parse_json_object(value: str | None) -> dict[str, Any] | None:
     return data if isinstance(data, dict) else None
 
 
+def _is_sensitive_key(key: str) -> bool:
+    normalized = key.casefold()
+    return any(part in normalized for part in _SENSITIVE_KEY_PARTS)
+
+
+def _redact_sensitive(value: Any, *, key: str | None = None) -> Any:
+    if key is not None and _is_sensitive_key(key):
+        return "***"
+    if isinstance(value, dict):
+        return {str(item_key): _redact_sensitive(item, key=str(item_key)) for item_key, item in value.items()}
+    if isinstance(value, list):
+        return [_redact_sensitive(item) for item in value]
+    return value
+
+
 def _format_json_like(value: str | None, parsed: dict[str, Any] | None) -> str:
     if parsed is None:
         return value or ""
-    return json.dumps(parsed, ensure_ascii=False, indent=2, sort_keys=True)
+    safe = _redact_sensitive(parsed)
+    return json.dumps(safe, ensure_ascii=False, indent=2, sort_keys=True)
+
+
+def _diff_value(value: Any, *, key: str) -> str:
+    if value is _MISSING:
+        return "（項目なし）"
+    safe = _redact_sensitive(value, key=key)
+    return json.dumps(safe, ensure_ascii=False, sort_keys=True)
 
 
 def _format_diff(
@@ -367,16 +392,25 @@ def _format_diff(
 ) -> str:
     if before is None and after is None:
         return ""
-    before = before or {}
-    after = after or {}
-    keys = sorted(set(before) | set(after))
-    lines: list[str] = []
+    before_values = before or {}
+    after_values = after or {}
+    keys = sorted(set(before_values) | set(after_values))
+    sections: list[str] = []
     for key in keys:
-        before_value = before.get(key)
-        after_value = after.get(key)
-        if before_value != after_value:
-            lines.append(f"{key}: {before_value!r} -> {after_value!r}")
-    return "\n".join(lines) if lines else "差分なし"
+        before_value = before_values.get(key, _MISSING)
+        after_value = after_values.get(key, _MISSING)
+        if before_value == after_value:
+            continue
+        sections.append(
+            "\n".join(
+                [
+                    f"変更項目: {key}",
+                    f"  変更前: {_diff_value(before_value, key=key)}",
+                    f"  変更後: {_diff_value(after_value, key=key)}",
+                ]
+            )
+        )
+    return "\n\n".join(sections) if sections else "差分なし"
 
 
 def _row_export_payload(row: ChangeLogRow) -> dict[str, Any]:

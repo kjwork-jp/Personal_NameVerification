@@ -18,6 +18,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from app.ui.datetime_display import format_datetime_display
 from app.ui.input_defaults import default_operator_id
 from app.ui.operations_log import default_operations_log_path
 from app.ui.ui_style import PageHeader, set_status_message
@@ -231,7 +232,9 @@ class HelpSettingsTab(QWidget):
             self.database_updated_input.setText("確認エラー")
             return
 
-        updated = datetime.fromtimestamp(stat.st_mtime).strftime("%Y-%m-%d %H:%M:%S")
+        updated = format_datetime_display(
+            datetime.fromtimestamp(stat.st_mtime), fallback="不明"
+        )
         self.database_exists_input.setText("あり")
         self.database_size_input.setText(f"{stat.st_size:,} bytes")
         self.database_updated_input.setText(updated)

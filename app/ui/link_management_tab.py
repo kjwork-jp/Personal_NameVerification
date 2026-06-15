@@ -48,6 +48,12 @@ class LinkManagementTab(QWidget):
         self.register_subtitle_combo = QComboBox()
         self.unregister_name_combo = QComboBox()
         self.unregister_link_combo = QComboBox()
+        self.unlink_target_summary_label = QLabel("解除対象: 未選択")
+        self.unlink_target_summary_label.setWordWrap(True)
+        self.unlink_target_summary_label.setTextInteractionFlags(
+            Qt.TextInteractionFlag.TextSelectableByMouse
+        )
+        self.unlink_target_summary_label.setProperty("unlink_target_summary", True)
 
         self.refresh_button = QPushButton("再読込")
         self.link_button = QPushButton("関連付けを登録")
@@ -58,6 +64,9 @@ class LinkManagementTab(QWidget):
         self.register_name_combo.currentIndexChanged.connect(self._refresh_registration_subtitles)
         self.register_title_combo.currentIndexChanged.connect(self._refresh_registration_subtitles)
         self.unregister_name_combo.currentIndexChanged.connect(self._refresh_unlink_candidates)
+        self.unregister_link_combo.currentIndexChanged.connect(
+            lambda _index: self._update_unlink_target_summary()
+        )
 
         register_form = QFormLayout()
         compact_layout(register_form, margins=2, spacing=3)
@@ -85,7 +94,7 @@ class LinkManagementTab(QWidget):
         unregister_form = QFormLayout()
         compact_layout(unregister_form, margins=2, spacing=3)
         unregister_form.addRow("名前", self.unregister_name_combo)
-        unregister_form.addRow("既存関連", self.unregister_link_combo)
+        unregister_form.addRow("解除する関連（1件）", self.unregister_link_combo)
 
         unregister_actions = QHBoxLayout()
         compact_layout(unregister_actions, margins=0, spacing=4)
@@ -100,6 +109,7 @@ class LinkManagementTab(QWidget):
         )
         unregister_hint.setWordWrap(True)
         unregister_layout.addWidget(unregister_hint)
+        unregister_layout.addWidget(self.unlink_target_summary_label)
         unregister_layout.addLayout(unregister_form)
         unregister_layout.addLayout(unregister_actions)
         unregister_layout.addStretch(1)
@@ -222,6 +232,40 @@ class LinkManagementTab(QWidget):
             _link_tooltip,
             data_attr="link_id",
         )
+        self._update_unlink_target_summary()
+
+    def _selected_unlink_row(self) -> Any | None:
+        index = self.unregister_link_combo.currentIndex()
+        if index < 0 or index >= len(self._links):
+            return None
+        return self._links[index]
+
+    def _selected_unregister_name(self) -> Any | None:
+        index = self.unregister_name_combo.currentIndex()
+        if index < 0 or index >= len(self._names):
+            return None
+        return self._names[index]
+
+    def _unlink_target_summary_text(self) -> str:
+        row = self._selected_unlink_row()
+        name = self._selected_unregister_name()
+        if row is None:
+            return "解除対象: 未選択"
+        name_text = getattr(name, "raw_name", "不明") if name is not None else "不明"
+        return "\n".join(
+            [
+                "解除対象（この1件のみ）",
+                f"名前: {name_text}",
+                f"タイトル: {row.title_name}",
+                f"サブタイトル: {row.subtitle_code} / {row.subtitle_name}",
+                f"関連種別: {row.relation_type}",
+                f"リンク公開ID: {public_id_detail(getattr(row, 'link_public_id', None))}",
+                f"内部リンクID: {row.link_id}",
+            ]
+        )
+
+    def _update_unlink_target_summary(self) -> None:
+        self.unlink_target_summary_label.setText(self._unlink_target_summary_text())
 
     def _create_link(self) -> None:
         if not can_link(self._role_context.role):
@@ -250,10 +294,11 @@ class LinkManagementTab(QWidget):
         if link_id is None:
             self._set_message("解除する既存関連を選択してください", is_error=True)
             return
+        target_summary = self._unlink_target_summary_text()
         if not confirm_destructive_action(
             self,
             "関連解除の確認",
-            "選択した関連を外します。よろしいですか？",
+            f"{target_summary}\n\nこの関連1件だけを解除します。ほかの関連は維持されます。",
         ):
             self._set_message("関連解除をキャンセルしました")
             return
