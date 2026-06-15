@@ -35,3 +35,8 @@ def test_datetime_helper_is_wired_to_remaining_ui_surfaces() -> None:
 
     for path, marker in expected.items():
         assert marker in Path(path).read_text(encoding="utf-8"), path
+
+
+def test_batch_scope_has_six_confirmed_items() -> None:
+    assert len(expected_scope := {"datetime", "title-layout", "audit-diff", "data-io", "title-filter", "unlink"}) == 6
+    assert "data-io" in expected_scope
