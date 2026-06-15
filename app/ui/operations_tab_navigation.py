@@ -1,4 +1,4 @@
-"""Navigation restructuring helpers for the Operations tab."""
+"""データ入出力タブのナビゲーション再構成ヘルパー。"""
 
 from __future__ import annotations
 
@@ -26,11 +26,11 @@ _GUIDE_TEXT_BY_ROLE = {
 データ入出力タブの操作ガイド（viewer）
 
 この権限では、実行ログの参照のみ利用できます。
-Export / Backup / Restore / Import は表示しません。
+データ出力 / バックアップ / 復元 / データ取込は表示しません。
 
-1. Operations Log
+1. 実行ログ
    データ入出力タブの実行ログを確認・絞り込みできます。
-   ログエクスポートは出力操作のため、viewerでは利用できません。
+   ログ出力は出力操作のため、viewerでは利用できません。
 
 補足:
    viewerは参照専用です。DB更新、出力、バックアップ、復元、取込は行えません。
@@ -38,17 +38,17 @@ Export / Backup / Restore / Import は表示しません。
     "editor": """
 データ入出力タブの操作ガイド（editor）
 
-この権限では、通常の出力とバックアップのみ利用できます。
-Restore / Import は破壊的操作のため表示しません。
+この権限では、通常のデータ出力とバックアップのみ利用できます。
+復元 / データ取込は破壊的操作のため表示しません。
 
-1. Export
-   CSV / JSON / SQL dump を出力します。
+1. データ出力
+   CSV / JSON / SQLダンプを出力します。
 
-2. Backup
+2. バックアップ
    現在のSQLite DBをバックアップします。
 
-3. Operations Log
-   データ入出力タブの実行ログを確認・絞り込み・エクスポートします。
+3. 実行ログ
+   データ入出力タブの実行ログを確認・絞り込み・出力します。
 
 補足:
    editorは通常作業向けです。DB置換や外部データ取込はadminで実行してください。
@@ -57,33 +57,28 @@ Restore / Import は破壊的操作のため表示しません。
 データ入出力タブの操作ガイド（admin）
 
 この権限では、データ入出力の全操作を利用できます。
-Restore / Import は破壊的操作のため、実行前に必ずバックアップを取得してください。
+復元 / データ取込は破壊的操作のため、実行前に必ずバックアップを取得してください。
 
-1. Export
-   CSV / JSON / SQL dump を出力します。
+1. データ出力
+   CSV / JSON / SQLダンプを出力します。
 
-2. Backup
+2. バックアップ
    現在のSQLite DBをバックアップします。
 
-3. Restore
-   バックアップDBで対象DBを置換します。destructive操作です。
+3. 復元
+   バックアップDBで対象DBを置換します。破壊的操作です。
 
-4. Import
-   CSV / JSON からDBへ取り込みます。destructive操作です。
+4. データ取込
+   CSV / JSONからDBへ取り込みます。破壊的操作です。
 
-5. Operations Log
-   データ入出力タブの実行ログを確認・絞り込み・エクスポートします。
+5. 実行ログ
+   データ入出力タブの実行ログを確認・絞り込み・出力します。
 """.strip(),
 }
 
 
 def apply_operations_subtabs(widget: QWidget) -> None:
-    """Reorganize the already-built OperationsTab into task-oriented subtabs.
-
-    The existing OperationsTab owns all widgets and behavior. This helper only moves
-    its grouped UI sections into a QTabWidget so the public widget attributes,
-    signal connections, history handling, and RBAC guards remain unchanged.
-    """
+    """構築済みのOperationsTabを処理別サブタブへ再構成する。"""
 
     if getattr(widget, "operations_subtabs", None) is not None:
         return
@@ -100,7 +95,7 @@ def apply_operations_subtabs(widget: QWidget) -> None:
     if not groups:
         return
 
-    logs_group = _take_group_box_by_title(root_layout, "Operations 実行ログ")
+    logs_group = _take_group_box_by_title(root_layout, "データ入出力 実行ログ")
     _insert_result_hint(root_layout, widget)
 
     sub_tabs = QTabWidget(widget)
@@ -109,10 +104,10 @@ def apply_operations_subtabs(widget: QWidget) -> None:
     sub_tabs.addTab(_build_guide_page(role), "ガイド")
 
     section_order = [
-        ("Export", "Export"),
-        ("Backup", "Backup"),
-        ("Restore（destructive）", "Restore"),
-        ("Import（destructive）", "Import"),
+        ("データ出力", "データ出力"),
+        ("バックアップ", "バックアップ"),
+        ("復元（破壊的操作）", "復元"),
+        ("データ取込（破壊的操作）", "データ取込"),
     ]
     for group_title, tab_title in section_order:
         group = groups.get(group_title)
@@ -120,7 +115,7 @@ def apply_operations_subtabs(widget: QWidget) -> None:
             sub_tabs.addTab(_page_with_group(group), tab_title)
 
     if logs_group is not None:
-        sub_tabs.addTab(_page_with_group(logs_group), "Operations Log")
+        sub_tabs.addTab(_page_with_group(logs_group), "実行ログ")
 
     insert_index = max(0, grid_index)
     root_layout.insertWidget(insert_index, sub_tabs, 1)
@@ -162,7 +157,7 @@ def _page_with_group(group: QGroupBox) -> QWidget:
 
 
 def _group_description(group_title: str) -> str:
-    if group_title.startswith("Operations 実行ログ"):
+    if group_title.startswith("データ入出力 実行ログ"):
         return DATA_IO_LOG_DESCRIPTION
     group_key = group_title.split("（", maxsplit=1)[0]
     return DATA_IO_GROUP_DESCRIPTIONS.get(group_key, "")
